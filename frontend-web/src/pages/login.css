@@ -1,0 +1,217 @@
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  /* Login container to fill full screen and center contents */
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    background: linear-gradient(to top, #63C7FF, #86ECC0, #4B6EDC);
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    position: fixed; /* ✅ ensure it ignores scroll */
+    top: 0;
+    left: 0;
+  }
+  
+  /* Centered white box */
+  .login-box {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 40px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+    height: 600px;
+  }
+  
+  .login-title {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 2.0rem;
+    
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+    
+    
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.1rem;
+    color: #121212;
+    font-weight: 500;
+    text-align: start;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #2e2020;
+    border-radius: 5px;
+    font-size: 1rem;
+    
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+  
+  .login-button {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #02106E;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .login-button:hover {
+    background-color: hsl(211, 100%, 35%);
+  }
+  
+  .forgot-password {
+    display: block;
+    text-align: center;
+    margin-top: 1rem;
+    color: #000000;
+    text-decoration: underline;
+    font-size: 0.9rem;
+  }
+  
+  .forgot-password:hover {
+    text-decoration: underline;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .login-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto 0.5rem auto;
+    background: transparent; 
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* dark background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  }
+  
+  .reset-modal {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 800px;
+    width: 100%;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    text-align: start;
+    
+  }
+  
+  .send-code-button {
+    margin-top: 1rem;
+    padding: 0.5rem 1.5rem;
+    background-color: #ffcc00;
+    color: black;
+    font-weight: bold;
+    border: solid;
+    border-width: 2px;
+    border-radius: 15px;
+    cursor: pointer; 
+  }
+  
+  .send-code-button:hover {
+    background-color: #e6b800;
+  }
+
+  .button-wrapper {
+    display: flex;
+    justify-content: center;
+  }
+
+  .required {
+    color: red;
+  }
+
+  .reset-modal h2 {
+    font-size: 2.0rem; /* or increase to 1.75rem, 2rem etc. */
+  }
+
+  .password-hint {
+    display: flex;
+    align-items: center; /* Align icon and text vertically */
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+  }
+  
+  .hint-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+  }
+  
+  .error-message {
+    background-color: #ffe6e6;
+    border: 1px solid #ff9999;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 14px;
+    color: #b30000;
+  }
+  
+  .error-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .success-message {
+    background-color: #d4f8d4;
+    color: #2e7d32;
+    border: 1px solid #81c784;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  
+  .success-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
