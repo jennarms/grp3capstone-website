@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './login.css';
+import { useNavigate } from 'react-router-dom';
 
 
 export function Login() {
@@ -10,11 +11,18 @@ export function Login() {
     const [resetError, setResetError] = useState(false);
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
     const [enteredCode, setEnteredCode] = useState('');
+    const navigate = useNavigate();
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      // Add your login logic here
       console.log('Logging in with:', { email, password });
+    
+      // Simulated successful login
+      if (email === 'mainadmin1234' && password === 'metrolayagadmin!') {
+        navigate('/dashboard');
+      } else {
+        alert('Invalid email or password');
+      }
     };
   
     return (

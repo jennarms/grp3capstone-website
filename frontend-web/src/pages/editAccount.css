@@ -1,0 +1,130 @@
+:root{
+    --sidebar-w: 300px;
+    --navy: #0b1a78;
+    --bubble: #7fa8ef;
+    --bubble-border: #1f2b5a;
+  }
+  
+  html, body { overflow-x: hidden; }
+  
+  /* Main content (sits to the right of your fixed sidebar) */
+  .main-content{
+    margin-left: var(--sidebar-w);
+    padding: 24px 24px 80px;
+    box-sizing: border-box;
+  }
+  
+  @media (max-width: 1024px){
+    .main-content{ margin-left: 0; }
+  }
+  
+  /* Header */
+  .page-title{ margin: 0; font-weight: 800; }
+  .bc-title-rule{
+    border: 0;
+    border-top: 3px solid #1f2b5a;
+    margin: 8px 0 14px;
+  }
+  
+  /* Tabs */
+  .bc-tabs{ display: flex; gap: 14px; margin: 4px 0 8px; }
+  .bc-tab{
+    border: 2px solid #1f2b5a;
+    background: #eef3ff;
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .bc-tab.active{
+    background: #0b1a78;
+    color: #fff;
+  }
+  
+  /* Feed area: scrollable; composer is sticky at bottom */
+  .bc-feed{
+    max-height: calc(70vh - 20px);
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  
+  /* Message block */
+  .bc-msg{ margin: 14px 0 22px; }
+  .bc-author{
+    font-size: 12px;
+    color: #2c2f36;
+    margin-left: 16px;
+    margin-bottom: 4px;
+  }
+  .bc-bubble{
+    background: var(--bubble);
+    border: 2px solid var(--bubble-border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    max-width: 930px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  }
+  .bc-bubble p{
+    margin: 0;
+    color: #0c1730;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  
+  /* Reactions row */
+  .bc-reactions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 8px 0 8px;
+  }
+  .bc-chip{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 2px solid #d5d9e6;
+    border-radius: 999px;
+    padding: 4px 10px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,.08);
+  }
+  .bc-chip-add{ border-style: dashed; opacity: .9; }
+  .bc-chip-emoji{ font-size: 16px; }
+  .bc-chip-count{ font-weight: 700; color: #2b2e36; }
+  
+  /* Composer */
+  .bc-composer{
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 56px;
+    gap: 10px;
+    margin-top: 16px;
+    background: transparent;
+  }
+  .bc-input{
+    width: 100%;
+    min-height: 56px;
+    max-height: 180px;
+    resize: vertical;
+    border: 2px solid #cfd3de;
+    border-radius: 14px;
+    padding: 12px 14px;
+    outline: none;
+    font-size: 1rem;
+    background: #fff;
+  }
+  .bc-send{
+    border: 2px solid #1f2b5a;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 14px;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .bc-send:hover{ filter: brightness(1.05); }
+  
+  @media (max-width: 768px){
+    .bc-bubble{ max-width: 100%; }
+  }

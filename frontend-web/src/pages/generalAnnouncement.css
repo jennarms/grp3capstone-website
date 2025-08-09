@@ -1,0 +1,242 @@
+:root{
+  --sidebar-w: 300px;
+  --sidebar-w-md: 250px;
+  --sidebar-w-sm: 200px;
+
+  --accent-navy: #0b1a78;
+  --card-br: 14px;
+  --card-border: #e9e9ee;
+}
+
+html, body { overflow-x: hidden; }
+
+.main-content {
+  padding: 24px 24px 56px;
+  transition: margin-left .25s ease;
+  box-sizing: border-box;
+  width: 1550px; /* allow it to flex naturally */
+}
+
+/* ===== Header ===== */
+.header-row{
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.page-title {
+  font-size: 45px;
+  font-weight: 800;
+  color: black;
+}
+
+.header-row { justify-content: flex-start; }
+
+/* ===== Content layout ===== */
+/* Form stays in row 1, list scrolls in row 2 so the form never moves */
+.general-announcement {
+  max-width: 100%;
+  display: grid;                            /* NEW */
+  grid-template-rows: auto minmax(0,1fr);   /* NEW: form | list */
+  gap: 20px;                                 /* NEW */
+  height: calc(100vh - 220px);               /* NEW: visible area; tweak if needed */
+  overflow: hidden;                           /* NEW: confine scrolling to list */
+}
+
+/* The list becomes the only scrollable area under the form */
+.announcements-container{
+  display: grid;
+  gap: 18px;
+  margin-top: 0;                 /* avoid extra shift */
+  min-height: 0;                 /* NEW: allow scrolling inside grid child */
+  overflow-y: auto;              /* NEW: scroll only the list */
+  padding-right: 8px;
+  overflow-anchor: none;         /* prevent scroll-anchoring jumps */
+  overscroll-behavior: contain;  /* stop scroll chaining to page */
+}
+
+/* ===== Cards (form + announcement items) ===== */
+.card{
+  background: #fff;
+  border: 2px solid var(--card-border);
+  border-radius: var(--card-br);
+  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+}
+
+/* ===== Form ===== */
+.announcement-form{ padding: 16px; }
+
+.announcement-form input{
+  height: 44px;
+  margin-bottom: 10px;
+}
+
+.announcement-form textarea{
+  min-height: 120px;
+  resize: vertical;
+}
+
+.form-actions{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.submit-btn{
+  background: var(--accent-navy);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 200px;
+}
+
+.submit-btn:hover{ filter: brightness(1.05); }
+
+.card-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-header h2{
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: black;
+  letter-spacing: .2px;
+}
+
+/* icons on the right */
+.announcement-actions{ display: flex; gap: 8px; }
+
+.icon-btn{
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.action-icon{ width: 30px; height: 30px; display: block; }
+
+.card-message{ line-height: 1.45; color: #000000; }
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 1024px){
+  .page-title{ font-size: 2rem; }
+}
+
+@media (max-width: 768px){
+  .page-title{ font-size: 1.75rem; }
+  .card-header h2{ font-size: 1.35rem; }
+}
+
+/* Horizontal line under title */
+.title-divider {
+  border: none;
+  border-top: 2px solid #ddd;
+  margin: 8px 0;
+}
+
+/* Date & time styling */
+.posted-date-time {
+  margin-top: 10px;
+  font-size: 1rem;
+  color: #111010;
+  text-align: start;
+}
+
+/* Optional: custom scrollbar styling for the list */
+.announcements-container::-webkit-scrollbar { width: 6px; }
+.announcements-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+.announcements-container::-webkit-scrollbar-track { background: transparent; }
+
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal{
+  width: 560px;
+  height: 250px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.2);
+  overflow: hidden;
+}
+
+.modal-header{ padding: 16px 20px 8px; }
+.modal-title{ font-weight: 800; font-size: 1.5rem; }
+
+.modal-body{
+  padding: 0 20px 16px;
+  color: #000000;
+  font-size: 18px;
+}
+
+.modal-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 16px 16px;
+}
+
+.btn{
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 130px;
+}
+
+.btn-outline{ background: #fff; border: 1px solid #cfd1d8; }
+.btn-danger{ background: #bf2d2d; color: #fff; }
+.btn-outline:hover{ background: #f5f6f8; }
+.btn-danger:hover{ filter: brightness(1.05); }
+
+.announcement-card {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.announcement-card p {
+  margin-top: 12px;
+  font-size: 22px;
+  line-height: 1.6;
+  color: #111010;
+}
+
+.announcement-form input::placeholder,
+.announcement-form textarea::placeholder {
+  font-size: 21px;
+  font-weight: 400;
+  opacity: 1;
+  color: #666;
+}
+
+.announcement-form input,
+.announcement-form textarea{
+  width: 100%;
+  border: 3px solid #cfd1d8;
+  border-radius: 12px;
+  padding: 14px 16px;
+  outline: none;
+  font-size: 21px;
+  box-sizing: border-box;
+  background: #fff;
+}
