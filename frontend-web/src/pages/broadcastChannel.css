@@ -1,0 +1,211 @@
+:root{
+  --sidebar-w: 300px;
+  --navy: #0b1a78;
+  --bubble: #7fa8ef;          /* light bubble */
+  --bubble-border: #1f2b5a;
+}
+
+html, body { overflow-x: hidden; }
+
+/* Page content to the right of your fixed sidebar */
+.main-content{
+  margin-left: -40px;
+  padding: 24px 24px 80px;
+  box-sizing: border-box;
+  margin-top: 100px;
+}
+@media (max-width: 1024px){
+  .main-content{ margin-left: 0; }
+}
+
+/* Title + underline */
+.page-title{ 
+  margin-left: 30px;
+  margin-bottom: 0px;
+  font-weight: 800; }
+
+.bc-title-rule{
+  border: 0;
+  border-top: 1px solid #424862;
+  margin: 8px auto 14px;
+  width: min(980px, 92%);
+  
+}
+
+/* Center helper for tabs row */
+.center-row{
+  display: flex;
+  justify-content: center;
+}
+
+/* Tabs */
+.bc-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 4px 0 6px;
+  justify-content: flex-start; /* Aligns to the left */
+}
+
+.bc-tab{
+  border: 2px solid #1f2b5a;
+  background: #eef3ff;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  justify-content: flex-start;
+}
+.bc-tab.active{
+  background: #0b1a78;
+  color: #fff;
+}
+
+/* ======= FEED ======= */
+/* Center the conversation column */
+.bc-feed{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;      /* keep the column centered on the page */
+  gap: 18px;
+  max-height: calc(70vh - 10px);
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.bc-msg{
+  width: 100%;
+  max-width: 920px;         /* conversation column width */
+  display: flex;
+  flex-direction: column;
+}
+
+/* LEFT-ALIGNED for other people */
+.bc-msg.other{
+  align-items: flex-start;
+}
+
+/* RIGHT-ALIGNED for Admin/you */
+.bc-msg.admin{
+  align-items: flex-end;    /* bubble & author move to the right */
+}
+
+/* Author label */
+.bc-author{
+  font-size: 17px;
+  color: black;
+  margin: 0 8px 6px 8px;
+}
+
+/* Make the author label line up with its bubble edge */
+.bc-msg.admin .bc-author{
+  /* put the label above the bubble, but left aligned to the bubble */
+  align-self: flex-end;            /* same right edge as bubble */
+  max-width: 70%;                  /* match the bubble's max width below */
+  margin: 0 0 6px 0;
+  padding-left: 18px;              /* same left padding as bubble so it hugs the bubble edge */
+  text-align: left;
+}
+
+/* Bubble base */
+.bc-bubble{
+  display: inline-block;
+  padding: 14px 18px;
+  border: 2px solid var(--bubble-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Other users' bubble */
+.bc-msg.other .bc-bubble{
+  background: var(--bubble);
+  color: #0c1730;
+  border-color: var(--bubble-border);
+  max-width: 70%;
+}
+
+/* Admin/you bubble (right) */
+.bc-msg.admin .bc-bubble{
+  background: var(--bubble);
+  color: #000;
+  border-color: #000;
+  border-width: 1px;
+  max-width: 70%;       /* keep a pleasant width on large screens */
+  font-size: 15px;      /* fixed typo */
+  font-weight: 700;     /* fixed typo */
+}
+
+/* Reactions row (unchanged) */
+.bc-reactions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 6px 0 6px;
+}
+
+/* ===== COMPOSER ===== */
+.bc-composer {
+  position: fixed;       /* Stay fixed on screen */
+  bottom: 0;
+  left: var(--sidebar-w); /* pushes it to the right of the sidebar */
+  width: calc(100% - var(--sidebar-w)); /* fill remaining width */
+  background: white;     /* so it doesn't overlap messages visually */
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  margin-bottom: 25px;
+}
+
+
+.bc-input{
+  width: 100%;
+  min-height: 54px;
+  max-height: 160px;
+  resize: vertical;
+  border: 1px solid #000000;
+  border-radius: 14px;
+  padding: 12px 14px;
+  padding-right: 64px;     /* room for the button */
+  outline: none;
+  font-size: 1rem;
+  background: #fff;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.bc-send{
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+}
+.bc-send-icon{
+  width: 35px;             /* bigger and centered */
+  height: 35px;
+  display: block;
+  object-fit: contain;
+}
+.bc-send:hover{ background: #f4f6fa; }
+
+@media (max-width: 768px){
+  .bc-bubble{ max-width: 100%; }
+  .bc-title-rule{ width: 95%; }
+}
+
+.bc-title-rule {
+  border: none;
+  border-top: 2px solid #1e3b73;
+  margin: 8px 0 10px;
+  width: 100%; /* Full width */
+}
+
