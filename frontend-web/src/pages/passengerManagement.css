@@ -1,0 +1,164 @@
+:root{
+    --sidebar-w: 300px;
+    --nav-h: 100px;
+    --blue-ink: #0b1a78;
+    --stroke: #cfd8ea;
+    --table-line: #9da9c2;
+    --chip-bg: #eef3ff;
+  }
+  
+  /* page scaffold (matches your other screens) */
+  .pmc-main{
+    margin-left: -40px;
+    margin-top: var(--nav-h);
+    margin-bottom: 100px;
+    padding: 24px;
+    box-sizing:border-box;
+    width: 1600px;
+  }
+  
+  /* header row */
+  .pmc-header-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pmc-title{
+    font-weight: 750;
+    margin: 0 0 6px 30px;
+    color: black;
+    margin-bottom: 30px;
+  }
+  
+  /* controls row */
+  .pmc-controls{
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    margin: 6px 0 10px 30px;
+  }
+  
+  .pmc-search{
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .pmc-search svg{
+    width: 18px; height: 18px;
+    position: absolute; left: 12px;
+    fill: #667292;
+  }
+  .pmc-search input{
+    height: 36px;
+    padding: 6px 12px 6px 36px;
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    outline: none;
+    min-width: 280px;
+  }
+  
+  .pmc-filter select{
+    height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--stroke);
+    border-color: black;
+    border-radius: 8px;
+    background: #fff;
+    outline: none;
+    font-weight: 700;
+    margin-left: -1650px;
+    
+  }
+  
+  .pmc-delete{
+    justify-self: end;
+    height: 36px;
+    padding: 6px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--blue-ink);
+    background: #fff;
+    color: var(--blue-ink);
+    font-weight: 700;
+    cursor: pointer;
+    width: 300px;
+  }
+  .pmc-delete:disabled{
+    opacity: .5;
+    cursor: not-allowed;
+  }
+  
+  /* section label */
+  .pmc-section-label{
+    margin: 8px 0 8px 30px;
+    font-weight: 900;
+    font-size: 24px;
+    text-align: start;
+    color: black;
+  }
+  
+  html { scrollbar-gutter: stable; }
+
+/* table wrapper (scrollable) */
+.pmc-table-wrap{
+  margin-left: 30px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
+
+  /* NEW: constrain height so vertical scrollbar can appear */
+  max-height: calc(100vh - 280px); /* tweak 280px if your header/controls change */
+  overflow-y: auto;                 /* vertical scroll when many rows */
+  overflow-x: auto;                 /* horizontal scroll when many columns */
+}
+
+  
+  /* table */
+  .pmc-table{
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1100px;            /* ensure layout like screenshot */
+  }
+  .pmc-table th, .pmc-table td{
+    border: 1px solid var(--table-line);
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 16.5px;
+    color: black;
+    background: #fff;
+  }
+  
+  /* sticky header (optional but nice) */
+  .pmc-table thead th{
+    position: sticky;
+    top: 0;
+    background: #f6f8ff;
+    z-index: 2;
+  }
+  
+  /* sticky first column for checkboxes */
+  .pmc-sticky{
+    position: sticky;
+    left: 0;
+    background: #f6f8ff;
+    z-index: 3;
+    width: 44px;
+    text-align: center;
+  }
+  
+  /* utility cells */
+  .pmc-mono{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pmc-ellipsis{
+    max-width: 240px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  
+  .pmc-empty{
+    text-align: center;
+    padding: 20px 0;
+    color: #59627a;
+  }

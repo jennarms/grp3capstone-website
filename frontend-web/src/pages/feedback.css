@@ -1,0 +1,143 @@
+:root{
+    --nav-h: 100px;
+    --stroke: #d6deef;
+    --ink: #0b1a78;
+    --rule: #b9c6e6;
+    --panel: #ffffff;
+    --card-shadow: 0 6px 18px rgba(0,0,0,.08);
+    --green: #1bc882;
+    --muted: #5a6276;
+  }
+  
+  /* page scaffold (same spacing as other screens) */
+  .fb-main{
+    margin-left: -40px;
+    margin-top: var(--nav-h);
+    padding: 20px 24px 28px;
+    box-sizing: border-box;
+  }
+  
+  /* header */
+  .fb-header-row{
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+  }
+  .fb-title{
+    font-size: 32px;
+    font-weight: 800;
+  }
+  .fb-title-icon{ margin-right: 6px; }
+  .fb-settings{
+    justify-self: end;
+    color: #0b1a78;
+    font-weight: 800;
+    border: 1px solid var(--stroke);
+    padding: 8px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+  }
+  
+  /* controls */
+  .fb-controls{
+    margin: 8px 0 14px;
+  }
+  .fb-filter{
+    height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--stroke);
+    border-radius: 8px;
+    background: #fff;
+  }
+  
+  /* list area */
+  .fb-list{
+    display: grid;
+    gap: 14px;
+  }
+  
+  /* card */
+  .fb-card{
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    padding: 14px 16px 16px;
+  }
+  
+  /* actions (reply/delete) in top-right */
+  .fb-actions{
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+  .icon-btn{
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    border-radius: 8px;
+    border: 1px solid var(--stroke);
+    background: #fff;
+    cursor: pointer;
+  }
+  .icon-btn svg{ width: 18px; height: 18px; fill: #2e3854; }
+  .icon-btn.danger svg{ fill: #c23b3b; }
+  
+  /* rows and labels */
+  .fb-row{ margin: 6px 0; }
+  .fb-label{
+    font-weight: 800;
+    margin-right: 6px;
+  }
+  .fb-value{ color: #2e3854; }
+  
+  /* blue rule under date */
+  .fb-rule{
+    border: 0;
+    border-top: 3px solid #b7c9ef;
+    margin: 8px 0 12px;
+  }
+  
+  /* grid: fields + photo */
+  .fb-grid{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+    align-items: start;
+  }
+  .fb-fields{ min-width: 0; } /* allow ellipsis wrapping */
+  
+  /* photo */
+  .fb-photo{
+    width: 280px;
+    height: 170px;
+    object-fit: cover;
+    border: 3px solid var(--green);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.12);
+  }
+  
+  /* stars */
+  .fb-stars{ display: inline-flex; gap: 2px; vertical-align: middle; }
+  .fb-star{ width: 18px; height: 18px; fill: #d5dbea; }
+  .fb-star.filled{ fill: #ffd84d; }
+  
+  /* admin response box */
+  .fb-admin-reply{
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: inset 0 0 0 2px #e9eefb;
+  }
+  .fb-admin-text{ color: #2e3854; }
+  
+  /* responsive */
+  @media (max-width: 960px){
+    .fb-grid{ grid-template-columns: 1fr; }
+    .fb-photo{ width: 100%; height: 200px; }
+  }
