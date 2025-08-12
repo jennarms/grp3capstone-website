@@ -114,11 +114,7 @@ export function Broadcast() {
     <>
       <Navbar />
       <div className="main-content">
-        <div className="header-row">
-          <h1 className="page-title">Broadcast Channel</h1>
-          <HeaderButton />
-        </div>
-
+          <HeaderButton />  
         {/* Tabs */}
         <div className="bc-tabs center-row">
           <button
@@ -133,6 +129,11 @@ export function Broadcast() {
           >
             Admins
           </button>
+        </div>
+
+        <div className="header-row">
+          <h1 className="page-title">Broadcast Channel</h1>
+          <HeaderButton />
         </div>
 
         <hr className="bc-title-rule" />
@@ -154,22 +155,23 @@ export function Broadcast() {
         </div>
 
         {/* Composer with icon INSIDE the field */}
-        <div className="bc-composer">
-  <textarea
-    className="bc-input"
-    placeholder="Type a message..."
-    value={draft}
-    onChange={(e) => setDraft(e.target.value)}
-    onKeyDown={handleEnter}
-  />
-  <button className="bc-send" onClick={sendMessage} aria-label="Send">
+        <div className="bc-composer" style={{ position: "relative" }}>
+          <textarea
+            className="bc-input"
+            placeholder="Type a message..."
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleEnter}
+            style={{ paddingRight: 48 }}        // room for the icon
+          />
+            <button className="bc-send" onClick={sendMessage} aria-label="Send">
     <img
-      className="bc-send-icon"
-      src="https://unpkg.com/heroicons@2.1.5/24/outline/paper-airplane.svg"
+      src="https://cdn-icons-png.flaticon.com/512/126/126475.png"
       alt="Send"
+      className="bc-send-icon"
     />
   </button>
-</div>
+        </div>
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 
 export function Login() {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showResetModal, setShowResetModal] = useState(false);
     const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -15,13 +15,13 @@ export function Login() {
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      console.log('Logging in with:', { email, password });
+      console.log('Logging in with:', { username, password });
     
       // Simulated successful login
-      if (email === 'mainadmin1234' && password === 'metrolayagadmin!') {
+      if (username === 'mainadmin1234' && password === 'metrolayagadmin!') {
         navigate('/dashboard');
       } else {
-        alert('Invalid email or password');
+        alert('Invalid username or password');
       }
     };
   
@@ -37,12 +37,12 @@ export function Login() {
           
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="username">Username</label>
               <input
                 type="text"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="form-input"
               />
             </div>
