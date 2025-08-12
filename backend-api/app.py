@@ -1,12 +1,10 @@
-from flask import Flask, jsonify
-from flask_cors import CORS  # 🔁 Import CORS
+from app import create_app
 
-app = Flask(__name__)
-CORS(app)  # 🔁 Enable CORS so React can call Flask
+app = create_app()
 
-@app.route('/api/hello')
-def hello():
-    return jsonify(message='Hello from Flask!')
+@app.route('/')
+def home():
+    return "Backend is running!"
 
 if __name__ == '__main__':
     app.run(debug=True)

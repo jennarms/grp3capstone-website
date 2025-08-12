@@ -23,7 +23,7 @@ export function Navbar() {
         <Link to="/operations" className="sidebar-link">
           Operations Management
         </Link>
-        <Link to="/passenger" className="sidebar-link">
+        <Link to="/passengers" className="sidebar-link">
           Passenger Management
         </Link>
         <Link to="/feedback" className="sidebar-link">

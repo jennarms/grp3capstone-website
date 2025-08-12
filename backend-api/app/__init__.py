@@ -1,0 +1,47 @@
+from flask import Flask
+from flask_cors import CORS
+from flask_mysqldb import MySQL
+from flask_mail import Mail
+from flask_jwt_extended import JWTManager
+from dotenv import load_dotenv
+import os
+
+# Global extension instances
+mysql = MySQL()
+mail = Mail()
+jwt = JWTManager()
+
+def create_app():
+    app = Flask(__name__)
+    CORS(app)
+
+    # Load environment variables
+    load_dotenv()
+
+    # MySQL Config
+    app.config['MYSQL_HOST'] = os.getenv('DB_HOST')
+    app.config['MYSQL_USER'] = os.getenv('DB_USER')
+    app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD')
+    app.config['MYSQL_DB'] = os.getenv('DB_NAME')
+
+    # Mail Config
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'False').lower() == 'true'
+    app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+
+    # JWT Config
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
+
+    # Initialize extensions
+    mysql.init_app(app)
+    mail.init_app(app)
+    jwt.init_app(app)
+
+    # Register routes
+    from app.routes.main_admin_auth import main_admin_auth
+    app.register_blueprint(main_admin_auth, url_prefix="/main-admin")
+
+    return app
