@@ -1,35 +1,50 @@
 :root{
   --sidebar-w: 300px;
+  --nav-h: 100px;        /* height of your top Navbar */
+  --composer-h: 80px;    /* fixed composer height */
   --navy: #0b1a78;
-  --bubble: #7fa8ef;          /* light bubble */
+  --bubble: #7fa8ef;
   --bubble-border: #1f2b5a;
 }
 
 html, body { overflow-x: hidden; }
 
-/* Page content to the right of your fixed sidebar */
+/* Right-side content area */
 .main-content{
   margin-left: -40px;
-  padding: 24px 24px 80px;
+  margin-top: var(--nav-h);
+  height: calc(100vh - var(--nav-h));
+  display: flex;
+  flex-direction: column;
+  padding: 24px 24px var(--composer-h); /* keep feed above composer */
   box-sizing: border-box;
-  margin-top: 100px;
 }
+
 @media (max-width: 1024px){
   .main-content{ margin-left: 0; }
 }
 
+/* Sticky header block */
+.bc-header{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 5;
+  padding-bottom: 6px;
+}
+
 /* Title + underline */
 .page-title{ 
-  margin-left: 30px;
-  margin-bottom: 0px;
-  font-weight: 800; }
+  margin-left: 3px;
+  margin-bottom: -20px;
+  font-weight: 600;
+}
 
 .bc-title-rule{
-  border: 0;
-  border-top: 1px solid #424862;
-  margin: 8px auto 14px;
-  width: min(980px, 92%);
-  
+  border: none;
+  border-top: 1px solid #000000;
+  margin: 8px 0 10px;
+  width: 100%;
 }
 
 /* Center helper for tabs row */
@@ -43,9 +58,10 @@ html, body { overflow-x: hidden; }
   display: flex;
   gap: 12px;
   margin: 4px 0 6px;
-  justify-content: flex-start; /* Aligns to the left */
+  justify-content: flex-start;
+  margin-top: -40px;
+  margin-bottom: 15px;
 }
-
 .bc-tab{
   border: 2px solid #1f2b5a;
   background: #eef3ff;
@@ -53,7 +69,7 @@ html, body { overflow-x: hidden; }
   border-radius: 999px;
   font-weight: 800;
   cursor: pointer;
-  justify-content: flex-start;
+  width: 250px;
 }
 .bc-tab.active{
   background: #0b1a78;
@@ -61,33 +77,30 @@ html, body { overflow-x: hidden; }
 }
 
 /* ======= FEED ======= */
-/* Center the conversation column */
+/* Only this area scrolls */
+html { scrollbar-gutter: stable; }         /* page-level (newer browsers) */
+
 .bc-feed{
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;      /* keep the column centered on the page */
+  align-items: flex-end;
   gap: 18px;
-  max-height: calc(70vh - 10px);
-  overflow-y: auto;
+  /* reserve space for scrollbar so bubbles don't shift */
+  overflow-y: auto;                        /* or 'scroll' */
+  scrollbar-gutter: stable both-edges;     /* keep width stable */
   padding: 8px 12px;
 }
 
+
 .bc-msg{
   width: 100%;
-  max-width: 920px;         /* conversation column width */
+  max-width: 920px;
   display: flex;
   flex-direction: column;
 }
-
-/* LEFT-ALIGNED for other people */
-.bc-msg.other{
-  align-items: flex-start;
-}
-
-/* RIGHT-ALIGNED for Admin/you */
-.bc-msg.admin{
-  align-items: flex-end;    /* bubble & author move to the right */
-}
+.bc-msg.other{ align-items: flex-start; }
+.bc-msg.admin{ align-items: flex-end; }
 
 /* Author label */
 .bc-author{
@@ -95,18 +108,15 @@ html, body { overflow-x: hidden; }
   color: black;
   margin: 0 8px 6px 8px;
 }
-
-/* Make the author label line up with its bubble edge */
 .bc-msg.admin .bc-author{
-  /* put the label above the bubble, but left aligned to the bubble */
-  align-self: flex-end;            /* same right edge as bubble */
-  max-width: 70%;                  /* match the bubble's max width below */
+  align-self: flex-end;
+  max-width: 70%;
   margin: 0 0 6px 0;
-  padding-left: 18px;              /* same left padding as bubble so it hugs the bubble edge */
+  padding-left: 18px;
   text-align: left;
 }
 
-/* Bubble base */
+/* Bubble */
 .bc-bubble{
   display: inline-block;
   padding: 14px 18px;
@@ -117,27 +127,22 @@ html, body { overflow-x: hidden; }
   word-wrap: break-word;
   max-width: 100%;
 }
-
-/* Other users' bubble */
 .bc-msg.other .bc-bubble{
   background: var(--bubble);
   color: #0c1730;
   border-color: var(--bubble-border);
   max-width: 70%;
 }
-
-/* Admin/you bubble (right) */
 .bc-msg.admin .bc-bubble{
   background: var(--bubble);
   color: #000;
   border-color: #000;
   border-width: 1px;
-  max-width: 70%;       /* keep a pleasant width on large screens */
-  font-size: 15px;      /* fixed typo */
-  font-weight: 700;     /* fixed typo */
+  max-width: 70%;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-/* Reactions row (unchanged) */
 .bc-reactions{
   display: flex;
   flex-wrap: wrap;
@@ -145,28 +150,39 @@ html, body { overflow-x: hidden; }
   margin: 10px 6px 0 6px;
 }
 
+@media (max-width: 768px){
+  .bc-bubble{ max-width: 100%; }
+}
+
 /* ===== COMPOSER ===== */
 .bc-composer {
-  position: fixed;       /* Stay fixed on screen */
+  position: fixed;
   bottom: 0;
-  left: var(--sidebar-w); /* pushes it to the right of the sidebar */
-  width: calc(100% - var(--sidebar-w)); /* fill remaining width */
-  background: white;     /* so it doesn't overlap messages visually */
+  left: var(--sidebar-w);
+  width: 1550px;
+  height: var(--composer-h);
+  background: white;
   padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   z-index: 10;
-  margin-bottom: 25px;
+  margin-left: -300px;
+  margin-bottom: -50px;
 }
-
+@media (max-width: 1024px){
+  .bc-composer{
+    left: 0;
+    width: 100%;
+  }
+}
 
 .bc-input{
   width: 100%;
   min-height: 54px;
   max-height: 160px;
   resize: vertical;
-  border: 1px solid #000000;
+  border: 1px solid #000;
   border-radius: 14px;
   padding: 12px 14px;
   padding-right: 64px;     /* room for the button */
@@ -190,22 +206,9 @@ html, body { overflow-x: hidden; }
   z-index: 3;
 }
 .bc-send-icon{
-  width: 35px;             /* bigger and centered */
+  width: 35px;
   height: 35px;
   display: block;
   object-fit: contain;
 }
 .bc-send:hover{ background: #f4f6fa; }
-
-@media (max-width: 768px){
-  .bc-bubble{ max-width: 100%; }
-  .bc-title-rule{ width: 95%; }
-}
-
-.bc-title-rule {
-  border: none;
-  border-top: 2px solid #1e3b73;
-  margin: 8px 0 10px;
-  width: 100%; /* Full width */
-}
-
