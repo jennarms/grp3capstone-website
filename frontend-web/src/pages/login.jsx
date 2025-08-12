@@ -14,7 +14,7 @@ export function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
-  // Login handler
+  // Login backend
   const handleSubmit = async (e) => {
     e.preventDefault();
 
