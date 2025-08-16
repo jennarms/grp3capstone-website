@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";        // ⬅️ add this
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./feedback.css";
@@ -64,14 +65,31 @@ export function Feedback() {
   const [items, setItems] = useState(SEED);
   const [filter, setFilter] = useState("all");
 
+  // State for delete confirmation modal
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
   const filtered = useMemo(
     () => items.filter((i) => (filter === "all" ? true : i.category === filter)),
     [items, filter]
   );
 
   const onDelete = (id) => {
-    if (!confirm("Delete this feedback?")) return;
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    setPendingDeleteId(id); // Set the id for the feedback to be deleted
+    setConfirmDeleteOpen(true); // Open the confirmation modal
+  };
+
+  const confirmDelete = () => {
+    if (pendingDeleteId != null) {
+      setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId)); // Remove the feedback
+    }
+    setConfirmDeleteOpen(false); // Close the confirmation modal
+    setPendingDeleteId(null); // Reset the pending delete id
+  };
+
+  const cancelDelete = () => {
+    setConfirmDeleteOpen(false); // Close the confirmation modal without deleting
+    setPendingDeleteId(null); // Reset the pending delete id
   };
 
   const onReply = (id) => {
@@ -86,34 +104,39 @@ export function Feedback() {
     <>
       <Navbar />
       <div className="fb-main">
-        <div className="fb-header-row">
-          <div className="fb-title">
-            <span className="fb-title-icon">🗣️⭐</span> Feedback
+        {/* Sticky header + controls */}
+        <div className="fb-sticky">
+          <div className="fb-header-row">
+            <div className="fb-title">Feedback</div>
+            <HeaderButton />
           </div>
 
-          <HeaderButton />
-          <a className="fb-settings" href="#" onClick={(e) => e.preventDefault()}>
-            Settings
-          </a>
+          {/* Filter + Settings on ONE line */}
+          <div className="fb-controls">
+            <select
+              className="fb-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="all">Sort by category</option>
+              <option value="Complaint">Complaint</option>
+              <option value="Compliment">Compliment</option>
+              <option value="Suggestion">Suggestion</option>
+              <option value="Inquiry">Inquiry</option>
+            </select>
+
+            {/* ⬇️ now routes to /feedback/settings */}
+            <Link className="fb-settings" to="/feedbackSettings">
+              Settings
+            </Link>
+          </div>
         </div>
 
-        <div className="fb-controls">
-          <select
-            className="fb-filter"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="all">Sort by category</option>
-            <option value="Complaint">Complaint</option>
-            <option value="Compliment">Compliment</option>
-            <option value="Suggestion">Suggestion</option>
-            <option value="Inquiry">Inquiry</option>
-          </select>
-        </div>
-
+        {/* Scrollable list */}
         <div className="fb-list">
           {filtered.map((f) => (
             <article key={f.id} className="fb-card">
+              {/* actions */}
               <div className="fb-actions">
                 <button
                   className="icon-btn"
@@ -128,7 +151,7 @@ export function Feedback() {
                 <button
                   className="icon-btn danger"
                   title="Delete"
-                  onClick={() => onDelete(f.id)}
+                  onClick={() => onDelete(f.id)} // Open delete confirmation modal
                 >
                   {/* trash */}
                   <svg viewBox="0 0 24 24">
@@ -137,12 +160,14 @@ export function Feedback() {
                 </button>
               </div>
 
+              {/* top fields */}
               <div className="fb-row">
                 <span className="fb-label">Date:</span>
                 <span className="fb-value">{fmtDate(f.date)}</span>
               </div>
               <hr className="fb-rule" />
 
+              {/* details (text only) */}
               <div className="fb-grid">
                 <div className="fb-fields">
                   <div className="fb-row">
@@ -162,12 +187,14 @@ export function Feedback() {
                     <span className="fb-value">{f.message}</span>
                   </div>
                 </div>
-
-                {f.image ? (
-                  <img className="fb-photo" src={f.image} alt="attachment" />
-                ) : null}
               </div>
 
+              {/* photo below the message */}
+              {f.image ? (
+                <img className="fb-photo" src={f.image} alt="attachment" />
+              ) : null}
+
+              {/* admin reply (if any) */}
               {f.adminResponse && (
                 <div className="fb-admin-reply">
                   <b>Admin:</b>{" "}
@@ -178,6 +205,30 @@ export function Feedback() {
           ))}
         </div>
       </div>
+
+      {/* Confirm Delete Modal */}
+      {confirmDeleteOpen && (
+        <div className="modal-overlay" onClick={cancelDelete} aria-hidden="true">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="del-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <span className="modal-title" id="del-title">Delete Feedback</span>
+            </div>
+            <div className="modal-body">
+              Are you sure you want to delete this feedback? This action cannot be undone.
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={cancelDelete}>Cancel</button>
+              <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

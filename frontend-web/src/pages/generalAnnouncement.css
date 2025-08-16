@@ -164,7 +164,7 @@ html, body { overflow-x: hidden; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 30001;
 }
 
 .modal{
@@ -240,3 +240,35 @@ html, body { overflow-x: hidden; }
   box-sizing: border-box;
   background: #fff;
 }
+
+.dark-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  z-index: 1; /* Ensure it stays above most other elements */
+}
+
+.dark-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  z-index: 1000; /* Ensure it stays above the Navbar */
+}
+
+/* Navbar */
+.navbar {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure HeaderButton is also above the dark overlay */
+.header-buttons-fixed {
+  z-index: 100; /* Above Navbar but below the overlay */
+}
+

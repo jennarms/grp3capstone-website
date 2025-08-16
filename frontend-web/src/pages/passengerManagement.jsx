@@ -3,6 +3,7 @@ import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./passengerManagement.css";
 
+// Sample Data
 const SEED_ROWS = [
   {
     user_id: "UID0020489",
@@ -148,6 +149,8 @@ export function Passenger() {
   const [platform, setPlatform] = useState("all");
   const [checked, setChecked] = useState(() => new Set());
 
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false); // State for showing delete confirmation modal
+
   const columns = [
     { key: "select", label: "" },
     { key: "user_id", label: "User ID" },
@@ -172,7 +175,6 @@ export function Passenger() {
     return rows.filter((r) => {
       if (platform !== "all" && r.platform_source !== platform) return false;
       if (!q) return true;
-      // search across all fields
       return Object.values(r).some((v) =>
         String(v ?? "").toLowerCase().includes(q)
       );
@@ -199,12 +201,17 @@ export function Passenger() {
 
   const onDelete = () => {
     if (checked.size === 0) return;
-    const ok = window.confirm(
-      `Delete ${checked.size} selected record${checked.size > 1 ? "s" : ""}?`
-    );
-    if (!ok) return;
-    setRows((prev) => prev.filter((r) => !checked.has(r.user_id)));
-    setChecked(new Set());
+    setShowConfirmDelete(true); // Show confirmation modal when delete is clicked
+  };
+
+  const confirmDelete = () => {
+    setRows((prev) => prev.filter((r) => !checked.has(r.user_id))); // Delete selected rows
+    setChecked(new Set()); // Clear selected checkboxes
+    setShowConfirmDelete(false); // Close the confirmation modal
+  };
+
+  const cancelDelete = () => {
+    setShowConfirmDelete(false); // Close the confirmation modal without deleting
   };
 
   const allVisibleChecked =
@@ -322,6 +329,20 @@ export function Passenger() {
           </table>
         </div>
       </div>
+
+      {/* Confirmation Modal for Delete */}
+      {showConfirmDelete && (
+        <div className="confirm-overlay">
+          <div className="confirm-box">
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete {checked.size} selected record{checked.size > 1 ? "s" : ""}?</p>
+            <div className="confirm-buttons">
+              <button className="cancel-btn" onClick={cancelDelete}>Cancel</button>
+              <button className="yes-btn" onClick={confirmDelete}>Yes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
