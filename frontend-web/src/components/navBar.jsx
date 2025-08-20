@@ -31,7 +31,7 @@ export function Navbar() {
         <Link to="/faqs" className="sidebar-link">
           FAQs Management
         </Link>
-        <Link to="/customization" className="sidebar-link">
+        <Link to="/UICustomization" className="sidebar-link">
           UI Customization
         </Link>
         <Link to="/reports" className="sidebar-link">
