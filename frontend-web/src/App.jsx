@@ -9,7 +9,8 @@ import { Login } from './pages/login'
 import { Passenger } from './pages/passengerManagement'
 import { FeedbackSettings } from './pages/feedbackSettings'
 import { AccountSettings } from './pages/accountSettings'
-
+import { Report } from './pages/reportGeneration'
+import { UI } from './pages/uiCustomization'
 
 
 
@@ -26,6 +27,8 @@ function App() {
         <Route path='/feedback' element={<Feedback/>}/>
         <Route path='/feedbackSettings' element={<FeedbackSettings/>}/>
         <Route path='/accountSettings' element={<AccountSettings/>}/>
+        <Route path='/reports' element={<Report/>}/>
+        <Route path='/UICustomization' element ={<UI/>}/>
       </Routes>
     </Router>
   )

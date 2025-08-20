@@ -1,0 +1,238 @@
+:root {
+    --nav-h: 72px;        /* set to the real navbar height */
+    --sidebar-w: 260px;   /* set to the real sidebar width */
+  }
+  
+  /* ================= PAGE-SCOPED SCROLLER ================= */
+  .reports-page{
+    position: fixed;
+    top: var(--nav-h);
+    left: var(--sidebar-w);
+    right: 0;
+    bottom: 0;
+  
+    overflow-y: auto;                 /* page-only vertical scroll */
+    overflow-x: hidden;
+    scrollbar-gutter: stable;         /* keeps layout from shifting */
+  
+    padding: 0;
+    box-sizing: border-box;
+  
+    /* Firefox scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #93ace6 #eef3ff;
+  }
+  /* WebKit/Chromium scrollbar styling for the page scroller */
+  .reports-page::-webkit-scrollbar{ width: 12px; }
+  .reports-page::-webkit-scrollbar-track{
+    background: #eef3ff;
+    border-left: 1px solid #dfe6f7;
+  }
+  .reports-page::-webkit-scrollbar-thumb{
+    background: #b7c9ef;
+    border-radius: 8px;
+    border: 3px solid #eef3ff;
+  }
+  .reports-page::-webkit-scrollbar-thumb:hover{ background: #93ace6; }
+  
+  /* Inner content wrapper — padding-right keeps clear of fixed header buttons */
+  .reports-main{
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 160px 40px 24px;
+    box-sizing: border-box;
+  }
+  
+  /* ================= HEADER ================= */
+  .reports-header-row{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .reports-title{
+    margin: 0 0 2px 0;
+    font-size: 45px;
+    font-weight: 800;
+    color: #000;
+    text-align: start;
+  }
+  .reports-subtitle{
+    color: #000;
+    font-weight: 700;
+    text-align: start;
+    font-size: 25px;
+  }
+  
+  /* ================= CONTROLS (DATES ONLY) ================= */
+  .reports-controls{
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin: 10px 0 10px;
+  }
+  .rg-dates{
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 600;
+    font-size: 17px;
+    color: #000;
+  }
+  .rg-dates input[type="date"]{
+    height: 40px;
+    padding: 6px 40px;
+    border: 1px solid #9da9c2;
+    border-radius: 10px;
+    background: #fff;
+    width: 200px;
+    color: #000;
+  }
+  
+  /* ================= GENERATE BUTTON ON TABLE HEADER ================= */
+  .rg-table-head{
+    display: grid;
+    grid-template-columns: 1fr auto; /* label left, button right */
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 8px;
+  }
+  .rg-range-label{
+    font-weight: 700;
+    font-size: 21px;
+    text-align: start;
+  }
+  .rg-btn{
+    height: 36px;
+    padding: 1px 16px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    background: #0b1a78;
+    color: #fff;
+    cursor: pointer;
+    font-size: 20px;
+  }
+  .rg-btn-generate{
+    min-width: 220px;
+  }
+  
+  /* ================= SCROLLABLE TABLE ================= */
+  .rg-table-wrap{
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: auto;                  /* its own scrollbar if needed */
+    max-height: 420px;
+    -webkit-overflow-scrolling: touch;
+  
+    /* Firefox scrollbar for the table area */
+    scrollbar-width: thin;
+    scrollbar-color: #a8bce9 #f6f8ff;
+  }
+  /* WebKit/Chromium scrollbar styling for the table scroller */
+  .rg-table-wrap::-webkit-scrollbar{ height: 10px; width: 12px; }
+  .rg-table-wrap::-webkit-scrollbar-track{ background: #f6f8ff; border-radius: 8px; }
+  .rg-table-wrap::-webkit-scrollbar-thumb{ background: #a8bce9; border-radius: 8px; }
+  .rg-table-wrap::-webkit-scrollbar-thumb:hover{ background: #8ea9e4; }
+  
+  .rg-table{
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 940px;               /* keep columns readable */
+  }
+  .rg-table th,
+  .rg-table td{
+    border: 1px solid #9da9c2;
+    padding: 6px 8px;
+    text-align: left;
+    background: #fff;
+  }
+  .rg-table thead th{
+    position: sticky;
+    top: 0;
+    background: #f3f6ff;
+    z-index: 1;
+  }
+  
+  /* ================= CHARTS ================= */
+  .rg-charts{
+    display: grid;
+    grid-template-columns: 1fr 1fr;  /* evenly share remaining space */
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .chart-card{
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+  }
+  .chart-title{
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #000;
+  }
+  .chart-body{ height: 270px; }
+  .chart-span-2{ grid-column: span 2; }
+  
+  /* ================= EXPORT BUTTONS (centered) ================= */
+  .rg-export-row{
+    display: flex;
+    gap: 14px;
+    margin-top: 18px;
+    justify-content: center;        /* centered as requested */
+  }
+  .rg-export{
+    height: 36px;
+    width: 240px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    background: #0b1a78;
+    color: #fff;
+    cursor: pointer;
+    font-size: 18px;
+  }
+  
+  /* ================= TOAST ================= */
+  .rg-toast{
+    position: fixed;
+    top: calc(var(--nav-h) + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 340px;
+    max-width: 520px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.16);
+    z-index: 9999;
+    color: #1a1a1a;
+  }
+  .rg-toast.success{
+    background: #ffd44d;
+  }
+  .rg-toast.error{
+    background: #ffb3b3;
+  }
+  .rg-toast-title{
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .rg-toast-msg{
+    font-weight: 600;
+  }
+  
+  /* ================= RESPONSIVE ================= */
+  @media (max-width: 1200px){
+    .reports-main{ padding-right: 120px; }
+  }
+  @media (max-width: 1024px){
+    .reports-page{ left: 0; }
+    .reports-main{ padding: 0 24px 40px; }
+    .rg-charts{ grid-template-columns: 1fr; }
+    .chart-span-2{ grid-column: span 1; }
+  }

@@ -1,0 +1,142 @@
+/* Page content container (keeps clear of your fixed header + sidebar) */
+.ui-main{
+    margin-left: 260px;         /* width of your left sidebar */
+    margin-top: 100px;          /* height of your top navbar */
+    padding: 0 32px 60px;
+    box-sizing: border-box;
+  }
+  
+  .ui-title{
+    font-size: 42px;
+    font-weight: 800;
+    margin: 0 0 16px 0;
+  }
+  
+  /* Accordion shell */
+  .ui-accordion{
+    display: grid;
+    gap: 12px;
+  }
+  
+  /* Item */
+  .ui-acc-item{
+    background: #f4f6fa;
+    border: 2px solid #1a1a1a;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  /* Header button */
+  .ui-acc-head{
+    width: 100%;
+    background: #eceff4;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 20px;
+  }
+  
+  .ui-acc-left{
+    display: inline-flex;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .ui-acc-icon{
+    display: inline-flex;
+    width: 26px; height: 26px;
+    align-items: center; justify-content: center;
+  }
+  
+  /* caret */
+  .ui-acc-caret{
+    width: 12px; height: 12px;
+    border-right: 3px solid #222;
+    border-bottom: 3px solid #222;
+    transform: rotate(-45deg);
+    transition: transform .2s ease;
+  }
+  .ui-acc-item.open .ui-acc-caret{ transform: rotate(45deg); }
+  
+  /* Collapsible panel with smooth height */
+  .ui-acc-panel{
+    padding: 0 16px;
+    max-height: 0;
+    overflow: hidden;
+    background: #fff;
+    transition: max-height .28s ease;
+    box-shadow: inset 0 1px 0 #d8e0ef;
+  }
+  .ui-acc-item.open .ui-acc-panel{ max-height: 600px; padding: 16px; }
+  
+  /* Dropzone for the Logo section */
+  .ui-dropzone{
+    display: block;
+    width: 100%;
+    min-height: 170px;
+    border: 3px dashed #9aa8c6;
+    border-radius: 10px;
+    background: repeating-linear-gradient(
+        45deg, rgba(0,0,0,.02) 0 6px, rgba(0,0,0,0) 6px 12px);
+    position: relative;
+    cursor: pointer;
+  }
+  .ui-drop-input{ display: none; }
+  
+  .ui-drop-content{
+    position: absolute; inset: 0;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 6px;
+    color: #666;
+    text-align: center;
+  }
+  .ui-drop-arrow{ font-size: 42px; line-height: 1; }
+  .ui-drop-title{ font-weight: 800; font-size: 18px; color: #333; }
+  .ui-drop-note{ font-size: 14px; opacity: .8; }
+  
+  /* Simple form field styles */
+  .ui-field-row{
+    display: grid;
+    gap: 6px;
+    max-width: 520px;
+  }
+  .ui-field-label{ font-weight: 700; }
+  .ui-input{
+    height: 42px;
+    border: 1px solid #cdd6ea;
+    border-radius: 10px;
+    padding: 0 12px;
+  }
+  
+  /* Color swatches */
+  .ui-swatches{
+    display: flex;
+    gap: 10px;
+  }
+  .ui-swatch{
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid #fff; box-shadow: 0 0 0 2px #cfd8ea;
+    cursor: pointer;
+  }
+  .ui-swatch input{ display: none; }
+  
+  /* Page actions */
+  .ui-actions{
+    margin-top: 24px;
+    display: flex;
+    gap: 14px;
+    justify-content: flex-end;
+  }
+  .ui-btn{
+    height: 44px; padding: 0 18px;
+    border: none; border-radius: 10px;
+    font-weight: 800; cursor: pointer;
+  }
+  .ui-btn.primary{ background:#0b1a78; color:#fff; }
+  .ui-btn.secondary{ background:#fff; border:2px solid #1a1a1a; }
