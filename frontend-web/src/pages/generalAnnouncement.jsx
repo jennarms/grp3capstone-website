@@ -92,12 +92,13 @@ export function Announcement() {
 
   return (
     <>
-      <Navbar />
+    <Navbar />
+    <HeaderButton />
+      {confirmOpen && <div className="dark-overlay"></div>}
 
       <div className="main-content">
         <div className="header-row">
-        <h1 className="page-title">General Announcement</h1>
-          <HeaderButton />
+          <h1 className="page-title">General Announcement</h1>
         </div>
 
         <div className="general-announcement">
@@ -188,5 +189,6 @@ export function Announcement() {
         </div>
       )}
     </>
+
   );
 }

@@ -7,6 +7,8 @@ import { Feedback } from './pages/feedback'
 import { Announcement } from './pages/generalAnnouncement'
 import { Login } from './pages/login'
 import { Passenger } from './pages/passengerManagement'
+import { FeedbackSettings } from './pages/feedbackSettings'
+import { AccountSettings } from './pages/accountSettings'
 
 
 
@@ -22,6 +24,8 @@ function App() {
         <Route path='/broadcast' element={<Broadcast/>}/>
         <Route path='/passenger' element={<Passenger/>}/>
         <Route path='/feedback' element={<Feedback/>}/>
+        <Route path='/feedbackSettings' element={<FeedbackSettings/>}/>
+        <Route path='/accountSettings' element={<AccountSettings/>}/>
       </Routes>
     </Router>
   )

@@ -9,14 +9,20 @@ export function FAQs() {
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [faqToEdit, setFaqToEdit] = useState(null);
   const [editQuestion, setEditQuestion] = useState('');
   const [editAnswer, setEditAnswer] = useState('');
   const [showEditConfirm, setShowEditConfirm] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [faqToDelete, setFaqToDelete] = useState(null);
+
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // (You had this, but it's not needed for the darken behavior)
+  const [modalVisible, setModalVisible] = useState(null); // 'edit' | 'delete' | null
 
   const initialFaqs = [
     { id: 'F001', adminId: 'A001', question: 'Question 1..', answer: 'Answer to question 1' },
@@ -53,7 +59,7 @@ export function FAQs() {
   return (
     <>
       <Navbar />
-      <HeaderButton/>
+      <HeaderButton />
       <div className="faqs-top-header">
         <h1>FAQs Management</h1>
       </div>
@@ -110,6 +116,7 @@ export function FAQs() {
                           setEditQuestion(faq.question);
                           setEditAnswer(faq.answer);
                           setEditModalVisible(true);
+                          setModalVisible('edit');
                         }}
                       >Edit</button>
                       <button
@@ -117,6 +124,7 @@ export function FAQs() {
                         onClick={() => {
                           setFaqToDelete(faq);
                           setShowDeleteConfirm(true);
+                          setModalVisible('delete');
                         }}
                       >Delete</button>
                     </div>
@@ -135,13 +143,19 @@ export function FAQs() {
         </div>
       </div>
 
-      {/* Add FAQ Modal */}
+      {/* Add FAQ Modal — use the same dark overlay */}
       {showModal && (
-        <div className="modal-overlay">
+        <div className="confirm-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2>Add FAQ</h2>
-              <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+              <button
+                className="close-btn"
+                onClick={() => {
+                  setShowModal(false);
+                  setShowConfirm(false);
+                }}
+              >×</button>
             </div>
             <div className="modal-body">
               <div className="modal-field">
@@ -152,12 +166,23 @@ export function FAQs() {
                 <span className="modal-label">Admin ID:</span>
                 <span className="modal-value">A001</span>
               </div>
-              <input type="text" placeholder="Question" value={newQuestion} onChange={(e) => setNewQuestion(e.target.value)} />
-              <input type="text" placeholder="Answer" value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} />
+              <input
+                type="text"
+                placeholder="Question"
+                value={newQuestion}
+                onChange={(e) => setNewQuestion(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Answer"
+                value={newAnswer}
+                onChange={(e) => setNewAnswer(e.target.value)}
+              />
             </div>
             <div className="save-btn-container">
               <button className="save-btn" onClick={() => setShowConfirm(true)}>Save</button>
             </div>
+
             {showConfirm && (
               <div className="confirm-overlay">
                 <div className="confirm-box">
@@ -165,10 +190,13 @@ export function FAQs() {
                   <p>Are you sure you want to add?</p>
                   <div className="confirm-buttons">
                     <button className="cancel-btn" onClick={() => setShowConfirm(false)}>Cancel</button>
-                    <button className="yes-btn" onClick={() => {
-                      handleSave();
-                      setShowConfirm(false);
-                    }}>Yes</button>
+                    <button
+                      className="yes-btn"
+                      onClick={() => {
+                        handleSave();
+                        setShowConfirm(false);
+                      }}
+                    >Yes</button>
                   </div>
                 </div>
               </div>
@@ -177,13 +205,19 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Edit FAQ Modal */}
+      {/* Edit FAQ Modal — now also uses confirm-overlay to darken everything */}
       {editModalVisible && faqToEdit && (
-        <div className="modal-overlay">
+        <div className="confirm-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2>Edit FAQ</h2>
-              <button className="close-btn" onClick={() => setEditModalVisible(false)}>×</button>
+              <button
+                className="close-btn"
+                onClick={() => {
+                  setEditModalVisible(false);
+                  setModalVisible(null);
+                }}
+              >×</button>
             </div>
             <div className="modal-body">
               <div className="modal-field">
@@ -194,8 +228,18 @@ export function FAQs() {
                 <span className="modal-label">Admin ID:</span>
                 <span className="modal-value">{faqToEdit.adminId}</span>
               </div>
-              <input type="text" placeholder="Question" value={editQuestion} onChange={(e) => setEditQuestion(e.target.value)} />
-              <input type="text" placeholder="Answer" value={editAnswer} onChange={(e) => setEditAnswer(e.target.value)} />
+              <input
+                type="text"
+                placeholder="Question"
+                value={editQuestion}
+                onChange={(e) => setEditQuestion(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Answer"
+                value={editAnswer}
+                onChange={(e) => setEditAnswer(e.target.value)}
+              />
             </div>
             <div className="save-btn-container">
               <button className="save-btn" onClick={() => setShowEditConfirm(true)}>Save</button>
@@ -223,6 +267,7 @@ export function FAQs() {
                   setFaqsList(updatedFaqs);
                   setEditModalVisible(false);
                   setShowEditConfirm(false);
+                  setModalVisible(null);
                 }}
               >Yes</button>
             </div>
@@ -230,7 +275,7 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Confirm Delete */}
+      {/* Confirm Delete (unchanged) */}
       {showDeleteConfirm && faqToDelete && (
         <div className="confirm-overlay">
           <div className="confirm-box">
@@ -245,14 +290,13 @@ export function FAQs() {
                   setFaqsList(updatedFaqs);
                   setShowDeleteConfirm(false);
                   setFaqToDelete(null);
+                  setModalVisible(null);
                 }}
               >Yes</button>
             </div>
           </div>
         </div>
       )}
-      
     </>
   );
-  
 }

@@ -11,44 +11,62 @@
   
   /* page scaffold (same spacing as other screens) */
   .fb-main{
-    margin-left: -40px;
-    margin-top: var(--nav-h);
+    margin-left: -5px;
+    margin-top: var(--nav-h -40px);
     padding: 20px 24px 28px;
     box-sizing: border-box;
+    margin-top: 290px;
+
   }
   
   /* header */
   .fb-header-row{
     display: grid;
     grid-template-columns: 1fr auto auto;
-    align-items: center;
     gap: 12px;
+    margin-bottom: -50px;
   }
   .fb-title{
-    font-size: 32px;
-    font-weight: 800;
+    font-size: 55px;
+    font-weight: 700;
+    color: black;
+    margin-bottom: 50px;
+ 
   }
-  .fb-title-icon{ margin-right: 6px; }
+  
   .fb-settings{
-    justify-self: end;
-    color: #0b1a78;
-    font-weight: 800;
-    border: 1px solid var(--stroke);
-    padding: 8px 12px;
-    border-radius: 10px;
-    text-decoration: none;
+    /* size */
+    display: inline-flex;
+    justify-content: center;
+    height: 35px;             /* taller */
+    min-width: 300px;         /* wider baseline */         /* extra width without hard-coding */
+    font-weight: 700;
+    font-size: 20px;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    box-sizing: border-box;
+    margin-left: 870px;
   }
   
   /* controls */
   .fb-controls{
-    margin: 8px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
   }
+  
   .fb-filter{
     height: 36px;
     padding: 6px 12px;
     border: 1px solid var(--stroke);
-    border-radius: 8px;
+    border-radius: 12px;
+    border-color: black;
     background: #fff;
+  
+    /* wider size */
+    width: 360px;        /* <- adjust to taste (e.g., 320–420px) */
+    min-width: 320px;    /* keeps it from collapsing */
   }
   
   /* list area */
@@ -65,6 +83,8 @@
     border-radius: 12px;
     box-shadow: var(--card-shadow);
     padding: 14px 16px 16px;
+    width: 1500px;
+
   }
   
   /* actions (reply/delete) in top-right */
@@ -76,10 +96,8 @@
     gap: 10px;
   }
   .icon-btn{
-    width: 34px; height: 34px;
-    display: grid; place-items: center;
+    width: 40px; height: 40px;
     border-radius: 8px;
-    border: 1px solid var(--stroke);
     background: #fff;
     cursor: pointer;
   }
@@ -89,10 +107,12 @@
   /* rows and labels */
   .fb-row{ margin: 6px 0; }
   .fb-label{
-    font-weight: 800;
-    margin-right: 6px;
+    font-weight: 900;
+    font-size: 20PX;
+    text-align: right;
   }
-  .fb-value{ color: #2e3854; }
+  .fb-value{ color: #000000;
+font-size: 18px; }
   
   /* blue rule under date */
   .fb-rule{
@@ -112,12 +132,13 @@
   
   /* photo */
   .fb-photo{
-    width: 280px;
-    height: 170px;
+    width: 400px;
+    height: 250px;
     object-fit: cover;
     border: 3px solid var(--green);
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0,0,0,.12);
+    object-position: center; 
   }
   
   /* stars */
@@ -141,3 +162,23 @@
     .fb-grid{ grid-template-columns: 1fr; }
     .fb-photo{ width: 100%; height: 200px; }
   }
+
+  .fb-main,
+.fb-title,
+.fb-controls,
+.fb-section-label,
+.fb-row,
+.fb-admin-reply {
+  text-align: left;
+}
+
+.fb-sticky{
+    position: sticky;
+    top: var(--nav-h);   /* sits just under your fixed Navbar */
+    background: #fff;
+    z-index: 6;
+    padding-top: 4px;
+    padding-bottom: 8px;
+  } 
+
+  

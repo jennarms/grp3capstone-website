@@ -1,0 +1,247 @@
+:root{
+    --nav-h: 100px;
+    --ink: #0b1a78;
+    --rule: #0b1a78;
+    --stroke: #cfd8ea;
+    --panel: #ffffff;
+  
+    /* how much the main content should “hug” the sidebar */
+    --content-left-offset: -40px;   /* tweak to taste; 0 on mobile */
+  }
+  
+  /* Page scaffold (left-aligned, tucked beside the sidebar) */
+  .fs-main{
+    margin-left:-320px;
+    margin-bottom: 200px;
+    padding: 20px 24px 32px;
+    box-sizing: border-box;
+    max-width: 900px;
+    width: 100%;
+  }
+  
+  /* Header row with action button on the right */
+  .fs-header-row{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 12px;
+  }
+  
+  /* Title + icon */
+  .fs-title-wrap{
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .fs-title-icon{
+    width: 34px; height: 34px;
+    fill: var(--ink);
+    transform: translateY(1px);
+  }
+  .fs-title{
+    margin: 0;
+    font-size: 44px;
+    font-weight: 750;
+    color: #000;
+  }
+  
+  /* Short underline under title (left aligned) */
+  .fs-title-rule{
+    border: none;
+    border-top: 2px solid var(--rule);
+    width: 620px;
+    margin: 12px 0 18px;
+    color: #02106E;
+
+  }
+  
+  /* Section label */
+  .fs-h2{
+    margin: 6px 0 16px;
+    font-size: 35px;
+    font-weight: 780;
+    color: #000;
+    text-align: start;
+  }
+  
+  /* Generic row spacing; force block so rows don't sit on the same line */
+  .fs-row{
+    margin: 14px 0;
+    display: block;
+    margin-bottom: 50px;
+  }
+  
+  /* Labels */
+  .fs-label{
+    display: block;
+    font-weight: 500;
+    font-size: 23px;
+    color: #000;
+    margin-bottom: 6px;
+    text-align: start;
+  }
+  
+  /* Status row pinned left */
+  .fs-status{
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  .fs-status .fs-label{
+    margin: 0;
+    text-align: start;
+  }
+  
+  /* Square checkbox with a ✓ when checked */
+  .fs-check{
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #1f2b5a;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    outline: none;
+  }
+  .fs-check:checked::after{
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 1px;
+    width: 6px;
+    height: 12px;
+    border: solid #1f2b5a;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+  .fs-check:focus-visible{
+    box-shadow: 0 0 0 3px rgba(11,26,120,.25);
+    border-color: #0b1a78;
+  }
+  
+  /* Textarea wrapper to get rounded outer border like mock */
+  .fs-textarea-shell{
+    border: 1px solid #000000;
+    border-radius: 12px;
+    padding: 10px;
+    margin-left: 30px;
+    background: #fff;
+    width: 1460px;
+  }
+  .fs-textarea{
+    font: inherit;
+    font-size: 18px;
+    font-weight: 450;
+    color: #000000;
+    line-height: 1.4;
+    width: 1000px;
+  }
+  .fs-textarea[readonly]{
+    background: transparent;
+    color: #2e3854;
+  }
+  
+  /* Actions row */
+  .fs-actions{
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    justify-content: flex-start;
+  }
+  .fs-btn{
+    height: 40px;
+    width: 280px;
+    padding: 0 18px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    font-size: 22px;
+    cursor: pointer;
+    margin-left: 30px;
+    margin-top: -30px;
+  }
+  .fs-btn-dark{
+    background: #0b1a78;
+    color: #fff;
+  }
+  .fs-disabled{
+    opacity: .55;
+    cursor: not-allowed;
+  }
+  
+  /* Responsive: remove the negative offset on smaller screens */
+  @media (max-width: 1024px){
+    .fs-main{ margin-left: 0; max-width: 100%; }
+  }
+  @media (max-width: 960px){
+    .fs-title{ font-size: 36px; }
+    .fs-title-rule{ width: 70%; }
+    .fs-textarea-shell{ max-width: 100%; }
+  }
+
+  :root { --content-left-offset: -00px; }
+
+  .fs-textarea-shell{
+    /* keep your width as-is; just let the textarea use all of it */
+    display: block;
+    padding: 0;              /* remove inner gap so the textarea can own the padding */
+    box-sizing: border-box;
+  }
+  
+  .fs-textarea{
+    display: block;
+    width: 100%;             /* occupy the full shell width */
+    min-width: 100%;         /* prevent horizontal shrinking after resize */
+    height: 100%;
+    min-height: 160px;       /* keep your preferred height */
+    padding: 12px 16px;      /* put the padding on the textarea instead */
+    border: 0;               /* use the shell's border only */
+    outline: none;
+    resize: vertical;        /* only vertical resize */
+    box-sizing: border-box;
+  }
+
+  .navbar {
+    z-index: 1000;
+  }
+
+  .dark-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    z-index: 1001; /* Ensure it stays above the Navbar */
+  }
+  
+  /* Navbar */
+  .navbar {
+    position: relative;
+    z-index: 1; /* Lower than dark overlay */
+  }
+  
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000; /* High enough to stay on top of other elements */
+  }
+  
+  .modal {
+    width: 560px;
+    height: 250px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
+    z-index: 10001; /* Ensure modal is above the dark overlay */
+  }
