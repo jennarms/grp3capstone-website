@@ -1,20 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Navbar } from "../components/navBar";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
+import { Navbar } from "../components/navBar";
 import "./reportGeneration.css";
 
 import {
-  ResponsiveContainer,
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 
 /* --------- Seed data (can be swapped with real API later) --------- */
@@ -42,7 +42,7 @@ const fmt = (d) =>
 const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF"];
 
 /* -------- Toast component (non-intrusive) -------- */
-function Toast({ open, title, message, tone = "success", onClose }) {
+function Toast({ open, title, message, tone = "success" }) {
   if (!open) return null;
   return (
     <div className={`rg-toast ${tone}`} role="status" aria-live="polite">
@@ -51,6 +51,7 @@ function Toast({ open, title, message, tone = "success", onClose }) {
     </div>
   );
 }
+
 
 export function Report() {
   /* Dates only affect labels in this demo dataset (no per-day rows here) */
