@@ -14,17 +14,13 @@ export function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
-  // Login backend
+  // Handle login
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!username || !password) {
-      alert('Please enter username and password');
-      return;
-    }
+    if (!username || !password) return alert('Please enter username and password');
 
     try {
-      const res = await fetch('http://localhost:5000/main-admin/login', {
+      const res = await fetch('http://localhost:5000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -33,24 +29,23 @@ export function Login() {
 
       if (res.ok) {
         alert(data.message || 'Login successful!');
-        navigate('/dashboard'); // adjust route as needed
+        // Redirect based on role
+        if (data.role === 'main-admin') navigate('/announcement');
+        else if (data.role === 'station-admin') navigate('/dashboard');
       } else {
         alert(data.error || 'Invalid username or password');
       }
-    } catch (error) {
-      alert('Login failed: ' + error.message);
+    } catch (err) {
+      alert('Login failed: ' + err.message);
     }
   };
 
   // Send OTP for forgot password
   const sendOtp = async () => {
-    if (!username) {
-      alert('Please enter your username first');
-      return;
-    }
+    if (!username) return alert('Please enter your username first');
 
     try {
-      const res = await fetch('http://localhost:5000/main-admin/forgot-password', {
+      const res = await fetch('http://localhost:5000/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
@@ -58,26 +53,25 @@ export function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        alert(data.message || 'OTP sent. Please check your email.');
+        alert(data.message || 'OTP sent. Check your email.');
         setShowResetModal(false);
         setShowPasswordReset(true);
         setResetError('');
       } else {
-        alert(data.error || 'Failed to send OTP.');
+        alert(data.error || 'Failed to send OTP');
       }
-    } catch (error) {
-      alert('Error sending OTP: ' + error.message);
+    } catch (err) {
+      alert('Error sending OTP: ' + err.message);
     }
   };
 
-  // Reset password call
+  // Reset password
   const resetPassword = async () => {
     if (!enteredCode || !newPassword || !confirmPassword) {
       setResetError('Please fill all fields');
       setShowSuccessMessage(false);
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setResetError('Passwords do not match');
       setShowSuccessMessage(false);
@@ -85,7 +79,7 @@ export function Login() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/main-admin/reset-password', {
+      const res = await fetch('http://localhost:5000/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,7 +89,6 @@ export function Login() {
           confirm_password: confirmPassword,
         }),
       });
-
       const data = await res.json();
 
       if (res.ok) {
@@ -105,8 +98,8 @@ export function Login() {
         setResetError(data.error || 'Failed to reset password');
         setShowSuccessMessage(false);
       }
-    } catch (error) {
-      setResetError('Error: ' + error.message);
+    } catch (err) {
+      setResetError('Error: ' + err.message);
       setShowSuccessMessage(false);
     }
   };
@@ -123,10 +116,9 @@ export function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label>Username</label>
             <input
               type="text"
-              id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="form-input"
@@ -135,10 +127,9 @@ export function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label>Password</label>
             <input
               type="password"
-              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="form-input"
@@ -146,9 +137,7 @@ export function Login() {
             />
           </div>
 
-          <button type="submit" className="login-button">
-            Log in
-          </button>
+          <button type="submit" className="login-button">Log in</button>
         </form>
 
         <a
@@ -163,113 +152,43 @@ export function Login() {
         </a>
       </div>
 
-      {/* OTP send modal */}
+      {/* OTP Modal */}
       {showResetModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowResetModal(false);
-            setShowPasswordReset(false);
-          }}
-        >
+        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <strong>Reset Password</strong>
-            </h2>
-            <p>
-              An OTP will be sent to your registered email address to reset your
-              password. Click 'Send Code' to receive it.
-            </p>
-            <div className="button-wrapper">
-              <button
-                className="send-code-button"
-                onClick={sendOtp}
-              >
-                Send Code
-              </button>
-            </div>
+            <h2><strong>Reset Password</strong></h2>
+            <p>Click 'Send Code' to receive an OTP on your registered email.</p>
+            <button className="send-code-button" onClick={sendOtp}>Send Code</button>
           </div>
         </div>
       )}
 
-      {/* Password reset modal */}
+      {/* Password Reset Modal */}
       {showPasswordReset && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowResetModal(false);
-            setShowPasswordReset(false);
-          }}
-        >
+        <div className="modal-overlay" onClick={() => setShowPasswordReset(false)}>
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <strong>Reset Password</strong>
-            </h2>
-            <p>The verification code has been sent to your email.</p>
+            <h2><strong>Reset Password</strong></h2>
+            <p>OTP has been sent to your email.</p>
 
-            {showSuccessMessage && (
-              <div className="success-message">
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-                  alt="Success Icon"
-                  className="success-icon"
-                />
-                <span>Password has been reset successfully</span>
-              </div>
-            )}
-
-            {resetError && (
-              <div className="error-message">
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
-                  alt="Error Icon"
-                  className="error-icon"
-                />
-                <span>{resetError}</span>
-              </div>
-            )}
+            {showSuccessMessage && <div className="success-message">Password reset successfully!</div>}
+            {resetError && <div className="error-message">{resetError}</div>}
 
             <div className="form-group">
-              <label>
-                Code<span className="required"> *</span>
-              </label>
-              <input
-                type="text"
-                className="form-input"
-                value={enteredCode}
-                onChange={(e) => setEnteredCode(e.target.value)}
-              />
+              <label>Code</label>
+              <input type="text" value={enteredCode} onChange={(e) => setEnteredCode(e.target.value)} className="form-input"/>
             </div>
 
             <div className="form-group">
-              <label>
-                New Password<span className="required"> *</span>
-              </label>
-              <input
-                type="password"
-                className="form-input"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              <label>New Password</label>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="form-input"/>
             </div>
 
             <div className="form-group">
-              <label>
-                Confirm Password<span className="required"> *</span>
-              </label>
-              <input
-                type="password"
-                className="form-input"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <label>Confirm Password</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="form-input"/>
             </div>
 
-            <div className="button-wrapper">
-              <button className="send-code-button" onClick={resetPassword}>
-                Reset Password
-              </button>
-            </div>
+            <button className="send-code-button" onClick={resetPassword}>Reset Password</button>
           </div>
         </div>
       )}
