@@ -41,7 +41,8 @@ def create_app():
     jwt.init_app(app)
 
     # Register routes
-    from app.routes.main_admin_auth import main_admin_auth
-    app.register_blueprint(main_admin_auth, url_prefix="/main-admin")
+    from app.routes.auth import auth
+    app.register_blueprint(auth, url_prefix="/auth")
+
 
     return app
