@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './login.css';
@@ -14,29 +15,27 @@ export function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
+ // ✅ Get API URL from .env
+  const apiUrl = import.meta.env.VITE_API_URL;
+  console.log("API URL from env:", apiUrl);
+
   // Handle login
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) return alert('Please enter username and password');
 
     try {
-      const res = await fetch('http://localhost:5000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
+      console.log('Sending login request...');
+      const res = await axios.post(`${apiUrl}/auth/login`, { username, password });
+      console.log('Login response:', res.data);
 
-      if (res.ok) {
-        alert(data.message || 'Login successful!');
-        // Redirect based on role
-        if (data.role === 'main-admin') navigate('/announcement');
-        else if (data.role === 'station-admin') navigate('/dashboard');
-      } else {
-        alert(data.error || 'Invalid username or password');
-      }
+      if (res.data.role === 'main-admin') navigate('/announcement');
+      else if (res.data.role === 'station-admin') navigate('/dashboard');
+
+      alert(res.data.message || 'Login successful!');
     } catch (err) {
-      alert('Login failed: ' + err.message);
+      console.error('Login error:', err.response ? err.response.data : err.message);
+      alert('Login failed. See console for details.');
     }
   };
 
@@ -45,23 +44,17 @@ export function Login() {
     if (!username) return alert('Please enter your username first');
 
     try {
-      const res = await fetch('http://localhost:5000/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-      });
-      const data = await res.json();
+      console.log('Sending OTP request...');
+      const res = await axios.post(`${apiUrl}/auth/forgot-password`, { username });
+      console.log('OTP response:', res.data);
 
-      if (res.ok) {
-        alert(data.message || 'OTP sent. Check your email.');
-        setShowResetModal(false);
-        setShowPasswordReset(true);
-        setResetError('');
-      } else {
-        alert(data.error || 'Failed to send OTP');
-      }
+      alert(res.data.message || 'OTP sent. Check your email.');
+      setShowResetModal(false);
+      setShowPasswordReset(true);
+      setResetError('');
     } catch (err) {
-      alert('Error sending OTP: ' + err.message);
+      console.error('OTP error:', err.response ? err.response.data : err.message);
+      alert('Error sending OTP. See console for details.');
     }
   };
 
@@ -79,27 +72,20 @@ export function Login() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          otp: enteredCode,
-          new_password: newPassword,
-          confirm_password: confirmPassword,
-        }),
+      console.log('Sending reset-password request...');
+      const res = await axios.post(`${apiUrl}/auth/reset-password`, {
+        username,
+        otp: enteredCode,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
       });
-      const data = await res.json();
+      console.log('Reset-password response:', res.data);
 
-      if (res.ok) {
-        setShowSuccessMessage(true);
-        setResetError('');
-      } else {
-        setResetError(data.error || 'Failed to reset password');
-        setShowSuccessMessage(false);
-      }
+      setShowSuccessMessage(true);
+      setResetError('');
     } catch (err) {
-      setResetError('Error: ' + err.message);
+      console.error('Reset-password error:', err.response ? err.response.data : err.message);
+      setResetError('Error: ' + (err.response?.data?.error || err.message));
       setShowSuccessMessage(false);
     }
   };
