@@ -13,7 +13,9 @@ jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+
+    # ✅ Allow CORS for React frontend
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
     # Load environment variables
     load_dotenv()
@@ -40,9 +42,8 @@ def create_app():
     mail.init_app(app)
     jwt.init_app(app)
 
-    # Register routes
+    # ✅ Register routes with /api prefix
     from app.routes.auth import auth
-    app.register_blueprint(auth, url_prefix="/auth")
-
+    app.register_blueprint(auth, url_prefix="/api/auth")
 
     return app
