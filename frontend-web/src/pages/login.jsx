@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './login.css';
@@ -14,70 +15,56 @@ export function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
-  // Login backend
+ // ✅ Get API URL from .env
+  const apiUrl = import.meta.env.VITE_API_URL;
+  console.log("API URL from env:", apiUrl);
+
+  // Handle login
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!username || !password) {
-      alert('Please enter username and password');
-      return;
-    }
+    if (!username || !password) return alert('Please enter username and password');
 
     try {
-      const res = await fetch('http://localhost:5000/main-admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
+      console.log('Sending login request...');
+      const res = await axios.post(`${apiUrl}/auth/login`, { username, password });
+      console.log('Login response:', res.data);
 
-      if (res.ok) {
-        alert(data.message || 'Login successful!');
-        navigate('/dashboard'); // adjust route as needed
-      } else {
-        alert(data.error || 'Invalid username or password');
-      }
-    } catch (error) {
-      alert('Login failed: ' + error.message);
+      if (res.data.role === 'main-admin') navigate('/announcement');
+      else if (res.data.role === 'station-admin') navigate('/dashboard');
+
+      alert(res.data.message || 'Login successful!');
+    } catch (err) {
+      console.error('Login error:', err.response ? err.response.data : err.message);
+      alert('Login failed. See console for details.');
     }
   };
 
   // Send OTP for forgot password
   const sendOtp = async () => {
-    if (!username) {
-      alert('Please enter your username first');
-      return;
-    }
+    if (!username) return alert('Please enter your username first');
 
     try {
-      const res = await fetch('http://localhost:5000/main-admin/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-      });
-      const data = await res.json();
+      console.log('Sending OTP request...');
+      const res = await axios.post(`${apiUrl}/auth/forgot-password`, { username });
+      console.log('OTP response:', res.data);
 
-      if (res.ok) {
-        alert(data.message || 'OTP sent. Please check your email.');
-        setShowResetModal(false);
-        setShowPasswordReset(true);
-        setResetError('');
-      } else {
-        alert(data.error || 'Failed to send OTP.');
-      }
-    } catch (error) {
-      alert('Error sending OTP: ' + error.message);
+      alert(res.data.message || 'OTP sent. Check your email.');
+      setShowResetModal(false);
+      setShowPasswordReset(true);
+      setResetError('');
+    } catch (err) {
+      console.error('OTP error:', err.response ? err.response.data : err.message);
+      alert('Error sending OTP. See console for details.');
     }
   };
 
-  // Reset password call
+  // Reset password
   const resetPassword = async () => {
     if (!enteredCode || !newPassword || !confirmPassword) {
       setResetError('Please fill all fields');
       setShowSuccessMessage(false);
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setResetError('Passwords do not match');
       setShowSuccessMessage(false);
@@ -85,28 +72,20 @@ export function Login() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/main-admin/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          otp: enteredCode,
-          new_password: newPassword,
-          confirm_password: confirmPassword,
-        }),
+      console.log('Sending reset-password request...');
+      const res = await axios.post(`${apiUrl}/auth/reset-password`, {
+        username,
+        otp: enteredCode,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
       });
+      console.log('Reset-password response:', res.data);
 
-      const data = await res.json();
-
-      if (res.ok) {
-        setShowSuccessMessage(true);
-        setResetError('');
-      } else {
-        setResetError(data.error || 'Failed to reset password');
-        setShowSuccessMessage(false);
-      }
-    } catch (error) {
-      setResetError('Error: ' + error.message);
+      setShowSuccessMessage(true);
+      setResetError('');
+    } catch (err) {
+      console.error('Reset-password error:', err.response ? err.response.data : err.message);
+      setResetError('Error: ' + (err.response?.data?.error || err.message));
       setShowSuccessMessage(false);
     }
   };
@@ -123,10 +102,9 @@ export function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label>Username</label>
             <input
               type="text"
-              id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="form-input"
@@ -135,10 +113,9 @@ export function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label>Password</label>
             <input
               type="password"
-              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="form-input"
@@ -146,9 +123,7 @@ export function Login() {
             />
           </div>
 
-          <button type="submit" className="login-button">
-            Log in
-          </button>
+          <button type="submit" className="login-button">Log in</button>
         </form>
 
         <a
@@ -163,113 +138,43 @@ export function Login() {
         </a>
       </div>
 
-      {/* OTP send modal */}
+      {/* OTP Modal */}
       {showResetModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowResetModal(false);
-            setShowPasswordReset(false);
-          }}
-        >
+        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <strong>Reset Password</strong>
-            </h2>
-            <p>
-              An OTP will be sent to your registered email address to reset your
-              password. Click 'Send Code' to receive it.
-            </p>
-            <div className="button-wrapper">
-              <button
-                className="send-code-button"
-                onClick={sendOtp}
-              >
-                Send Code
-              </button>
-            </div>
+            <h2><strong>Reset Password</strong></h2>
+            <p>Click 'Send Code' to receive an OTP on your registered email.</p>
+            <button className="send-code-button" onClick={sendOtp}>Send Code</button>
           </div>
         </div>
       )}
 
-      {/* Password reset modal */}
+      {/* Password Reset Modal */}
       {showPasswordReset && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowResetModal(false);
-            setShowPasswordReset(false);
-          }}
-        >
+        <div className="modal-overlay" onClick={() => setShowPasswordReset(false)}>
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <strong>Reset Password</strong>
-            </h2>
-            <p>The verification code has been sent to your email.</p>
+            <h2><strong>Reset Password</strong></h2>
+            <p>OTP has been sent to your email.</p>
 
-            {showSuccessMessage && (
-              <div className="success-message">
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-                  alt="Success Icon"
-                  className="success-icon"
-                />
-                <span>Password has been reset successfully</span>
-              </div>
-            )}
-
-            {resetError && (
-              <div className="error-message">
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
-                  alt="Error Icon"
-                  className="error-icon"
-                />
-                <span>{resetError}</span>
-              </div>
-            )}
+            {showSuccessMessage && <div className="success-message">Password reset successfully!</div>}
+            {resetError && <div className="error-message">{resetError}</div>}
 
             <div className="form-group">
-              <label>
-                Code<span className="required"> *</span>
-              </label>
-              <input
-                type="text"
-                className="form-input"
-                value={enteredCode}
-                onChange={(e) => setEnteredCode(e.target.value)}
-              />
+              <label>Code</label>
+              <input type="text" value={enteredCode} onChange={(e) => setEnteredCode(e.target.value)} className="form-input"/>
             </div>
 
             <div className="form-group">
-              <label>
-                New Password<span className="required"> *</span>
-              </label>
-              <input
-                type="password"
-                className="form-input"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              <label>New Password</label>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="form-input"/>
             </div>
 
             <div className="form-group">
-              <label>
-                Confirm Password<span className="required"> *</span>
-              </label>
-              <input
-                type="password"
-                className="form-input"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <label>Confirm Password</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="form-input"/>
             </div>
 
-            <div className="button-wrapper">
-              <button className="send-code-button" onClick={resetPassword}>
-                Reset Password
-              </button>
-            </div>
+            <button className="send-code-button" onClick={resetPassword}>Reset Password</button>
           </div>
         </div>
       )}
