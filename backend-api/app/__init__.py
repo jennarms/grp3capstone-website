@@ -15,7 +15,7 @@ def create_app():
     app = Flask(__name__)
 
     # ✅ Allow CORS for React frontend
-    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
     # Load environment variables
     load_dotenv()
@@ -45,5 +45,8 @@ def create_app():
     # ✅ Register routes with /api prefix
     from app.routes.auth import auth
     app.register_blueprint(auth, url_prefix="/api/auth")
+
+    from app.routes.announcement import announcement_bp
+    app.register_blueprint(announcement_bp, url_prefix="/api/announcement")
 
     return app

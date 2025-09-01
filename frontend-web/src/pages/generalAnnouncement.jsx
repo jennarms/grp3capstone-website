@@ -1,67 +1,98 @@
-import React, { useEffect, useState } from 'react';
-import './generalAnnouncement.css';
-import { Navbar } from '../components/navBar';
+import axios from 'axios';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { HeaderButton } from '../components/headerButton';
+import { Navbar } from '../components/navBar';
+import './generalAnnouncement.css';
 
 export function Announcement() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [announcements, setAnnouncements] = useState([]);
-
-  // editing state
   const [editingId, setEditingId] = useState(null);
-
-  // modal state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [feedback, setFeedback] = useState({ open: false, message: '' });
+
+  const apiUrl = import.meta.env.VITE_API_URL;
+  const token = localStorage.getItem('token'); // must match login
+  const adminId = localStorage.getItem('admin_id'); // must match login
+  const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
+
+  // Fetch all announcements
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/announcement`, { headers });
+      const formatted = res.data.announcements.map(a => ({
+        id: a.announce_id,
+        title: a.title,
+        message: a.content,
+        datePosted: new Date(a.date_time).toLocaleDateString(),
+        timePosted: new Date(a.date_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }));
+      setAnnouncements(formatted);
+    } catch (err) {
+      console.error('Failed to fetch announcements:', err.response?.data || err.message);
+    }
+  }, [apiUrl, headers]);
 
   useEffect(() => {
-    // lock page scroll when modal is open
-    document.body.style.overflow = confirmOpen ? 'hidden' : '';
-    return () => (document.body.style.overflow = '');
-  }, [confirmOpen]);
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
-  const handleSubmit = () => {
+  // Add or update announcement
+  const handleSubmit = async () => {
     if (!title.trim() || !message.trim()) return;
+    if (!adminId) return console.error('Admin ID missing in localStorage');
 
-    if (editingId) {
-      // update existing
-      setAnnouncements(prev =>
-        prev.map(a => (a.id === editingId ? { ...a, title, message } : a))
-      );
+    const payload = { title, content: message, admin_id: adminId };
+
+    try {
+      if (editingId) {
+        await axios.put(`${apiUrl}/announcement/${editingId}`, payload, { headers });
+        setFeedback({ open: true, message: 'Announcement successfully updated!' });
+      } else {
+        await axios.post(`${apiUrl}/announcement`, payload, { headers });
+        setFeedback({ open: true, message: 'Announcement successfully posted!' });
+      }
+      await fetchAnnouncements();
+      setTitle('');
+      setMessage('');
       setEditingId(null);
-    } else {
-      // add new
-      const now = new Date();
-      const datePosted = now.toLocaleDateString();
-      const timePosted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setAnnouncements(prev => [
-        { id: Date.now(), title, message, datePosted, timePosted },
-        ...prev,
-      ]);
+    } catch (err) {
+      console.error('Error saving announcement:', err.response?.data || err.message);
+      // Show error modal
+      setFeedback({ open: true, message: 'Failed to save announcement. It may already exist.' });
     }
-
-    setTitle('');
-    setMessage('');
   };
 
-  const askDelete = (id) => {
-    setPendingDeleteId(id);
-    setConfirmOpen(true);
-  };
+  // Delete announcement
+  const confirmDelete = async () => {
+    if (!pendingDeleteId || !adminId) return console.error('Admin ID missing in localStorage');
 
-  const confirmDelete = () => {
-    if (pendingDeleteId != null) {
+    try {
+      await axios.delete(`${apiUrl}/announcement/${pendingDeleteId}`, {
+        headers,
+        data: { admin_id: adminId }, // axios requires `data` for delete body
+      });
       setAnnouncements(prev => prev.filter(a => a.id !== pendingDeleteId));
-      // if you delete the item currently being edited, exit edit mode
       if (pendingDeleteId === editingId) {
         setEditingId(null);
         setTitle('');
         setMessage('');
       }
+      setFeedback({ open: true, message: 'Announcement successfully deleted!' });
+    } catch (err) {
+      console.error('Error deleting announcement:', err.response?.data || err.message);
+      setFeedback({ open: true, message: 'Failed to delete announcement.' });
     }
+
     setConfirmOpen(false);
     setPendingDeleteId(null);
+  };
+
+  const askDelete = id => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
   };
 
   const cancelDelete = () => {
@@ -69,11 +100,10 @@ export function Announcement() {
     setPendingDeleteId(null);
   };
 
-  const handleEdit = (a) => {
+  const handleEdit = a => {
     setEditingId(a.id);
     setTitle(a.title);
     setMessage(a.message);
-    // optionally scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -83,18 +113,12 @@ export function Announcement() {
     setMessage('');
   };
 
-  // close on ESC for modal
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') cancelDelete(); };
-    if (confirmOpen) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [confirmOpen]);
-
   return (
     <>
-    <Navbar />
-    <HeaderButton />
+      <Navbar />
+      <HeaderButton />
       {confirmOpen && <div className="dark-overlay"></div>}
+      {feedback.open && <div className="dark-overlay"></div>}
 
       <div className="main-content">
         <div className="header-row">
@@ -127,31 +151,19 @@ export function Announcement() {
           </div>
 
           <div className="announcements-container">
-            {announcements.map((a) => (
-              <div
-                key={a.id}
-                className={`announcement-card card ${editingId === a.id ? 'editing' : ''}`}
-              >
+            {announcements.map(a => (
+              <div key={a.id} className={`announcement-card card ${editingId === a.id ? 'editing' : ''}`}>
                 <div className="card-header">
                   <h2>{a.title}</h2>
                   <div className="announcement-actions">
                     <button onClick={() => handleEdit(a)} className="icon-btn" aria-label="Edit">
-                      <img
-                        src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png"
-                        alt=""
-                        className="action-icon"
-                      />
+                      <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="" className="action-icon" />
                     </button>
                     <button onClick={() => askDelete(a.id)} className="icon-btn" aria-label="Delete">
-                      <img
-                        src="https://cdn-icons-png.flaticon.com/512/1214/1214428.png"
-                        alt=""
-                        className="action-icon"
-                      />
+                      <img src="https://cdn-icons-png.flaticon.com/512/1214/1214428.png" alt="" className="action-icon" />
                     </button>
                   </div>
                 </div>
-
                 <hr className="title-divider" />
                 <p className="card-message">{a.message}</p>
                 {a.datePosted && a.timePosted && (
@@ -168,13 +180,7 @@ export function Announcement() {
       {/* Confirm Delete Modal */}
       {confirmOpen && (
         <div className="modal-overlay" onClick={cancelDelete} aria-hidden="true">
-          <div
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="del-title"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="del-title" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title" id="del-title">Delete Announcement</span>
             </div>
@@ -188,7 +194,28 @@ export function Announcement() {
           </div>
         </div>
       )}
-    </>
 
+      {/* Feedback Modal */}
+      {feedback.open && (
+        <div className="modal-overlay" onClick={() => setFeedback({ ...feedback, open: false })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Notice</span>
+            </div>
+            <div className="modal-body">
+              {feedback.message}
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn btn-outline"
+                onClick={() => setFeedback({ ...feedback, open: false })}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

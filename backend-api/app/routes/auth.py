@@ -54,16 +54,19 @@ def login():
         stored_hash = stored_hash.encode('utf-8')
 
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+            # ✅ Send admin_id for frontend
             return jsonify({
                 "message": "Login successful!",
                 "role": role,
-                "user_id": user_id
+                "admin_id": user_id   # <- fixed key
             }), 200
         else:
             return jsonify({"error": "Invalid username/email or password"}), 401
 
     except Exception as err:
+        print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
+
 
 # =====================
 # FORGOT PASSWORD - SEND OTP (Admin)
@@ -118,7 +121,9 @@ def forgot_password():
         return jsonify({"message": f"OTP sent to email linked to {role}"}), 200
 
     except Exception as err:
+        print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
+
 
 # =====================
 # RESET PASSWORD (Admin)
