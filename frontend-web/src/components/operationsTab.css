@@ -1,0 +1,63 @@
+.ops-title{
+    font-size: 42px;
+    font-weight: 800;
+    color: #000;
+    text-align: left;          /* keep left-aligned */
+    margin-left: -500px;
+  }
+  
+  /* ===================== Pill Bar ===================== */
+  .ops-tabs{
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: flex-start; /* left edge */
+    align-items: center;
+    margin: 0 0 18px 0;          /* remove side margins so it sits flush left */
+    padding: 0;
+    width: fit-content;          /* shrink to content so it hugs the left */
+    align-self: flex-start;      /* if parent is flex */
+  }
+  
+  /* Optional: make the bar sticky under your fixed navbar
+     Add className "ops-tabs sticky" to enable. */
+  .ops-tabs.sticky{
+    position: sticky;
+    top: var(--nav-h, 0);
+    z-index: 4;
+    background: transparent;
+    padding-top: 8px;
+  }
+  
+  /* ===================== Pills ===================== */
+  .ops-tab{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 18px;
+    text-decoration: none;
+    background: #001a63;        /* deep navy */
+    color: #fff;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: 0 2px 0 rgba(0,0,0,.25) inset;
+    transition: transform .06s ease, filter .12s ease, box-shadow .12s ease;
+  }
+  
+  .ops-tab:hover{
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+  
+  .ops-tab:active{
+    transform: translateY(0);
+    filter: brightness(1.02);
+  }
+  
+  .ops-tab.active{
+    background: #0b1a78;        /* slightly lighter for active */
+    box-shadow: 0 0 0 3px #ced7ff, 0 2px 0 rgba(0,0,0,.25) inset; /* subtle halo */
+  }

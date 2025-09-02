@@ -4,78 +4,104 @@ import { useNavigate } from "react-router-dom";
 import "./login.css";
 
 export function Login() {
+  // Auth fields
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
+
+  // Forgot/Reset UI
+  const [showResetModal, setShowResetModal] = useState(false);      // OTP send modal
+  const [showPasswordReset, setShowPasswordReset] = useState(false); // form after OTP sent
   const [resetError, setResetError] = useState("");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [enteredCode, setEnteredCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Login UX
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLoginSuccess, setShowLoginSuccess] = useState(false);
+  const [loginMessage, setLoginMessage] = useState("");
+  const [loginErrorMessage, setLoginErrorMessage] = useState("");
+
+  // OTP UX
+  const [otpError, setOtpError] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+
   const navigate = useNavigate();
+  const REDIRECT_DELAY_MS = 1200;
 
   const apiUrl = import.meta.env.VITE_API_URL;
   console.log("API URL from env:", apiUrl);
 
-  // ✅ Handle login
+  // ---------- Login ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password)
-      return alert("Please enter username and password");
+
+    if (!username || !password) {
+      setLoginErrorMessage("Please enter username and password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLoginErrorMessage("");
 
     try {
-      console.log("Sending login request...");
-      const res = await axios.post(`${apiUrl}/auth/login`, {
-        username,
-        password,
-      });
-      console.log("Login response:", res.data);
+      const res = await axios.post(`${apiUrl}/auth/login`, { username, password });
+      const data = res.data;
 
-      // ✅ Save to localStorage
-      if (res.data.token) localStorage.setItem("token", res.data.token);
-      if (res.data.admin_id) localStorage.setItem("admin_id", res.data.admin_id);
-      if (res.data.role) localStorage.setItem("role", res.data.role);
+      // optional: persist
+      if (data.token) localStorage.setItem("token", data.token);
+      if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
+      if (data.role) localStorage.setItem("role", data.role);
 
-      // ✅ Redirect based on role
-      if (res.data.role === "main-admin") navigate("/announcement");
-      else if (res.data.role === "station-admin") navigate("/dashboard");
+      setLoginMessage(data.message || "Login successful!");
+      setShowLoginSuccess(true);
 
-      alert(res.data.message || "Login successful!");
+      setTimeout(() => {
+        if (data.role === "main-admin") navigate("/announcement");
+        else if (data.role === "station-admin") navigate("/dashboard");
+        else navigate("/dashboard");
+      }, REDIRECT_DELAY_MS);
     } catch (err) {
-      console.error(
-        "Login error:",
-        err.response ? err.response.data : err.message
-      );
-      alert("Login failed. See console for details.");
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message;
+      setLoginErrorMessage(`Login failed: ${msg}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Send OTP for forgot password
+  // ---------- Send OTP ----------
   const sendOtp = async () => {
-    if (!username) return alert("Please enter your username first");
+    if (!username) {
+      setOtpError("Please enter your username first");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    setOtpError("");
 
     try {
-      console.log("Sending OTP request...");
-      const res = await axios.post(`${apiUrl}/auth/forgot-password`, {
-        username,
-      });
+      const res = await axios.post(`${apiUrl}/auth/forgot-password`, { username });
       console.log("OTP response:", res.data);
 
-      alert(res.data.message || "OTP sent. Check your email.");
       setShowResetModal(false);
       setShowPasswordReset(true);
       setResetError("");
     } catch (err) {
-      console.error(
-        "OTP error:",
-        err.response ? err.response.data : err.message
-      );
-      alert("Error sending OTP. See console for details.");
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message;
+      setOtpError(msg || "Failed to send OTP.");
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
-  // Reset password
+  // ---------- Reset password ----------
   const resetPassword = async () => {
     if (!enteredCode || !newPassword || !confirmPassword) {
       setResetError("Please fill all fields");
@@ -89,7 +115,6 @@ export function Login() {
     }
 
     try {
-      console.log("Sending reset-password request...");
       const res = await axios.post(`${apiUrl}/auth/reset-password`, {
         username,
         otp: enteredCode,
@@ -101,11 +126,11 @@ export function Login() {
       setShowSuccessMessage(true);
       setResetError("");
     } catch (err) {
-      console.error(
-        "Reset-password error:",
-        err.response ? err.response.data : err.message
-      );
-      setResetError("Error: " + (err.response?.data?.error || err.message));
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message;
+      setResetError(`Error: ${msg}`);
       setShowSuccessMessage(false);
     }
   };
@@ -120,7 +145,26 @@ export function Login() {
         />
         <h1 className="login-title">Log in</h1>
 
-        <form onSubmit={handleSubmit}>
+        {/* Inline error banner */}
+        {loginErrorMessage && (
+          <div className="error-message login-error" role="alert" aria-live="assertive">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+              alt="Error Icon"
+              className="error-icon"
+            />
+            <span>{loginErrorMessage}</span>
+            <button
+              className="error-close"
+              aria-label="Dismiss error"
+              onClick={() => setLoginErrorMessage("")}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
             <label>Username</label>
             <input
@@ -129,6 +173,7 @@ export function Login() {
               onChange={(e) => setUsername(e.target.value)}
               className="form-input"
               autoComplete="username"
+              disabled={isSubmitting || showLoginSuccess}
             />
           </div>
 
@@ -140,11 +185,17 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="form-input"
               autoComplete="current-password"
+              disabled={isSubmitting || showLoginSuccess}
             />
           </div>
 
-          <button type="submit" className="login-button">
-            Log in
+          <button
+            type="submit"
+            className="login-button"
+            disabled={isSubmitting || showLoginSuccess}
+            title={isSubmitting ? "Signing in…" : "Log in"}
+          >
+            {isSubmitting ? "Signing in…" : "Log in"}
           </button>
         </form>
 
@@ -153,6 +204,7 @@ export function Login() {
           className="forgot-password"
           onClick={(e) => {
             e.preventDefault();
+            setOtpError("");
             setShowResetModal(true);
           }}
         >
@@ -160,39 +212,85 @@ export function Login() {
         </a>
       </div>
 
-      {/* OTP Modal */}
-      {showResetModal && (
-        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
-          <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <strong>Reset Password</strong>
-            </h2>
-            <p>Click 'Send Code' to receive an OTP on your registered email.</p>
-            <button className="send-code-button" onClick={sendOtp}>
-              Send Code
-            </button>
+      {/* Success overlay */}
+      {showLoginSuccess && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="success-modal">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+              alt="Success"
+              className="success-big-icon"
+            />
+            <h3 className="success-title">{loginMessage || "Login successful!"}</h3>
           </div>
         </div>
       )}
 
-      {/* Password Reset Modal */}
+      {/* OTP Modal */}
+      {showResetModal && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowResetModal(false)}
+        >
+          <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
+            <h2><strong>Reset Password</strong></h2>
+            <p>
+              An OTP will be sent to your registered email address to reset your password.
+              Click <em>Send Code</em> to receive it.
+            </p>
+
+            {otpError && (
+              <div className="error-message" role="alert" aria-live="assertive">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+                  alt="Error Icon"
+                  className="error-icon"
+                />
+                <span>{otpError}</span>
+              </div>
+            )}
+
+            <div className="button-wrapper">
+              <button
+                className="send-code-button"
+                onClick={sendOtp}
+                disabled={isSendingOtp}
+                title={isSendingOtp ? "Sending…" : "Send Code"}
+              >
+                {isSendingOtp ? "Sending…" : "Send Code"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal (after OTP is sent) */}
       {showPasswordReset && (
         <div
           className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
           onClick={() => setShowPasswordReset(false)}
         >
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <strong>Reset Password</strong>
-            </h2>
-            <p>OTP has been sent to your email.</p>
+            <h2><strong>Reset Password</strong></h2>
+            <p>The verification code has been sent to your email.</p>
 
             {showSuccessMessage && (
-              <div className="success-message">
-                Password reset successfully!
+              <div className="success-message">Password reset successfully!</div>
+            )}
+            {resetError && (
+              <div className="error-message" role="alert" aria-live="assertive">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+                  alt="Error Icon"
+                  className="error-icon"
+                />
+                <span>{resetError}</span>
               </div>
             )}
-            {resetError && <div className="error-message">{resetError}</div>}
 
             <div className="form-group">
               <label>Code</label>

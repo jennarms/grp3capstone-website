@@ -29,6 +29,7 @@ html, body { overflow-x: hidden; }
   font-size: 45px;
   font-weight: 800;
   color: black;
+  margin-bottom: 5px;
 }
 
 .header-row { justify-content: flex-start; }
@@ -91,7 +92,8 @@ html, body { overflow-x: hidden; }
   padding: 10px 22px;
   font-weight: 700;
   cursor: pointer;
-  width: 200px;
+  width: 150px;
+  margin-left: 1150px;
 }
 
 .submit-btn:hover{ filter: brightness(1.05); }
