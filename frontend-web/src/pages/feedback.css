@@ -1,184 +1,218 @@
 :root{
-    --nav-h: 100px;
-    --stroke: #d6deef;
-    --ink: #0b1a78;
-    --rule: #b9c6e6;
-    --panel: #ffffff;
-    --card-shadow: 0 6px 18px rgba(0,0,0,.08);
-    --green: #1bc882;
-    --muted: #5a6276;
-  }
-  
-  /* page scaffold (same spacing as other screens) */
-  .fb-main{
-    margin-left: -5px;
-    margin-top: var(--nav-h -40px);
-    padding: 20px 24px 28px;
-    box-sizing: border-box;
-    margin-top: 290px;
-
-  }
-  
-  /* header */
-  .fb-header-row{
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 12px;
-    margin-bottom: -50px;
-  }
-  .fb-title{
-    font-size: 55px;
-    font-weight: 700;
-    color: black;
-    margin-bottom: 50px;
- 
-  }
-  
-  .fb-settings{
-    /* size */
-    display: inline-flex;
-    justify-content: center;
-    height: 35px;             /* taller */
-    min-width: 300px;         /* wider baseline */         /* extra width without hard-coding */
-    font-weight: 700;
-    font-size: 20px;
-    border: 2px solid var(--ink);
-    border-radius: 12px;
-    box-sizing: border-box;
-    margin-left: 870px;
-  }
-  
-  /* controls */
-  .fb-controls{
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-  }
-  
-  .fb-filter{
-    height: 36px;
-    padding: 6px 12px;
-    border: 1px solid var(--stroke);
-    border-radius: 12px;
-    border-color: black;
-    background: #fff;
-  
-    /* wider size */
-    width: 360px;        /* <- adjust to taste (e.g., 320–420px) */
-    min-width: 320px;    /* keeps it from collapsing */
-  }
-  
-  /* list area */
-  .fb-list{
-    display: grid;
-    gap: 14px;
-  }
-  
-  /* card */
-  .fb-card{
-    position: relative;
-    background: var(--panel);
-    border: 1px solid var(--stroke);
-    border-radius: 12px;
-    box-shadow: var(--card-shadow);
-    padding: 14px 16px 16px;
-    width: 1500px;
-
-  }
-  
-  /* actions (reply/delete) in top-right */
-  .fb-actions{
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    display: flex;
-    gap: 10px;
-  }
-  .icon-btn{
-    width: 40px; height: 40px;
-    border-radius: 8px;
-    background: #fff;
-    cursor: pointer;
-  }
-  .icon-btn svg{ width: 18px; height: 18px; fill: #2e3854; }
-  .icon-btn.danger svg{ fill: #c23b3b; }
-  
-  /* rows and labels */
-  .fb-row{ margin: 6px 0; }
-  .fb-label{
-    font-weight: 900;
-    font-size: 20PX;
-    text-align: right;
-  }
-  .fb-value{ color: #000000;
-font-size: 18px; }
-  
-  /* blue rule under date */
-  .fb-rule{
-    border: 0;
-    border-top: 3px solid #b7c9ef;
-    margin: 8px 0 12px;
-  }
-  
-  /* grid: fields + photo */
-  .fb-grid{
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 14px;
-    align-items: start;
-  }
-  .fb-fields{ min-width: 0; } /* allow ellipsis wrapping */
-  
-  /* photo */
-  .fb-photo{
-    width: 400px;
-    height: 250px;
-    object-fit: cover;
-    border: 3px solid var(--green);
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,.12);
-    object-position: center; 
-  }
-  
-  /* stars */
-  .fb-stars{ display: inline-flex; gap: 2px; vertical-align: middle; }
-  .fb-star{ width: 18px; height: 18px; fill: #d5dbea; }
-  .fb-star.filled{ fill: #ffd84d; }
-  
-  /* admin response box */
-  .fb-admin-reply{
-    margin-top: 12px;
-    padding: 10px 12px;
-    border: 1px solid var(--stroke);
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: inset 0 0 0 2px #e9eefb;
-  }
-  .fb-admin-text{ color: #2e3854; }
-  
-  /* responsive */
-  @media (max-width: 960px){
-    .fb-grid{ grid-template-columns: 1fr; }
-    .fb-photo{ width: 100%; height: 200px; }
-  }
-
-  .fb-main,
-.fb-title,
-.fb-controls,
-.fb-section-label,
-.fb-row,
-.fb-admin-reply {
-  text-align: left;
+  --nav-h: 100px;            /* same as other pages */
 }
 
-.fb-sticky{
-    position: sticky;
-    top: var(--nav-h);   /* sits just under your fixed Navbar */
-    background: #fff;
-    z-index: 6;
-    padding-top: 4px;
-    padding-bottom: 8px;
-  } 
+.fb-main{
+  margin-top: var(--nav-h);
+  height: calc(100vh - var(--nav-h));   /* so the list area can flex/scroll */
+  display: flex;
+  flex-direction: column;
+  padding: 24px 24px 16px;
+  box-sizing: border-box;
+  overflow-y:scroll;
+  width: 1600px;
+}
+@media (max-width: 1024px){
+  .fb-main{ margin-left: 0; }
+}
 
+/* Header block (does NOT scroll) */
+.fb-header{
+  flex: 0 0 auto;
+}
+
+/* Your existing header/controls styles can stay as-is, e.g.: */
+.header-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.page-title{
+  margin: 0 0 6px 3px;
+  font-size: 55px;
+  font-weight: 800;
+  color: #000;
+}
+.fb-controls-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fb-title-rule{
+  border: none;
+  border-top: 1px solid #000;
+  margin: 8px 0 10px;
+  width: 1500px
+}
+/* ===== Only this area scrolls (like .bc-feed) ===== */
+html { scrollbar-gutter: stable; }
+.fb-feed{
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+  display: grid;
+  gap: 14px;
+  padding-right: 4px;
+}
+
+/* Cards (keep your previous look) */
+.fb-card{
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  padding: 14px 16px 16px;
+  width: 1500px;
+margin-bottom: 15px;
+text-align: start;
+}
+
+.fb-actions{
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  gap: 10px;
   
+}
+.icon-btn svg {
+  width: 26px;
+  height: 26px;
+  color: #111;              /* default icon color */
+  fill: none;               /* outline icon */
+  stroke: currentColor;     /* use `color` above */
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn.danger:hover svg,
+.icon-btn.danger:focus-visible svg {
+  color: #c23b3b;           /* red on hover/focus */
+}
+
+/* Optional: subtle focus ring for accessibility */
+.icon-btn:focus-visible {
+  outline: 2px solid rgba(11, 26, 120, 0.4);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+
+.fb-row{ margin: 6px 0; }
+.fb-label{ font-weight: 900; font-size: 20px; }
+.fb-value{ color: #000; font-size: 18px; }
+
+.fb-rule{ border: 0; border-top: 3px solid #b7c9ef; margin: 8px 0 12px; }
+
+.fb-grid{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: start;
+}
+.fb-fields{ min-width: 0; }
+
+/* Photo */
+.fb-photo{
+  width: 400px;
+  height: 250px;
+  object-fit: cover;
+  border: 3px solid #1bc882;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.12);
+  object-position: center;
+}
+
+.fb-stars{ display: inline-flex; gap: 2px; vertical-align: middle; }
+.fb-star{ width: 18px; height: 18px; fill: #d5dbea; }
+.fb-star.filled{ fill: #ffd84d; }
+
+/* Admin response box */
+.fb-admin-reply{
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: inset 0 0 0 2px #e9eefb;
+}
+.fb-admin-text{ color: #2e3854; }
+
+/* Empty state */
+.fb-empty { padding: 28px 16px; color: #333; }
+.fb-empty-title { font-weight: 800; font-size: 20px; margin-bottom: 6px; }
+.fb-empty-sub { color: #5a6276; }
+
+/* Responsive */
+@media (max-width: 960px){
+  .fb-grid{ grid-template-columns: 1fr; }
+  .fb-photo{ width: 100%; height: 200px; }
+}
+
+/* Simple modal styles (same as before) */
+.modal-overlay{
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000;
+}
+.modal{
+  width: 560px; background: #fff;
+  border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.2);
+}
+.modal-header{ padding: 16px 20px; border-bottom: 1px solid #eee; }
+.modal-title{ font-weight: 800; }
+.modal-body{ padding: 16px 20px; }
+.modal-actions{
+  padding: 12px 20px 16px;
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.btn{ padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+.btn-outline{ border: 1px solid #ccd1e5; background: #fff; }
+.btn-danger{ border: none; background: #c23b3b; color: #fff; }
+
+.fb-controls-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Select size like before */
+.fb-filter{
+  height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #000;     /* crisp edge like previous */
+  border-radius: 12px;
+  background: #fff;
+  width: 360px;
+  min-width: 280px;
+  box-sizing: border-box;
+}
+
+/* SETTINGS button – restored to the old outline style and pushed right */
+.fb-settings{
+  margin-left: 900px;                         /* ⬅️ pins to the right */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 20px;
+  min-width: 220px;                           /* adjust if you want wider/narrower */
+  border: 2px solid #0b1a78;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #0b1a78;
+  background: #fff;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.fb-settings:hover{
+  background: #0b1a78;
+  color: #fff;
+}
+

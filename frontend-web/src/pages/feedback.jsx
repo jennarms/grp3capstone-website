@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";        // ⬅️ add this
+import { Link } from "react-router-dom";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./feedback.css";
@@ -65,7 +65,6 @@ export function Feedback() {
   const [items, setItems] = useState(SEED);
   const [filter, setFilter] = useState("all");
 
-  // State for delete confirmation modal
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
@@ -75,21 +74,19 @@ export function Feedback() {
   );
 
   const onDelete = (id) => {
-    setPendingDeleteId(id); // Set the id for the feedback to be deleted
-    setConfirmDeleteOpen(true); // Open the confirmation modal
+    setPendingDeleteId(id);
+    setConfirmDeleteOpen(true);
   };
-
   const confirmDelete = () => {
     if (pendingDeleteId != null) {
-      setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId)); // Remove the feedback
+      setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId));
     }
-    setConfirmDeleteOpen(false); // Close the confirmation modal
-    setPendingDeleteId(null); // Reset the pending delete id
+    setConfirmDeleteOpen(false);
+    setPendingDeleteId(null);
   };
-
   const cancelDelete = () => {
-    setConfirmDeleteOpen(false); // Close the confirmation modal without deleting
-    setPendingDeleteId(null); // Reset the pending delete id
+    setConfirmDeleteOpen(false);
+    setPendingDeleteId(null);
   };
 
   const onReply = (id) => {
@@ -103,110 +100,111 @@ export function Feedback() {
   return (
     <>
       <Navbar />
+
       <div className="fb-main">
-        {/* Sticky header + controls */}
-        <div className="fb-sticky">
-          <div className="fb-header-row">
-            <div className="fb-title">Feedback</div>
+        {/* HEADER (static) */}
+        <div className="fb-header">
+          <div className="header-row">
+            <h1 className="page-title">Feedback</h1>
             <HeaderButton />
           </div>
 
-          {/* Filter + Settings on ONE line */}
-          <div className="fb-controls">
-            <select
-              className="fb-filter"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">Sort by category</option>
-              <option value="Complaint">Complaint</option>
-              <option value="Compliment">Compliment</option>
-              <option value="Suggestion">Suggestion</option>
-              <option value="Inquiry">Inquiry</option>
-            </select>
+          <div className="fb-controls-row">
+  <select
+    className="fb-filter"
+    value={filter}
+    onChange={(e) => setFilter(e.target.value)}
+    aria-label="Sort by category"
+  >
+    <option value="all">Sort by category</option>
+    <option value="Complaint">Complaint</option>
+    <option value="Compliment">Compliment</option>
+    <option value="Suggestion">Suggestion</option>
+    <option value="Inquiry">Inquiry</option>
+  </select>
 
-            {/* ⬇️ now routes to /feedback/settings */}
-            <Link className="fb-settings" to="/feedbackSettings">
-              Settings
-            </Link>
-          </div>
+  <Link className="fb-settings" to="/feedbackSettings">
+    Settings
+  </Link>
+</div>
+
+          <hr className="fb-title-rule" />
         </div>
 
-        {/* Scrollable list */}
-        <div className="fb-list">
-          {filtered.map((f) => (
-            <article key={f.id} className="fb-card">
-              {/* actions */}
-              <div className="fb-actions">
-                <button
-                  className="icon-btn"
-                  title="Reply"
-                  onClick={() => onReply(f.id)}
-                >
-                  {/* paper airplane */}
-                  <svg viewBox="0 0 24 24">
-                    <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
-                  </svg>
-                </button>
-                <button
-                  className="icon-btn danger"
-                  title="Delete"
-                  onClick={() => onDelete(f.id)} // Open delete confirmation modal
-                >
-                  {/* trash */}
-                  <svg viewBox="0 0 24 24">
-                    <path d="M9 3h6l1 2h5v2H3V5h5l1-2zm1 6h2v10h-2V9zm4 0h2v10h-2V9z" />
-                  </svg>
-                </button>
+  
+        <div className="fb-scroll">
+          {filtered.length === 0 ? (
+            <div className="fb-empty">
+              <div className="fb-empty-title">No feedback yet</div>
+              <div className="fb-empty-sub">
+                New submissions will appear here. You can still adjust{" "}
+                <Link to="/feedbackSettings">Settings</Link> anytime.
               </div>
+            </div>
+          ) : (
+            filtered.map((f) => (
+              <article key={f.id} className="fb-card">
+                <div className="fb-actions">
+                <button
+  className="icon-btn danger"
+  title="Delete"
+  aria-label="Delete"
+  onClick={() => onDelete(f.id)}
+>
+  <svg viewBox="0 0 24 24" className="icon-trash" aria-hidden="true">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </svg>
+</button>
+                </div>
 
-              {/* top fields */}
-              <div className="fb-row">
-                <span className="fb-label">Date:</span>
-                <span className="fb-value">{fmtDate(f.date)}</span>
-              </div>
-              <hr className="fb-rule" />
+                <div className="fb-row">
+                  <span className="fb-label">Date: </span>
+                  <span className="fb-value">{fmtDate(f.date)}</span>
+                </div>
+                <hr className="fb-rule" />
 
-              {/* details (text only) */}
-              <div className="fb-grid">
-                <div className="fb-fields">
-                  <div className="fb-row">
-                    <span className="fb-label">Category:</span>
-                    <span className="fb-value">{f.category}</span>
-                  </div>
-                  <div className="fb-row">
-                    <span className="fb-label">Station:</span>
-                    <span className="fb-value">{f.station}</span>
-                  </div>
-                  <div className="fb-row">
-                    <span className="fb-label">Rating:</span>
-                    <Stars value={f.rating} />
-                  </div>
-                  <div className="fb-row">
-                    <span className="fb-label">Message:</span>
-                    <span className="fb-value">{f.message}</span>
+                <div className="fb-grid">
+                  <div className="fb-fields">
+                    <div className="fb-row">
+                      <span className="fb-label">Category: </span>
+                      <span className="fb-value">{f.category}</span>
+                    </div>
+                    <div className="fb-row">
+                      <span className="fb-label">Station: </span>
+                      <span className="fb-value">{f.station}</span>
+                    </div>
+                    <div className="fb-row">
+                      <span className="fb-label">Rating: </span>
+                      <Stars value={f.rating} />
+                    </div>
+                    <div className="fb-row">
+                      <span className="fb-label">Message: </span>
+                      <span className="fb-value">{f.message}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* photo below the message */}
-              {f.image ? (
-                <img className="fb-photo" src={f.image} alt="attachment" />
-              ) : null}
+                {f.image ? (
+                  <img className="fb-photo" src={f.image} alt="attachment" />
+                ) : null}
 
-              {/* admin reply (if any) */}
-              {f.adminResponse && (
-                <div className="fb-admin-reply">
-                  <b>Admin:</b>{" "}
-                  <span className="fb-admin-text">{f.adminResponse}</span>
-                </div>
-              )}
-            </article>
-          ))}
+                {f.adminResponse && (
+                  <div className="fb-admin-reply">
+                    <b>Admin:</b>{" "}
+                    <span className="fb-admin-text">{f.adminResponse}</span>
+                  </div>
+                )}
+              </article>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Confirm Delete Modal */}
+      {/* Delete modal */}
       {confirmDeleteOpen && (
         <div className="modal-overlay" onClick={cancelDelete} aria-hidden="true">
           <div
@@ -217,14 +215,21 @@ export function Feedback() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <span className="modal-title" id="del-title">Delete Feedback</span>
+              <span className="modal-title" id="del-title">
+                Delete Feedback
+              </span>
             </div>
             <div className="modal-body">
-              Are you sure you want to delete this feedback? This action cannot be undone.
+              Are you sure you want to delete this feedback? This action cannot
+              be undone.
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={cancelDelete}>Cancel</button>
-              <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+              <button className="btn btn-outline" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button className="btn btn-danger" onClick={confirmDelete}>
+                Delete
+              </button>
             </div>
           </div>
         </div>
