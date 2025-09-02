@@ -1,16 +1,58 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Navbar } from "../components/navBar";
 import { HeaderButton } from "../components/headerButton";
 import "./uiCustomization.css";
 
+/** Single accordion item with smooth height animation (auto to content) */
 function AccordionItem({ id, openId, setOpenId, icon, title, children }) {
   const isOpen = openId === id;
+  const panelRef = useRef(null);
+  const [maxH, setMaxH] = useState(0);
+
+  // Measure content height on open/resize
+  useEffect(() => {
+    function measure() {
+      if (!panelRef.current) return;
+      const inner = panelRef.current.querySelector(".panel-inner");
+      const h = inner ? inner.scrollHeight : panelRef.current.scrollHeight;
+      setMaxH(isOpen ? h : 0);
+    }
+
+    measure();
+    window.addEventListener("resize", measure);
+    const raf = requestAnimationFrame(measure);
+
+    // Re-measure while open if content size changes
+    let ro;
+    if (isOpen && panelRef.current) {
+      const inner = panelRef.current.querySelector(".panel-inner");
+      if (inner && "ResizeObserver" in window) {
+        ro = new ResizeObserver(() => measure());
+        ro.observe(inner);
+      }
+    }
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      cancelAnimationFrame(raf);
+      if (ro) ro.disconnect();
+    };
+  }, [isOpen, children]);
+
+  const handleToggle = () => {
+    // Preserve scroll position to avoid any “jump” during expand/collapse
+    const y = window.scrollY;
+    setOpenId(isOpen ? null : id);
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  };
+
   return (
-    <div className={`ui-acc-item ${isOpen ? "open" : ""}`}>
+    <div className={`ui-acc-item ${isOpen ? "open" : ""}`} style={{ overflowAnchor: "none" }}>
       <button
+        id={`${id}-head`}
         type="button"
         className="ui-acc-head"
-        onClick={() => setOpenId(isOpen ? null : id)}
+        onClick={handleToggle}
         aria-expanded={isOpen}
         aria-controls={`${id}-panel`}
       >
@@ -26,8 +68,10 @@ function AccordionItem({ id, openId, setOpenId, icon, title, children }) {
         className="ui-acc-panel"
         role="region"
         aria-labelledby={`${id}-head`}
+        ref={panelRef}
+        style={{ maxHeight: `${maxH}px`, overflowAnchor: "none" }}
       >
-        {children}
+        <div className="panel-inner">{children}</div>
       </div>
     </div>
   );
@@ -42,11 +86,13 @@ export function UI() {
       <HeaderButton />
 
       <main className="ui-main">
-        <h1 className="ui-title">UI Customization</h1>
+        {/* Sticky title bar wrapper prevents borders from showing beside the title */}
+        <div className="ui-titlebar">
+          <h1 className="ui-title">UI Customization</h1>
+        </div>
 
         {/* Accordion */}
-        <section className="ui-accordion">
-
+        <section className="ui-accordion" style={{ overflowAnchor: "none" }}>
           {/* Logo */}
           <AccordionItem
             id="logo"
@@ -61,7 +107,6 @@ export function UI() {
                 accept="image/*"
                 className="ui-drop-input"
                 onChange={(e) => {
-                  // hook up your upload logic here
                   if (e.target.files?.[0]) {
                     console.log("Selected file:", e.target.files[0]);
                   }
@@ -75,7 +120,7 @@ export function UI() {
             </label>
           </AccordionItem>
 
-          {/* Company Name / Transportation Name */}
+          {/* Company Name */}
           <AccordionItem
             id="company"
             openId={openId}
@@ -87,7 +132,11 @@ export function UI() {
               <label className="ui-field-label" htmlFor="companyName">
                 Company name
               </label>
-              <input id="companyName" className="ui-input" placeholder="e.g. Pasig Ferry" />
+              <input
+                id="companyName"
+                className="ui-input"
+                placeholder="e.g. Pasig Ferry"
+              />
             </div>
           </AccordionItem>
 
@@ -100,35 +149,25 @@ export function UI() {
             title="Color Scheme"
           >
             <div className="ui-swatches">
-              {["#0B1A78", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF"].map((c) => (
-                <label key={c} className="ui-swatch" style={{ background: c }}>
-                  <input type="radio" name="brandColor" value={c} />
-                </label>
-              ))}
-            </div>
-          </AccordionItem>
-
-          {/* Splash Screen */}
-          <AccordionItem
-            id="splash"
-            openId={openId}
-            setOpenId={setOpenId}
-            icon="⚙️"
-            title="Splash Screen"
-          >
-            <div className="ui-field-row">
-              <label className="ui-field-label" htmlFor="splashText">
-                Splash text
-              </label>
-              <input id="splashText" className="ui-input" placeholder="Welcome aboard!" />
+              {["#0B1A78", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF"].map(
+                (c) => (
+                  <label key={c} className="ui-swatch" style={{ background: c }}>
+                    <input type="radio" name="brandColor" value={c} />
+                  </label>
+                )
+              )}
             </div>
           </AccordionItem>
         </section>
 
         {/* Actions */}
         <div className="ui-actions">
-          <button type="button" className="ui-btn secondary">Reset to Default</button>
-          <button type="button" className="ui-btn primary">Save Customization</button>
+          <button type="button" className="ui-btn secondary">
+            Reset to Default
+          </button>
+          <button type="button" className="ui-btn primary">
+            Save Customization
+          </button>
         </div>
       </main>
     </>

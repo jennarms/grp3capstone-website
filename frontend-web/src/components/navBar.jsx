@@ -19,11 +19,9 @@ export function Navbar() {
         <Link to="/broadcast" className="sidebar-link">
           Broadcast Channel
         </Link>
-        <Link to="/operations" className="sidebar-link">
-          Operations Management
-        </Link>
+        <Link to="/vehicle" className="sidebar-link">Operations Management</Link>
         <Link to="/passenger" className="sidebar-link">
-          Passenger Management
+          Passenger Management 
         </Link>
         <Link to="/feedback" className="sidebar-link">
           Feedback

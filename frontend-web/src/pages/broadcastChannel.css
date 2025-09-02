@@ -65,9 +65,10 @@ html, body { overflow-x: hidden; }
 .bc-tab{
   border: 2px solid #1f2b5a;
   background: #eef3ff;
-  padding: 6px 16px;
+  padding: 3px 16px;
   border-radius: 999px;
   font-weight: 800;
+  font-size: 19px;
   cursor: pointer;
   width: 250px;
 }
@@ -157,9 +158,9 @@ html { scrollbar-gutter: stable; }         /* page-level (newer browsers) */
 /* ===== COMPOSER ===== */
 .bc-composer {
   position: fixed;
-  bottom: 0;
+  bottom: 15px;
   left: var(--sidebar-w);
-  width: 1550px;
+  width: 1570px;
   height: var(--composer-h);
   background: white;
   padding: 10px 14px;
@@ -167,7 +168,7 @@ html { scrollbar-gutter: stable; }         /* page-level (newer browsers) */
   align-items: center;
   gap: 8px;
   z-index: 10;
-  margin-left: -300px;
+  margin-left: -270px;
   margin-bottom: -50px;
 }
 @media (max-width: 1024px){
@@ -195,23 +196,24 @@ html { scrollbar-gutter: stable; }         /* page-level (newer browsers) */
 
 .bc-send{
   position: absolute;
-  right: 10px;
+  right: 25px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 3;
+  border: none;
 }
-.bc-send-icon{
-  width: 35px;
-  height: 35px;
-  display: block;
-  object-fit: contain;
+.bc-send-icon {
+  width: 28px;
+  height: 28px;
+  transition: transform 0.15s ease, filter 0.15s ease;      
+  outline: none;
 }
-.bc-send:hover{ background: #f4f6fa; }
+.bc-send:hover{ background: transparent; stroke-width: 0; }
 
 .fb-card{
   overflow: hidden; /* clips the image to the card's border-radius */
@@ -232,4 +234,42 @@ html { scrollbar-gutter: stable; }         /* page-level (newer browsers) */
     min-height: 260px;
     aspect-ratio: 16 / 9;
   }
+}
+
+.bc-reactions { position: relative; }
+
+.bc-emoji-pop {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  display: flex;              /* Change from grid to flex */
+  gap: 6px;
+  padding: 10px 8px;
+  background: #fff;
+  border: 1px solid #e1e4eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.12);
+  z-index: 50;
+  justify-content: center;    /* Center horizontally */
+  align-items: center;        /* Center vertically */
+}
+
+.bc-emoji-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 32px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.bc-emoji-btn:hover {
+  background: #f5f6fb;
+  transform: scale(1.2); /* Hover animation stays centered */
 }

@@ -3,8 +3,14 @@ import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./broadcastChannel.css";
 
-/** Single message bubble with dynamic reactions */
-function Message({ msg, onReact, onAddReaction }) {
+
+const EMOJI_PALETTE = [
+  "👍","🥰","🔥","😮","😢","👎",
+  "😡", "🙂"
+];
+
+/** Single message bubble with dynamic reactions + emoji picker */
+function Message({ msg, onReact, onTogglePicker, isPickerOpen, onPickEmoji }) {
   const reactions = Object.entries(msg.reactions || {}); // [[emoji, count], ...]
   const roleClass =
     msg.author === "Admin" || msg.author === "Main Administrator"
@@ -32,14 +38,34 @@ function Message({ msg, onReact, onAddReaction }) {
           </button>
         ))}
 
+        {/* Add reaction opens the emoji-only picker */}
         <button
           className="bc-chip bc-chip-add"
           type="button"
           title="Add reaction"
-          onClick={() => onAddReaction(msg.id)}
+          onClick={() => onTogglePicker(msg.id)}
+          aria-expanded={isPickerOpen ? "true" : "false"}
+          aria-controls={`picker-${msg.id}`}
         >
           ＋
         </button>
+
+        {/* Inline emoji picker (emojis only) */}
+        {isPickerOpen && (
+          <div className="bc-emoji-pop" id={`picker-${msg.id}`} role="menu">
+            {EMOJI_PALETTE.map((e) => (
+              <button
+                key={e}
+                className="bc-emoji-btn"
+                type="button"
+                role="menuitem"
+                onClick={() => onPickEmoji(msg.id, e)}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -52,6 +78,9 @@ export function Broadcast() {
 
   // start empty
   const [messages, setMessages] = useState([]);
+
+  // which message has the emoji picker open
+  const [pickerForId, setPickerForId] = useState(null);
 
   const filtered = messages.filter((m) =>
     tab === "admins" ? m.audience === "admins" : m.audience === "everyone"
@@ -102,19 +131,23 @@ export function Broadcast() {
     );
   };
 
-  const addReaction = (id) => {
-    const raw = window.prompt("React with an emoji (e.g., 😍 👍 🔥):");
-    if (!raw) return;
-    const emoji = Array.from(raw.trim())[0]; // first grapheme
-    if (!emoji) return;
+  /** Open/close the emoji-only picker for a specific message */
+  const togglePicker = (id) => {
+    setPickerForId((cur) => (cur === id ? null : id));
+  };
+
+  /** When an emoji is chosen from the palette */
+  const pickEmoji = (id, emoji) => {
     react(id, emoji);
+    setPickerForId(null);
   };
 
   return (
     <>
       <Navbar />
       <div className="main-content">
-          <HeaderButton />  
+        <HeaderButton />
+
         {/* Tabs */}
         <div className="bc-tabs center-row">
           <button
@@ -148,7 +181,9 @@ export function Broadcast() {
                 key={m.id}
                 msg={m}
                 onReact={react}
-                onAddReaction={addReaction}
+                onTogglePicker={togglePicker}
+                isPickerOpen={pickerForId === m.id}
+                onPickEmoji={pickEmoji}
               />
             ))
           )}
@@ -164,13 +199,13 @@ export function Broadcast() {
             onKeyDown={handleEnter}
             style={{ paddingRight: 48 }}        // room for the icon
           />
-            <button className="bc-send" onClick={sendMessage} aria-label="Send">
-    <img
-      src="https://cdn-icons-png.flaticon.com/512/126/126475.png"
-      alt="Send"
-      className="bc-send-icon"
-    />
-  </button>
+          <button className="bc-send" onClick={sendMessage} aria-label="Send">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/126/126475.png"
+              alt="Send"
+              className="bc-send-icon"
+            />
+          </button>
         </div>
       </div>
     </>

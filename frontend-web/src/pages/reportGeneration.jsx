@@ -41,7 +41,6 @@ const fmt = (d) =>
 
 const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF"];
 
-/* -------- Toast component (non-intrusive) -------- */
 function Toast({ open, title, message, tone = "success" }) {
   if (!open) return null;
   return (
