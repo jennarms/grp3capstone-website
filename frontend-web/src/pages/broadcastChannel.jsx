@@ -5,7 +5,7 @@ import "./broadcastChannel.css";
 
 
 const EMOJI_PALETTE = [
-  "👍","🥰","🔥","😮","😢","👎",
+  "👍","🥰","😮","😢","👎",
   "😡", "🙂"
 ];
 

@@ -1,299 +1,301 @@
+/* ===== Page ===== */
 .faqs-page {
-    font-size: 16px;
-    font-family: Arial, sans-serif;
-    width: 1250x;
-    max-width: none;
-    box-sizing: border-box;
-    align-items: center;
-  }
-  
-  .table-container {
-    max-height: 400px; /* or any desired height */
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    margin-left: 170px;
-  }
-  
-  .faqs-table {
-    width: 1100px;
-    border-collapse: collapse;
-    text-align: left;
-  }
-  
-  .faqs-table thead th {
-    position: sticky;
-    top: 0;
-    background-color: #cdddfc;
-    z-index: 1;
-    text-align: center;
-  }
-  
-  .faqs-table td,
-  .faqs-table th {
-    padding: 12px;
-    border: 1px solid #ddd;
-  }
-  
-  .edit-btn,
-  .delete-btn {
-    width: 100px;
-    text-align: center;
-    border: 2px solid #000c6f;
-    background-color: white;
-    color: #000000;
-    font-weight: bold;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-right: 10px;
-  }
-  
-  .delete-btn {
-    border-color: red;
-    color: red;
-    min-width: 60px;
-  }
-  
-  .faqs-top-header {
-    position: absolute;
-    top: 20px;
-    left: 340px;
-    right: 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-right: 40px;
-    z-index: 10;
-  }
-  
-  .faqs-top-header h1 {
-    font-size: 45px;
-    font-weight: 700;
-    margin: 0;
-    margin-top: 50px;
-  }
-  
-  .search-add-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-right: 10px;
-  }
-  
-  .search-input-wrapper {
-    position: relative;
-    width: 300px;
-  }
-  
-  .search-icon {
-    position: absolute;
-    top: 50%;
-    left: 12px;
-    margin-left: 170px;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    opacity: 0.6;
-  }
-  
-  .search-input {
-    width: 100%;
-    padding: 10px 16px 10px 36px;
-    font-size: 16px;
-    border-radius: 20px;
-    border: 1px solid gray;
-    margin-left: 170px;
-  }
-  
-  .add-btn {
-    padding: 5px 35px;
-    border: 2px solid #000c6f;
-    background-color: white;
-    font-weight: bold;
-    border-radius: 6px;
-    cursor: pointer;
-    color: #000c6f;
-    min-width: 350px;
-    font-size: 17px;
-  }
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  width: 1250px;               /* fixed (was 1250x) */
+  max-width: none;
+  box-sizing: border-box;
+}
 
+/* ===== Card wrapper that holds the toolbar + table ===== */
+.table-card {
+  width: 1408px;
+  margin-left: 70px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;            /* keeps borders clean */
+  background: #fff;            /* white/transparent look */
+  display: flex;
+  flex-direction: column;
+  height: 595px;
+}
 
-  .edit-btn,
-  .delete-btn {
-    padding: 6px 12px;
-    height: 36px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    
-  }
+/* ===== Toolbar (Search + Add) ===== */
+.search-add-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;            /* no blue */
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;
+  position: sticky;            /* keeps it visible while scrolling table */
+  top: 0;                      /* adjust if needed relative to your navbar */
+  z-index: 3;
+}
 
+.search-input-wrapper {
+  position: relative;
+  width: 300px;
+}
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+.search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px; /* space for icon */
+  font-size: 16px;
+  border-radius: 20px;
+  border: 1px solid gray;
+}
+.add-btn {
+  padding: 6px 20px;
+  border: 2px solid #000c6f;
+  background-color: #fff;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #000c6f;
+  font-size: 15px;
+  min-width: 140px;
+}
+
+/* ===== Stable table area (prevents layout jump on add/delete) ===== */
+.table-scroll {
+  height: 520px;               /* tweak for your viewport */
+  overflow-y: auto;
+}
+
+/* ===== Table ===== */
+.faqs-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  table-layout: fixed;         /* consistent column widths */
+}
+.faqs-table thead th {
+  position: sticky;
+  top: 0;                      /* sticks under the toolbar */
+  background-color: #fff;      /* white header */
+  z-index: 2;
+  text-align: center;
+  height: 60px;   
+}
+.faqs-table td,
+.faqs-table th {
+  padding: 12px;
+  border: 1px solid #ddd;
+  vertical-align: top;
+  word-wrap: break-word;
+  height: 75px;
+}
+
+/* ===== Buttons in table ===== */
+.edit-btn,
+.delete-btn {
+  width: 100px;
+  text-align: center;
+  border: 2px solid #000c6f;
+  background-color: #fff;
+  color: #000;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  padding: 6px 12px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.delete-btn {
+  border-color: red;
+  color: red;
+  min-width: 60px;
+}
 .action-buttons {
-    display: flex;
-    flex-direction: row;       /* Ensure horizontal layout */
-    justify-content: center;   /* Center them inside the cell */
-    align-items: center;       /* Align vertically */
-    gap: 10px;                 /* Space between Edit and Delete */
-    height: 100%;
-  }
-  
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  
-  .modal {
-    background: white;
-    padding: 20px 30px;
-    border-radius: 12px;
-    width: 420px;
-    height: 400px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    position: relative;
-  }
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .modal-header h2 {
-    margin-left: -15px;
-    color: #000000;
-    font-weight: bold;
-    font-size: 30px;
-  }
-  
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #444;
-  }
-  
-  .modal-body input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    width: 100%;
-  }
-  
-  .save-btn {
-    padding: 10px;
-    background-color: #5587eb;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 150px;
-    align-items: right;
-    
-  }
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+}
 
-  .save-btn-container {
-    display: flex;
-    justify-content: flex-end;
-  }
-  
-  .modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    text-align: left;
-  }
-  
-  .modal-field {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-    font-size: 17px;
-  }
-  
-  .modal-label {
-    font-weight: bold;
-    width: auto;
-    min-width: 40px; /* or 50px */
-    color: #333;
-  }
-  
-  .modal-value {
-    color: #000;
-    font-weight: 500;
-  }
+/* ===== Top page header (title) ===== */
+.faqs-top-header {
+  position: absolute;
+  top: 20px;
+  left: 340px;
+  right: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 40px;
+  z-index: 10;
+}
+.faqs-top-header h1 {
+  font-size: 45px;
+  font-weight: 700;
+  margin: 0;
+  margin-top: 50px;
+}
 
-  .confirm-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.4);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1001;
-  }
-  
-  .confirm-box {
-    background: white;
-    padding: 25px 30px;
-    border-radius: 10px;
-    width: 420px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-  }
-  
-  .confirm-box h3 {
-    margin-top: 0;
-    font-size: 22px;
-    font-weight: bolder;
-    text-align: left;
-  }
-  
-  .confirm-buttons {
-    margin-top: 20px;
-    display: flex;
-    justify-content: right;
-    gap: 20px;
-  }
-  
-  .cancel-btn {
-    background-color: white;
-    border: 1px solid #aaa;
-    padding: 8px 18px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    
-  }
-  
-  .yes-btn {
-    background-color: #000c6f;
-    color: white;
-    padding: 8px 20px;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 100px; /* ✅ Set width here */
-    text-align: center;
-  }
+/* ===== Overlays ===== */
+.modal-overlay,
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
 
-  
+/* ===== Modal (unified, no duplicates) ===== */
+.modal {
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  width: 640px;            /* size of modal */
+  max-width: 90vw;
+  min-height: 540px;       /* ensures space for footer */
+  max-height: 900px;        /* prevents overflow off-screen */
+  display: flex;           /* column layout: header, body, footer */
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+/* Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h2 {
+  margin: 0;
+  color: #000;
+  font-weight: 800;
+  font-size: 24px;
+}
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #444;
+}
+
+/* Body */
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;              /* more space between fields */
+  flex: unset;            /* don’t force scroll */
+  overflow-y: visible;    /* no scrollbars */
+}
+
+/* Field row: label + input */
+.modal-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-label {
+  font-weight: 700;
+  color: #333;
+  font-size: 15px;
+  width: 100px;           /* fixed width for alignment */
+  text-align: right;      /* align labels neatly */
+}
+
+.modal-body input {
+  flex: 1;                /* input takes remaining space */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;              /* space between buttons */
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+/* Footer buttons */
+.btn {
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 110px;       /* consistent width */
+  text-align: center;
+  border: 1px solid #aaa;
+  background: #fff;
+}
+.btn.primary {
+  background: #000c6f;
+  color: #fff;
+  border: none;
+}
+.btn.cancel {
+  background: #fff;
+  color: #333;
+}
+
+/* ===== Confirm dialog ===== */
+.confirm-box {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 10px;
+  width: 420px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.confirm-box h3 {
+  margin-top: 0;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: left;
+}
+.confirm-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.cancel-btn {
+  background-color: #fff;
+  border: 1px solid #aaa;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.yes-btn {
+  background-color: #000c6f;
+  color: #fff;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  min-width: 100px;
+  text-align: center;
+}
+
