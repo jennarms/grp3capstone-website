@@ -1,10 +1,14 @@
-import { Navbar } from '../components/navBar';
-import React, { useState } from 'react';
-import './FaqsManagement.css';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { HeaderButton } from '../components/headerButton';
+import { Navbar } from '../components/navBar';
+import './FaqsManagement.css';
 
 export function FAQs() {
   const [search, setSearch] = useState('');
+  const [faqsList, setFaqsList] = useState([]);
+
+  // Modals
   const [showModal, setShowModal] = useState(false);
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
@@ -14,47 +18,84 @@ export function FAQs() {
   const [faqToEdit, setFaqToEdit] = useState(null);
   const [editQuestion, setEditQuestion] = useState('');
   const [editAnswer, setEditAnswer] = useState('');
-  const [showEditConfirm, setShowEditConfirm] = useState(false);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [faqToDelete, setFaqToDelete] = useState(null);
 
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // ✅ Fetch FAQs on load
+  useEffect(() => {
+    fetchFaqs();
+  }, []);
 
-  // (You had this, but it's not needed for the darken behavior)
-  const [modalVisible, setModalVisible] = useState(null); // 'edit' | 'delete' | null
+  const fetchFaqs = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:5000/api/faqs/");
+      setFaqsList(res.data);
+    } catch (err) {
+      console.error("Error fetching FAQs:", err);
+    }
+  };
 
-  const initialFaqs = [
-    { id: 'F001', adminId: 'A001', question: 'Question 1..', answer: 'Answer to question 1' },
-    { id: 'F002', adminId: 'A001', question: 'Question 2..', answer: 'Answer to question 2' },
-    { id: 'F003', adminId: 'A001', question: 'Question 3..', answer: 'Answer to question 3' },
-    { id: 'F004', adminId: 'A001', question: 'Question 4..', answer: 'Answer to question 4' },
-  ];
+  // ✅ Add FAQ
+  const handleSave = async () => {
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/api/faqs/", {
+        admin_id: "admin001", // Replace with logged-in admin id
+        question: newQuestion,
+        answer: newAnswer
+      });
+      setFaqsList([...faqsList, {
+        faq_id: res.data.faq_id,
+        admin_id: "admin001",
+        question: newQuestion,
+        answer: newAnswer
+      }]);
+      setShowModal(false);
+      setNewQuestion('');
+      setNewAnswer('');
+      setShowConfirm(false);
+    } catch (err) {
+      console.error("Error adding FAQ:", err);
+    }
+  };
 
-  const [faqsList, setFaqsList] = useState(initialFaqs);
+  // ✅ Update FAQ
+  const handleUpdate = async () => {
+    try {
+      await axios.put(`http://127.0.0.1:5000/api/faqs/${faqToEdit.faq_id}`, {
+        question: editQuestion,
+        answer: editAnswer
+      });
+      const updatedFaqs = faqsList.map(faq =>
+        faq.faq_id === faqToEdit.faq_id
+          ? { ...faq, question: editQuestion, answer: editAnswer }
+          : faq
+      );
+      setFaqsList(updatedFaqs);
+      setEditModalVisible(false);
+    } catch (err) {
+      console.error("Error updating FAQ:", err);
+    }
+  };
 
+  // ✅ Delete FAQ
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/api/faqs/${faqToDelete.faq_id}`);
+      const updatedFaqs = faqsList.filter(faq => faq.faq_id !== faqToDelete.faq_id);
+      setFaqsList(updatedFaqs);
+      setShowDeleteConfirm(false);
+      setFaqToDelete(null);
+    } catch (err) {
+      console.error("Error deleting FAQ:", err);
+    }
+  };
+
+  // ✅ Search
   const filteredFaqs = faqsList.filter(faq =>
     faq.question.toLowerCase().includes(search.toLowerCase()) ||
     faq.answer.toLowerCase().includes(search.toLowerCase())
   );
-
-  const generateNewFaqID = () => {
-    const lastId = faqsList.length > 0 ? parseInt(faqsList[faqsList.length - 1].id.substring(1)) : 0;
-    return `F${(lastId + 1).toString().padStart(3, '0')}`;
-  };
-
-  const handleSave = () => {
-    const newFaq = {
-      id: generateNewFaqID(),
-      adminId: 'A001',
-      question: newQuestion,
-      answer: newAnswer,
-    };
-    setFaqsList([...faqsList, newFaq]);
-    setShowModal(false);
-    setNewQuestion('');
-    setNewAnswer('');
-  };
 
   return (
     <>
@@ -101,10 +142,10 @@ export function FAQs() {
               )}
 
               {filteredFaqs.map((faq, index) => (
-                <tr key={faq.id}>
+                <tr key={faq.faq_id}>
                   <td>{index + 1}</td>
-                  <td>{faq.id}</td>
-                  <td>{faq.adminId}</td>
+                  <td>{faq.faq_id}</td>
+                  <td>{faq.admin_id}</td>
                   <td>{faq.question}</td>
                   <td>{faq.answer}</td>
                   <td>
@@ -116,7 +157,6 @@ export function FAQs() {
                           setEditQuestion(faq.question);
                           setEditAnswer(faq.answer);
                           setEditModalVisible(true);
-                          setModalVisible('edit');
                         }}
                       >Edit</button>
                       <button
@@ -124,18 +164,10 @@ export function FAQs() {
                         onClick={() => {
                           setFaqToDelete(faq);
                           setShowDeleteConfirm(true);
-                          setModalVisible('delete');
                         }}
                       >Delete</button>
                     </div>
                   </td>
-                </tr>
-              ))}
-
-              {Array.from({ length: Math.max(0, 10 - filteredFaqs.length) }).map((_, idx) => (
-                <tr key={`empty-${idx}`}>
-                  <td>{filteredFaqs.length + idx + 1}</td>
-                  <td colSpan="5" style={{ height: '45px' }}></td>
                 </tr>
               ))}
             </tbody>
@@ -143,29 +175,15 @@ export function FAQs() {
         </div>
       </div>
 
-      {/* Add FAQ Modal — use the same dark overlay */}
+      {/* Add FAQ Modal */}
       {showModal && (
         <div className="confirm-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2>Add FAQ</h2>
-              <button
-                className="close-btn"
-                onClick={() => {
-                  setShowModal(false);
-                  setShowConfirm(false);
-                }}
-              >×</button>
+              <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
             </div>
             <div className="modal-body">
-              <div className="modal-field">
-                <span className="modal-label">FAQ ID:</span>
-                <span className="modal-value">{generateNewFaqID()}</span>
-              </div>
-              <div className="modal-field">
-                <span className="modal-label">Admin ID:</span>
-                <span className="modal-value">A001</span>
-              </div>
               <input
                 type="text"
                 placeholder="Question"
@@ -180,6 +198,7 @@ export function FAQs() {
               />
             </div>
             <div className="save-btn-container">
+              <button className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="save-btn" onClick={() => setShowConfirm(true)}>Save</button>
             </div>
 
@@ -190,13 +209,7 @@ export function FAQs() {
                   <p>Are you sure you want to add?</p>
                   <div className="confirm-buttons">
                     <button className="cancel-btn" onClick={() => setShowConfirm(false)}>Cancel</button>
-                    <button
-                      className="yes-btn"
-                      onClick={() => {
-                        handleSave();
-                        setShowConfirm(false);
-                      }}
-                    >Yes</button>
+                    <button className="yes-btn" onClick={handleSave}>Yes</button>
                   </div>
                 </div>
               </div>
@@ -205,29 +218,16 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Edit FAQ Modal — now also uses confirm-overlay to darken everything */}
+
+      {/* Edit FAQ Modal */}
       {editModalVisible && faqToEdit && (
         <div className="confirm-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2>Edit FAQ</h2>
-              <button
-                className="close-btn"
-                onClick={() => {
-                  setEditModalVisible(false);
-                  setModalVisible(null);
-                }}
-              >×</button>
+              <button className="close-btn" onClick={() => setEditModalVisible(false)}>×</button>
             </div>
             <div className="modal-body">
-              <div className="modal-field">
-                <span className="modal-label">FAQ ID:</span>
-                <span className="modal-value">{faqToEdit.id}</span>
-              </div>
-              <div className="modal-field">
-                <span className="modal-label">Admin ID:</span>
-                <span className="modal-value">{faqToEdit.adminId}</span>
-              </div>
               <input
                 type="text"
                 placeholder="Question"
@@ -242,40 +242,14 @@ export function FAQs() {
               />
             </div>
             <div className="save-btn-container">
-              <button className="save-btn" onClick={() => setShowEditConfirm(true)}>Save</button>
+              <button className="cancel-btn" onClick={() => setEditModalVisible(false)}>Cancel</button>
+              <button className="save-btn" onClick={handleUpdate}>Update</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Confirm Edit */}
-      {showEditConfirm && (
-        <div className="confirm-overlay">
-          <div className="confirm-box">
-            <h3>Confirm Edit</h3>
-            <p>Are you sure you want to update?</p>
-            <div className="confirm-buttons">
-              <button className="cancel-btn" onClick={() => setShowEditConfirm(false)}>Cancel</button>
-              <button
-                className="yes-btn"
-                onClick={() => {
-                  const updatedFaqs = faqsList.map(faq =>
-                    faq.id === faqToEdit.id
-                      ? { ...faq, question: editQuestion, answer: editAnswer }
-                      : faq
-                  );
-                  setFaqsList(updatedFaqs);
-                  setEditModalVisible(false);
-                  setShowEditConfirm(false);
-                  setModalVisible(null);
-                }}
-              >Yes</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Delete (unchanged) */}
+      {/* Confirm Delete */}
       {showDeleteConfirm && faqToDelete && (
         <div className="confirm-overlay">
           <div className="confirm-box">
@@ -283,16 +257,7 @@ export function FAQs() {
             <p>Are you sure you want to delete?</p>
             <div className="confirm-buttons">
               <button className="cancel-btn" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-              <button
-                className="yes-btn"
-                onClick={() => {
-                  const updatedFaqs = faqsList.filter(faq => faq.id !== faqToDelete.id);
-                  setFaqsList(updatedFaqs);
-                  setShowDeleteConfirm(false);
-                  setFaqToDelete(null);
-                  setModalVisible(null);
-                }}
-              >Yes</button>
+              <button className="yes-btn" onClick={handleDelete}>Yes</button>
             </div>
           </div>
         </div>

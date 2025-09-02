@@ -49,4 +49,7 @@ def create_app():
     from app.routes.announcement import announcement_bp
     app.register_blueprint(announcement_bp, url_prefix="/api/announcement")
 
+    from app.routes.faqs import faqs_bp
+    app.register_blueprint(faqs_bp, url_prefix="/api/faqs")
+
     return app
