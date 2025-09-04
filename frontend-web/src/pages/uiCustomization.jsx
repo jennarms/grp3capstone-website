@@ -3,7 +3,7 @@ import { Navbar } from "../components/navBar";
 import { HeaderButton } from "../components/headerButton";
 import "./uiCustomization.css";
 
-/** Single accordion item with smooth height animation (auto to content) */
+/** Accordion item whose header stays put while the panel animates below it */
 function AccordionItem({ id, openId, setOpenId, icon, title, children }) {
   const isOpen = openId === id;
   const panelRef = useRef(null);
@@ -40,10 +40,21 @@ function AccordionItem({ id, openId, setOpenId, icon, title, children }) {
   }, [isOpen, children]);
 
   const handleToggle = () => {
-    // Preserve scroll position to avoid any “jump” during expand/collapse
-    const y = window.scrollY;
-    setOpenId(isOpen ? null : id);
-    requestAnimationFrame(() => window.scrollTo(0, y));
+    const willOpen = !isOpen;
+    const panel = panelRef.current;
+    const inner = panel?.querySelector(".panel-inner");
+
+    const openHeight = inner?.scrollHeight || 0;            // full target height
+    const currentHeight = panel?.scrollHeight || maxH || 0;  // current visible height
+    const delta = willOpen ? openHeight : -currentHeight;    // how much height will change
+
+    const startY = window.scrollY;
+    setOpenId(willOpen ? id : null);
+
+    // Next frame: shift page by the same delta so the header doesn't move
+    requestAnimationFrame(() => {
+      window.scrollTo(0, startY + delta);
+    });
   };
 
   return (
@@ -85,12 +96,15 @@ export function UI() {
       <Navbar />
       <HeaderButton />
 
-      <main className="ui-main">
-        {/* Sticky title bar wrapper prevents borders from showing beside the title */}
-        <div className="ui-titlebar">
-          <h1 className="ui-title">UI Customization</h1>
-        </div>
+      {/* Uniform header (same style & alignment as the FAQs page) */}
+      <div className="ui-top-header">
+        <h1>UI Customization</h1>
+      </div>
 
+      {/* Spacer reserves vertical space below the absolutely-positioned header */}
+      <div className="ui-header-spacer" aria-hidden="true" />
+
+      <main className="ui-main">
         {/* Accordion */}
         <section className="ui-accordion" style={{ overflowAnchor: "none" }}>
           {/* Logo */}

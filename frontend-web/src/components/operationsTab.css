@@ -1,63 +1,69 @@
-.ops-title{
-    font-size: 42px;
-    font-weight: 800;
-    color: #000;
-    text-align: left;          /* keep left-aligned */
-    margin-left: -500px;
+:root{
+    --ops-left: 340px;   /* left edge of content area */
+    --ops-right: 40px;   /* right padding */
+    --ops-top: 20px;     /* top offset from app chrome */
+    --ops-space: 170px;  /* reserved height (title + tabs) */
   }
   
-  /* ===================== Pill Bar ===================== */
+  /* Header (title + tabs) pinned in place */
+  .ops-header{
+    position: absolute;
+    left: var(--ops-left);
+    right: var(--ops-right);
+    margin-top: -120px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;   /* force left alignment */
+    padding-right: 40px;
+    pointer-events: auto;
+  }
+  
+  /* Title — force left alignment and shared style */
+  .ops-title{
+    font-size: 48px !important;
+    font-weight: 700;
+    margin: 0;
+    text-align: left !important;  /* override any global centering */
+  }
+  
+  /* Tabs row under the title */
   .ops-tabs{
     display: flex;
-    gap: 16px;
     flex-wrap: wrap;
-    justify-content: flex-start; /* left edge */
-    align-items: center;
-    margin: 0 0 18px 0;          /* remove side margins so it sits flush left */
-    padding: 0;
-    width: fit-content;          /* shrink to content so it hugs the left */
-    align-self: flex-start;      /* if parent is flex */
+    gap: 10px;
   }
   
-  /* Optional: make the bar sticky under your fixed navbar
-     Add className "ops-tabs sticky" to enable. */
-  .ops-tabs.sticky{
-    position: sticky;
-    top: var(--nav-h, 0);
-    z-index: 4;
-    background: transparent;
-    padding-top: 8px;
-  }
-  
-  /* ===================== Pills ===================== */
+  /* Tab pill styling */
   .ops-tab{
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 36px;
-    padding: 0 18px;
+    min-width: 200px;
+    padding: 6px 14px !important;
+    border-radius: 10px;
     text-decoration: none;
-    background: #001a63;        /* deep navy */
+    font-weight: 700 !important;
+    font-size: 22px;
+    background: #0b1a78;
     color: #fff;
-    border-radius: 12px;
-    font-weight: 800;
-    font-size: 18px;
-    line-height: 1;
-    box-shadow: 0 2px 0 rgba(0,0,0,.25) inset;
-    transition: transform .06s ease, filter .12s ease, box-shadow .12s ease;
+    border: 2px solid #0b1a78;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+    transition: transform .05s ease, filter .15s ease;
   }
-  
-  .ops-tab:hover{
-    filter: brightness(1.06);
-    transform: translateY(-1px);
-  }
-  
-  .ops-tab:active{
-    transform: translateY(0);
-    filter: brightness(1.02);
-  }
+  .ops-tab:hover{ filter: brightness(0.95); }
+  .ops-tab:active{ transform: translateY(1px); }
   
   .ops-tab.active{
-    background: #0b1a78;        /* slightly lighter for active */
-    box-shadow: 0 0 0 3px #ced7ff, 0 2px 0 rgba(0,0,0,.25) inset; /* subtle halo */
+    filter: none;
+  }
+  
+  /* Reserve vertical space so content never sits under header */
+  .ops-header-spacer{
+    height: var(--ops-space);
+  }
+  
+  /* (Optional) If global styles center all h1s, this ensures left-align here */
+  .ops-header h1{
+    text-align: left;
   }

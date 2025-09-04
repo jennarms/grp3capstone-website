@@ -23,7 +23,11 @@ export function FAQs() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [faqToDelete, setFaqToDelete] = useState(null);
 
-  // Fetch FAQs
+  // Success / Notice
+  const [notice, setNotice] = useState({ open: false, text: '' });
+  const showNotice = (text) => setNotice({ open: true, text });
+  const closeNotice = () => setNotice({ open: false, text: '' });
+
   useEffect(() => {
     fetchFaqs();
   }, []);
@@ -57,6 +61,7 @@ export function FAQs() {
       setShowModal(false);
       setNewQuestion('');
       setNewAnswer('');
+      showNotice('FAQ successfully added!');
     } catch (err) {
       console.error('Error adding FAQ:', err);
     }
@@ -78,6 +83,7 @@ export function FAQs() {
       );
       setEditModalVisible(false);
       setFaqToEdit(null);
+      showNotice('FAQ successfully updated!');
     } catch (err) {
       console.error('Error updating FAQ:', err);
     }
@@ -90,12 +96,12 @@ export function FAQs() {
       setFaqsList(prev => prev.filter(faq => faq.faq_id !== faqToDelete.faq_id));
       setShowDeleteConfirm(false);
       setFaqToDelete(null);
+      showNotice('FAQ successfully deleted!');
     } catch (err) {
       console.error('Error deleting FAQ:', err);
     }
   };
 
-  // Search filter
   const filteredFaqs = faqsList.filter(
     faq =>
       faq.question.toLowerCase().includes(search.toLowerCase()) ||
@@ -112,7 +118,6 @@ export function FAQs() {
       </div>
 
       <div className="faqs-page">
-        {/* Card that contains toolbar + table */}
         <div className="table-card">
           <div className="search-add-container">
             <div className="search-input-wrapper">
@@ -135,7 +140,6 @@ export function FAQs() {
             </button>
           </div>
 
-          {/* Fixed-height scroll area so layout doesn't jump on add/delete */}
           <div className="table-scroll">
             <table className="faqs-table">
               <thead>
@@ -196,18 +200,18 @@ export function FAQs() {
         </div>
       </div>
 
-      {/* Add FAQ Modal */}
+      {/* Add FAQ Modal (renamed classes) */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h2>Add FAQ</h2>
-              <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+        <div className="fm-modalOverlay" onClick={() => setShowModal(false)}>
+          <div className="fm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="fm-modalHeader">
+              <h2 className="fm-modalTitle">Add FAQ</h2>
+              <button className="fm-closeBtn" onClick={() => setShowModal(false)}>×</button>
             </div>
 
-            <div className="modal-body">
-              <div className="modal-field">
-                <label className="modal-label">Question</label>
+            <div className="fm-modalBody">
+              <div className="fm-field">
+                <label className="fm-label">Question</label>
                 <input
                   type="text"
                   value={newQuestion}
@@ -215,8 +219,8 @@ export function FAQs() {
                 />
               </div>
 
-              <div className="modal-field">
-                <label className="modal-label">Answer</label>
+              <div className="fm-field">
+                <label className="fm-label">Answer</label>
                 <input
                   type="text"
                   value={newAnswer}
@@ -225,7 +229,7 @@ export function FAQs() {
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div className="fm-modalFooter">
               <button className="btn cancel" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="btn primary" onClick={handleSave}>Add</button>
             </div>
@@ -233,18 +237,18 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Edit FAQ Modal */}
+      {/* Edit FAQ Modal (renamed classes) */}
       {editModalVisible && faqToEdit && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h2>Edit FAQ</h2>
-              <button className="close-btn" onClick={() => setEditModalVisible(false)}>×</button>
+        <div className="fm-modalOverlay" onClick={() => setEditModalVisible(false)}>
+          <div className="fm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="fm-modalHeader">
+              <h2 className="fm-modalTitle">Edit FAQ</h2>
+              <button className="fm-closeBtn" onClick={() => setEditModalVisible(false)}>×</button>
             </div>
 
-            <div className="modal-body">
-              <div className="modal-field">
-                <label className="modal-label">Question</label>
+            <div className="fm-modalBody">
+              <div className="fm-field">
+                <label className="fm-label">Question</label>
                 <input
                   type="text"
                   value={editQuestion}
@@ -252,8 +256,8 @@ export function FAQs() {
                 />
               </div>
 
-              <div className="modal-field">
-                <label className="modal-label">Answer</label>
+              <div className="fm-field">
+                <label className="fm-label">Answer</label>
                 <input
                   type="text"
                   value={editAnswer}
@@ -262,7 +266,7 @@ export function FAQs() {
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div className="fm-modalFooter">
               <button className="btn cancel" onClick={() => setEditModalVisible(false)}>Cancel</button>
               <button className="btn primary" onClick={handleUpdate}>Update</button>
             </div>
@@ -270,7 +274,7 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Confirm Delete */}
+      {/* Confirm Delete (left as-is) */}
       {showDeleteConfirm && faqToDelete && (
         <div className="confirm-overlay">
           <div className="confirm-box">
@@ -283,6 +287,29 @@ export function FAQs() {
               <button className="yes-btn" onClick={handleDelete}>
                 Yes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success / Notice Modal (unchanged) */}
+      {notice.open && (
+        <div className="fm-noticeOverlay" onClick={closeNotice}>
+          <div
+            className="fm-noticeModal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fm-notice-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="fm-noticeHeader">
+              <span id="fm-notice-title" className="fm-noticeTitle">Success</span>
+            </div>
+            <div className="fm-noticeBody fm-noticeBody--center">
+              {notice.text}
+            </div>
+            <div className="fm-noticeActions">
+              <button className="btn primary" onClick={closeNotice}>OK</button>
             </div>
           </div>
         </div>
