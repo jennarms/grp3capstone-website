@@ -11,7 +11,8 @@ import { FeedbackSettings } from './pages/feedbackSettings'
 import { AccountSettings } from './pages/accountSettings'
 import { Report } from './pages/reportGeneration'
 import { UI } from './pages/uiCustomization'
-import VehicleTab from "./pages/operations/vehicleTab";
+import VehicleTab from "./pages/operations_vehicleTab";
+import { StationsTab } from './pages/operations_stationsTab'
 
 
 
@@ -31,6 +32,7 @@ function App() {
         <Route path='/reports' element={<Report/>}/>
         <Route path='/UICustomization' element ={<UI/>}/>
         <Route path="/vehicle" element={<VehicleTab />} />
+        <Route path="/stations" element={<StationsTab />} />
 
 
       </Routes>

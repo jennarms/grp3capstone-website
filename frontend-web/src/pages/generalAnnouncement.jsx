@@ -179,15 +179,15 @@ export function Announcement() {
 
       {/* Confirm Delete Modal */}
       {confirmOpen && (
-        <div className="modal-overlay" onClick={cancelDelete} aria-hidden="true">
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="del-title" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title" id="del-title">Delete Announcement</span>
+        <div className="ga-modal-overlay" onClick={cancelDelete} aria-hidden="true">
+          <div className="ga-modal" role="dialog" aria-modal="true" aria-labelledby="del-title" onClick={(e) => e.stopPropagation()}>
+            <div className="ga-modal-header">
+              <span className="ga-modal-title" id="del-title">Delete Announcement</span>
             </div>
-            <div className="modal-body">
+            <div className="ga-modal-body">
               Are you sure you want to delete this announcement? This action cannot be undone.
             </div>
-            <div className="modal-actions">
+            <div className="ga-modal-actions">
               <button className="btn btn-outline" onClick={cancelDelete}>Cancel</button>
               <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
             </div>
@@ -197,15 +197,15 @@ export function Announcement() {
 
       {/* Feedback Modal */}
       {feedback.open && (
-        <div className="modal-overlay" onClick={() => setFeedback({ ...feedback, open: false })}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">Notice</span>
+        <div className="ga-modal-overlay" onClick={() => setFeedback({ ...feedback, open: false })}>
+          <div className="ga-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ga-modal-header">
+              <span className="ga-modal-title">Notice</span>
             </div>
-            <div className="modal-body">
+            <div className="ga-modalBody ga-modalBody--center">
               {feedback.message}
             </div>
-            <div className="modal-actions">
+            <div className="ga-modal-actions">
               <button
                 className="btn btn-outline"
                 onClick={() => setFeedback({ ...feedback, open: false })}

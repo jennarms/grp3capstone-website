@@ -1,0 +1,122 @@
+:root {
+    --ops-stn-blue: #0b1a78;
+    --ops-stn-blue-200: #dfe7ff;
+    --ops-stn-border: #c8d1e6;
+    --ops-stn-text: #0f172a;
+  }
+  
+  .ops-stn-main {
+    max-width: 1200px;
+    margin-left: 340px;
+    margin-right: 40px;
+    margin-top: 12px;
+    font-size: 16px;
+  }
+  
+  .ops-stn-wrap { color: var(--ops-stn-text); }
+  
+  .ops-stn-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 10px 0 14px;
+  }
+  
+  .ops-stn-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  
+  /* Search */
+  .ops-stn-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 2px solid var(--ops-stn-border);
+    border-radius: 999px;
+    min-width: 320px;
+    background: #fff;
+  }
+  
+  .ops-stn-search-ico { flex: 0 0 auto; fill: #6b7280; }
+  
+  .ops-stn-search-input {
+    all: unset;
+    width: 100%;
+    font-size: 14px;
+    color: #111827;
+  }
+  
+  /* Add button */
+  .ops-stn-add-btn {
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 2px solid var(--ops-stn-blue);
+    background: #fff;
+    color: var(--ops-stn-blue);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .ops-stn-add-btn:hover { background: var(--ops-stn-blue-200); }
+  
+  /* Table */
+  .ops-stn-table-wrap {
+    overflow: auto;
+    border: 1px solid var(--ops-stn-border);
+    border-radius: 6px;
+    background: #fff;
+  }
+  
+  .ops-stn-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  
+  .ops-stn-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--ops-stn-blue-200);
+    color: #0b1a78;
+    text-align: left;
+    font-weight: 700;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ops-stn-border);
+    border-right: 1px solid var(--ops-stn-border);
+    white-space: nowrap;
+  }
+  
+  .ops-stn-th-index, .ops-stn-td-index { width: 44px; text-align: right; padding-right: 10px; }
+  
+  .ops-stn-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ops-stn-border);
+    border-right: 1px solid var(--ops-stn-border);
+    vertical-align: middle;
+    background: #fdfefe;
+  }
+  
+  .ops-stn-table tbody tr:hover td { background: #f7faff; }
+  
+  /* clip long text like password/emails */
+  .ops-stn-clip { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  /* Actions */
+  .ops-stn-th-actions { text-align: center; }
+  .ops-stn-actions { display: flex; gap: 8px; justify-content: center; }
+  
+  .ops-stn-action {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: 2px solid var(--ops-stn-blue);
+    background: #fff;
+    color: var(--ops-stn-blue);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .ops-stn-action:hover { background: var(--ops-stn-blue-200); }
+  
+  .ops-stn-delete { border-color: #1e3a8a; color: #1e3a8a; }
+  .ops-stn-delete:hover { background: #e8efff; }
+  
+  .ops-stn-empty { text-align: center; padding: 24px; color: #6b7280; }
