@@ -52,4 +52,7 @@ def create_app():
     from app.routes.faqs import faqs_bp
     app.register_blueprint(faqs_bp, url_prefix="/api/faqs")
 
+    from app.routes.accountSettings import account_settings_bp
+    app.register_blueprint(account_settings_bp, url_prefix="/api/account")
+
     return app
