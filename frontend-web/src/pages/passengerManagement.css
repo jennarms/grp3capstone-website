@@ -31,62 +31,49 @@
   }
   
   /* controls row */
-  .pmc-controls{
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 12px;
-    margin: 6px 0 10px 30px;
-  }
-  
-  .pmc-search{
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-  .pmc-search svg{
-    width: 18px; height: 18px;
-    position: absolute; left: 12px;
-    fill: #667292;
-  }
-  .pmc-search input{
-    height: 36px;
-    padding: 6px 12px 6px 36px;
-    border: 1px solid var(--stroke);
-    border-radius: 999px;
-    outline: none;
-    min-width: 280px;
-  }
-  
-  .pmc-filter select{
-    height: 36px;
-    padding: 6px 12px;
-    border: 1px solid var(--stroke);
-    border-color: black;
-    border-radius: 8px;
-    background: #fff;
-    outline: none;
-    font-weight: 700;
-    margin-left: -1650px;
-    
-  }
-  
-  .pmc-delete{
-    justify-self: end;
-    height: 36px;
-    padding: 6px 20px;
-    border-radius: 999px;
-    border: 1px solid var(--blue-ink);
-    background: #fff;
-    color: var(--blue-ink);
-    font-weight: 700;
-    cursor: pointer;
-    width: 300px;
-  }
-  .pmc-delete:disabled{
-    opacity: .5;
-    cursor: not-allowed;
-  }
+.pmc-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px 30px;
+}
+
+.pmc-search input {
+  height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  outline: none;
+  width: 280px;
+}
+.pmc-filter select {
+  height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  font-weight: 700;
+  width: 200px; 
+  cursor: pointer;
+}
+
+.pmc-delete {
+  justify-self: end;
+  height: 36px;
+  padding: 6px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--blue-ink);
+  background: #fff;
+  color: var(--blue-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+.pmc-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
   
   /* section label */
   .pmc-section-label{

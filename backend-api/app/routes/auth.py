@@ -1,11 +1,13 @@
 from flask import Blueprint, request, jsonify
-from app import mysql, mail
+from app import mysql, mail, jwt
 import bcrypt
 import random
 import string
 from datetime import datetime, timedelta
 from flask_mail import Message
+from flask_jwt_extended import create_access_token
 import traceback
+import re
 
 auth = Blueprint('auth', __name__)
 
@@ -54,11 +56,19 @@ def login():
         stored_hash = stored_hash.encode('utf-8')
 
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-            # ✅ Send admin_id for frontend
+            # ✅ Use user_id only for identity
+            # ✅ Put role in claims
+            token = create_access_token(
+                identity=str(user_id),  
+                additional_claims={"role": role},
+                expires_delta=timedelta(hours=1)
+            )
+
             return jsonify({
                 "message": "Login successful!",
                 "role": role,
-                "admin_id": user_id   # <- fixed key
+                "admin_id": user_id,
+                "token": token
             }), 200
         else:
             return jsonify({"error": "Invalid username/email or password"}), 401
@@ -66,7 +76,6 @@ def login():
     except Exception as err:
         print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
-
 
 # =====================
 # FORGOT PASSWORD - SEND OTP (Admin)
@@ -124,6 +133,20 @@ def forgot_password():
         print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
 
+# Helper: validate password strength
+def is_strong_password(password):
+    if len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"[0-9]", password):
+        return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False
+    return True
+
 
 # =====================
 # RESET PASSWORD (Admin)
@@ -140,6 +163,9 @@ def reset_password():
         return jsonify({"error": "All fields are required"}), 400
     if new_password != confirm_password:
         return jsonify({"error": "Passwords do not match"}), 400
+    if not is_strong_password(new_password):
+        return jsonify({"error": "Password must be at least 8 characters long, "
+                                 "contain uppercase, lowercase, number, and special character"}), 400
 
     try:
         cur = mysql.connection.cursor()

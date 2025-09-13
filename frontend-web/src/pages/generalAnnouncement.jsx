@@ -21,7 +21,7 @@ export function Announcement() {
   // Fetch all announcements
   const fetchAnnouncements = useCallback(async () => {
     try {
-      const res = await axios.get(`${apiUrl}/announcement`, { headers });
+      const res = await axios.get(`${apiUrl}/api/announcement`, { headers });
       const formatted = res.data.announcements.map(a => ({
         id: a.announce_id,
         title: a.title,
@@ -48,10 +48,10 @@ export function Announcement() {
 
     try {
       if (editingId) {
-        await axios.put(`${apiUrl}/announcement/${editingId}`, payload, { headers });
+        await axios.put(`${apiUrl}/api/announcement/${editingId}`, payload, { headers });
         setFeedback({ open: true, message: 'Announcement successfully updated!' });
       } else {
-        await axios.post(`${apiUrl}/announcement`, payload, { headers });
+        await axios.post(`${apiUrl}/api/announcement`, payload, { headers });
         setFeedback({ open: true, message: 'Announcement successfully posted!' });
       }
       await fetchAnnouncements();
@@ -60,7 +60,6 @@ export function Announcement() {
       setEditingId(null);
     } catch (err) {
       console.error('Error saving announcement:', err.response?.data || err.message);
-      // Show error modal
       setFeedback({ open: true, message: 'Failed to save announcement. It may already exist.' });
     }
   };
@@ -70,9 +69,9 @@ export function Announcement() {
     if (!pendingDeleteId || !adminId) return console.error('Admin ID missing in localStorage');
 
     try {
-      await axios.delete(`${apiUrl}/announcement/${pendingDeleteId}`, {
+      await axios.delete(`${apiUrl}/api/announcement/${pendingDeleteId}`, {
         headers,
-        data: { admin_id: adminId }, // axios requires `data` for delete body
+        data: { admin_id: adminId },
       });
       setAnnouncements(prev => prev.filter(a => a.id !== pendingDeleteId));
       if (pendingDeleteId === editingId) {

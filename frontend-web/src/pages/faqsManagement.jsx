@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { HeaderButton } from '../components/headerButton';
 import { Navbar } from '../components/navBar';
 import './FaqsManagement.css';
@@ -28,52 +28,68 @@ export function FAQs() {
   const showNotice = (text) => setNotice({ open: true, text });
   const closeNotice = () => setNotice({ open: false, text: '' });
 
-  useEffect(() => {
-    fetchFaqs();
-  }, []);
+  const apiUrl = import.meta.env.VITE_API_URL;
+  const token = localStorage.getItem('token');
+  const adminId = localStorage.getItem('admin_id');
+  const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
 
-  const fetchFaqs = async () => {
+  // Fetch FAQs
+  const fetchFaqs = useCallback(async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:5000/api/faqs/');
+      const res = await axios.get(`${apiUrl}/api/faqs/`, { headers });
       setFaqsList(res.data);
     } catch (err) {
-      console.error('Error fetching FAQs:', err);
+      console.error('Error fetching FAQs:', err.response?.data || err.message);
     }
-  };
+  }, [apiUrl, headers]);
 
-  // Add
+  useEffect(() => {
+    fetchFaqs();
+  }, [fetchFaqs]);
+
+  // Add FAQ
   const handleSave = async () => {
+    if (!newQuestion.trim() || !newAnswer.trim()) return;
+    if (!adminId) return console.error('Admin ID missing in localStorage');
+
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/faqs/', {
-        admin_id: 'admin001',
+      const res = await axios.post(`${apiUrl}/api/faqs/`, {
+        admin_id: adminId,
         question: newQuestion,
-        answer: newAnswer
-      });
+        answer: newAnswer,
+      }, { headers });
+
       setFaqsList(prev => [
         ...prev,
         {
           faq_id: res.data.faq_id,
-          admin_id: 'admin001',
+          admin_id: adminId,
           question: newQuestion,
           answer: newAnswer
         }
       ]);
+
       setShowModal(false);
       setNewQuestion('');
       setNewAnswer('');
       showNotice('FAQ successfully added!');
     } catch (err) {
-      console.error('Error adding FAQ:', err);
+      console.error('Error adding FAQ:', err.response?.data || err.message);
+      showNotice('Failed to add FAQ.');
     }
   };
 
-  // Update
+  // Update FAQ
   const handleUpdate = async () => {
+    if (!editQuestion.trim() || !editAnswer.trim()) return;
+    if (!faqToEdit) return;
+
     try {
-      await axios.put(`http://127.0.0.1:5000/api/faqs/${faqToEdit.faq_id}`, {
+      await axios.put(`${apiUrl}/api/faqs/${faqToEdit.faq_id}`, {
         question: editQuestion,
         answer: editAnswer
-      });
+      }, { headers });
+
       setFaqsList(prev =>
         prev.map(faq =>
           faq.faq_id === faqToEdit.faq_id
@@ -81,24 +97,29 @@ export function FAQs() {
             : faq
         )
       );
+
       setEditModalVisible(false);
       setFaqToEdit(null);
       showNotice('FAQ successfully updated!');
     } catch (err) {
-      console.error('Error updating FAQ:', err);
+      console.error('Error updating FAQ:', err.response?.data || err.message);
+      showNotice('Failed to update FAQ.');
     }
   };
 
-  // Delete
+  // Delete FAQ
   const handleDelete = async () => {
+    if (!faqToDelete) return;
+
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/faqs/${faqToDelete.faq_id}`);
+      await axios.delete(`${apiUrl}/api/faqs/${faqToDelete.faq_id}`, { headers });
       setFaqsList(prev => prev.filter(faq => faq.faq_id !== faqToDelete.faq_id));
       setShowDeleteConfirm(false);
       setFaqToDelete(null);
       showNotice('FAQ successfully deleted!');
     } catch (err) {
-      console.error('Error deleting FAQ:', err);
+      console.error('Error deleting FAQ:', err.response?.data || err.message);
+      showNotice('Failed to delete FAQ.');
     }
   };
 
@@ -109,6 +130,7 @@ export function FAQs() {
   );
 
   return (
+
     <>
       <Navbar />
       <HeaderButton />

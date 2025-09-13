@@ -46,7 +46,7 @@ export function Login() {
     setLoginErrorMessage("");
 
     try {
-      const res = await axios.post(`${apiUrl}/auth/login`, { username, password });
+      const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
       const data = res.data;
 
       // optional: persist
@@ -84,7 +84,7 @@ export function Login() {
     setOtpError("");
 
     try {
-      const res = await axios.post(`${apiUrl}/auth/forgot-password`, { username });
+      const res = await axios.post(`${apiUrl}/api/auth/forgot-password`, { username });
       console.log("OTP response:", res.data);
 
       setShowResetModal(false);
@@ -115,7 +115,7 @@ export function Login() {
     }
 
     try {
-      const res = await axios.post(`${apiUrl}/auth/reset-password`, {
+      const res = await axios.post(`${apiUrl}/api/auth/reset-password`, {
         username,
         otp: enteredCode,
         new_password: newPassword,
