@@ -1,0 +1,71 @@
+.fare-tab-page {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
+  
+  .fare-tab-main {
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+  }
+  
+  .fare-tab-section {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  /* Fare Table */
+  .fare-tab-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .fare-tab-table th,
+  .fare-tab-table td {
+    border: 1px solid #ddd;
+    padding: 12px 15px;
+    text-align: center;
+  }
+  
+  .fare-tab-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+  }
+  
+  .fare-input {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+  }
+  
+  /* Add Button */
+  .fare-tab-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .fare-add-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #008CBA;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+  
+  .fare-add-btn:hover {
+    background-color: #0077b5;
+  }
+  
+  .fare-add-btn:focus {
+    outline: none;
+  }

@@ -1,22 +1,21 @@
 :root{
     --ops-left: 340px;   /* left edge of content area */
     --ops-right: 40px;   /* right padding */
-    --ops-top: 20px;     /* top offset from app chrome */
+    --ops-top: 60px;     /* top offset from app chrome */
     --ops-space: 170px;  /* reserved height (title + tabs) */
   }
   
-  /* Header (title + tabs) pinned in place */
-  .ops-header{
-    position: absolute;
+  .ops-header {
+    position: fixed;            /* pin to top */
+    top: var(--ops-top);
     left: var(--ops-left);
     right: var(--ops-right);
-    margin-top: -120px;
     z-index: 10;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;   /* force left alignment */
+    align-items: flex-start;
     padding-right: 40px;
-    pointer-events: auto;
+    background: #fff;           /* make sure content doesn't bleed through */
   }
   
   /* Title — force left alignment and shared style */
@@ -24,7 +23,9 @@
     font-size: 48px !important;
     font-weight: 700;
     margin: 0;
+    margin-bottom: 10px;
     text-align: left !important;  /* override any global centering */
+    color: black;
   }
   
   /* Tabs row under the title */
@@ -39,11 +40,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 200px;
-    padding: 6px 14px !important;
+    min-width: 230px;
+    padding: 3px 14px !important;
     border-radius: 10px;
     text-decoration: none;
-    font-weight: 700 !important;
+    font-weight: 620 !important;
     font-size: 22px;
     background: #0b1a78;
     color: #fff;

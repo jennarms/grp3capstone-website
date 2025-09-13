@@ -1,0 +1,191 @@
+
+
+/* Main Content */
+.station-main-content {
+  margin-top: 30px;
+  background-color: transparent; /* Make the background transparent */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  box-shadow: none; /* Remove the shadow if you want a cleaner look */
+  width: 1550px;
+}
+
+/* Dashboard Header */
+.station-dashboard-header {
+  display: flex;
+  justify-content: flex-start;  /* Align the title to the left */
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+  background-color: #ffffff; /* Light background for the header */
+  border-radius: 8px; /* Rounded corners for the header */
+}
+
+/* Station Title */
+.station-title {
+  color: #000000;
+  font-size: 45px; /* Increase the font size for better visibility */
+  font-weight: 750;
+  text-align: left;  /* Ensure title is aligned left */
+  margin: 0;
+  padding-left: 20px; /* Padding for spacing */
+  font-family: 'Roboto', sans-serif; /* Modern font */
+}
+
+.station-title-announcement{
+  color: #000000;
+  font-size: 40px; /* Increase the font size for better visibility */
+  font-weight: 750;
+  text-align: left;  /* Ensure title is aligned left */
+  margin-top: 50px;
+  margin-bottom: -50px;
+  padding-left: 20px; /* Padding for spacing */
+  font-family: 'Roboto', sans-serif; /* Modern font */
+}
+
+/* Stats Section */
+.station-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.station-stat-box {
+  background: #f6f8ff; /* Dark blue background */
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  flex-grow: 1;
+  text-align: center;
+  min-width: 200px; /* Ensure the icons don’t stretch too far */
+  margin-bottom: 20px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.station-stat-box h3 {
+  font-size: 30px;
+  font-weight: 600;
+  color: rgb(0, 0, 0);
+  margin: 0;
+}
+
+.station-stat-box p {
+  font-size: 19px;
+  color: #000000;
+  margin-top: 5px;
+}
+
+.station-stat-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  transition: transform 0.3s ease;
+}
+
+.station-stat-box:hover {
+  background-color: #b8c7ff; /* Darker blue on hover */
+  transform: scale(1.05); /* Slightly scale up on hover */
+}
+
+.station-stat-icon:hover {
+  transform: scale(1.1); /* Slightly enlarge the icon on hover */
+}
+
+/* Trip Table Section */
+.station-trip-table {
+  margin-top: 30px;
+  overflow-x: auto;
+  max-height: 600px;   /* 👈 Allow more space for rows */
+  overflow-y: scroll;    /* 👈 Enable vertical scroll */
+}
+
+.station-trip-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.station-trip-table th,
+.station-trip-table td {
+  padding: 14px 20px;  /* 👈 Slightly bigger padding for readability */
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  font-size: 16px;     /* 👈 Make text a little larger */
+}
+
+.station-trip-table th {
+  background-color: #f6f8ff;
+  font-weight: 700;   /* Bolder header */
+  color: #333;
+  position: sticky;   /* 👈 Keep headers visible while scrolling */
+  top: 0;
+  z-index: 1;
+}
+
+.station-trip-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Announcement Section */
+.station-announcements {
+  margin-top: 40px;
+  background-color: #ffffff; /* Light blue background for the announcement container */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-height: 400px;   /* Set a maximum height for the announcement section */
+  overflow-y: scroll;    /* Enable vertical scrolling if there are many announcements */
+}
+
+.station-announcement-card {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  border: #000000 solid;
+  border-width: 0.1px;
+}
+
+.station-announcement-card h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 10px;
+  text-align: start;
+}
+
+.station-announcement-card p {
+  font-size: 1rem;
+  color: #555;
+  margin: 5px 0;
+  text-align: start;
+}
+
+/* General Announcements Title */
+.station-announcements h2.station-title {
+  font-size: 2rem; /* Increase the font size */
+  font-weight: 700; /* Make the font bold */
+  color: #1e7dd7; /* Blue color for emphasis */
+  margin-bottom: 20px; /* Add space below the title */
+  border-bottom: 2px solid #1e7dd7; /* Add a bottom border to separate it from the content */
+  padding-bottom: 10px; /* Add some space between the title and the content */
+}
+
+/* ========== Responsive Design ========== */
+@media (max-width: 1024px) {
+  .station-stat-box {
+    width: 48%;
+  }
+}
+
+@media (max-width: 768px) {
+  .station-stat-box {
+    width: 100%;
+  }
+
+}

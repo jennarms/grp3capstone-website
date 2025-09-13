@@ -13,6 +13,11 @@ import { Report } from './pages/reportGeneration'
 import { UI } from './pages/uiCustomization'
 import VehicleTab from "./pages/operations_vehicleTab";
 import { StationsTab } from './pages/operations_stationsTab'
+import {RoutesTab} from './pages/operations_routesTab'
+import { SchedulesTab } from './pages/operations_schedulesTab'
+import FaresTab from './pages/operations_faresTab'
+import { StationDashboard } from './pages/station_dashboard'
+import { BoardingLandingPage } from './pages/station_boardingLanding'
 
 
 
@@ -31,8 +36,15 @@ function App() {
         <Route path='/accountSettings' element={<AccountSettings/>}/>
         <Route path='/reports' element={<Report/>}/>
         <Route path='/UICustomization' element ={<UI/>}/>
-        <Route path="/vehicle" element={<VehicleTab />} />
-        <Route path="/stations" element={<StationsTab />} />
+        <Route path="/operations/vehicle" element={<VehicleTab />} />
+        <Route path="/operations/stations" element={<StationsTab />} />
+        <Route path="/operations/routes" element={<RoutesTab />} />
+        <Route path="/operations/schedules" element={<SchedulesTab />} />
+        <Route path="/operations/fares" element={<FaresTab />} /> 
+        <Route path="/dashboard" element={<StationDashboard />} />
+        <Route path="/boarding" element={<BoardingLandingPage />} />
+
+
 
 
       </Routes>

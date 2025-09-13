@@ -1,0 +1,165 @@
+:root {
+    --station-admin-sidebar-w: 300px;
+    --station-admin-sidebar-w-md: 250px;
+    --station-admin-sidebar-w-sm: 200px;
+  }
+  
+  /* Prevent accidental horizontal scroll when navbar slides */
+  html, body {
+    overflow-x: hidden;
+  }
+  
+  /* Main content should live beside the fixed navbar on desktop */
+  .station-admin-main-content {
+    margin-left: var(--station-admin-sidebar-w);
+    padding: 20px;
+    transition: margin-left .25s ease;
+  }
+  
+  /* ========== Navbar (Desktop) ========== */
+  .station-admin-sidebar {
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: var(--station-admin-sidebar-w); /* Same width as sidebar */
+    height: 100vh;
+    background: linear-gradient(to bottom, #557EFF, #63C7FF, #86ECC0, #4B6EDC);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
+    color: #ffffff;
+    box-sizing: border-box;
+    transition: transform .25s ease, width .25s ease, padding .25s ease;
+  }
+  
+  /* Profile Icon */
+  .station-admin-sidebar-profile {
+    margin-bottom: 20px;
+  }
+  
+  .station-admin-sidebar-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 90%;
+    background: #fff;
+    padding: 10px;
+  }
+  
+  /* Title */
+  .station-admin-sidebar-title {
+    margin-bottom: 30px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #000;
+    text-align: center;
+  }
+  
+  /* Nav Links */
+  .station-admin-sidebar-nav {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+  }
+  
+  .station-admin-sidebar-link {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    text-align: center;
+    background-color: #ffffff;
+    color: #000;
+    font-weight: bold;
+    font-size: 19px;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background-color .2s ease, transform .15s ease;
+  }
+  
+  .station-admin-sidebar-link:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .station-admin-sidebar-link:active {
+    transform: scale(.98);
+  }
+  
+  /* Optional: button to toggle the drawer (hamburger) for mobile */
+  .station-admin-menu-button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  
+  /* ========== Responsive ========== */
+  
+  /* <= 1024px: use slightly narrower navbar; turn it into an off-canvas drawer.
+     Content becomes full width unless the drawer is opened (you’ll toggle classes). */
+  @media (max-width: 1024px) {
+    .station-admin-sidebar {
+      width: var(--station-admin-sidebar-w-md);
+      padding: 30px 15px;
+      transform: translateX(-100%); /* Slide it off screen by default */
+    }
+  
+    .station-admin-sidebar.open {
+      transform: translateX(0); /* When open, slide in */
+    }
+  
+    .station-admin-main-content {
+      margin-left: 0;
+    }
+  
+    .station-admin-main-content.content--shift {
+      margin-left: var(--station-admin-sidebar-w-md);
+    }
+  
+    .station-admin-sidebar-profile {
+      display: none;
+    }
+  
+    .station-admin-sidebar-title {
+      font-size: 1.3rem;
+      text-align: left;
+      width: 100%;
+      padding-left: 8px;
+    }
+  
+    .station-admin-sidebar-nav {
+      gap: 20px;
+    }
+  
+    .station-admin-sidebar-link {
+      font-size: 1.1rem;
+      padding: 10px;
+    }
+  }
+  
+  /* <= 768px: even narrower navbar */
+  @media (max-width: 768px) {
+    .station-admin-sidebar {
+      width: var(--station-admin-sidebar-w-sm);
+      padding: 20px 10px;
+    }
+  
+    .station-admin-main-content.content--shift {
+      margin-left: var(--station-admin-sidebar-w-sm);
+    }
+  
+    .station-admin-sidebar-title {
+      font-size: 1.1rem;
+      padding-left: 6px;
+    }
+  
+    .station-admin-sidebar-nav {
+      gap: 15px;
+    }
+  
+    .station-admin-sidebar-link {
+      font-size: 1rem;
+      padding: 8px;
+    }
+  }
