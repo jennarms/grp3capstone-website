@@ -1,22 +1,23 @@
-/* ========== Layout Vars ========== */
-:root{
+:root {
   --sidebar-w: 300px;
   --sidebar-w-md: 250px;
   --sidebar-w-sm: 200px;
 }
 
 /* Prevent accidental horizontal scroll when sidebar slides */
-html, body { overflow-x: hidden; }
+html, body {
+  overflow-x: hidden;
+}
 
 /* Main content should live beside the fixed sidebar on desktop */
-.main-content {
+.navbar-main-content {
   margin-left: var(--sidebar-w);
   padding: 20px;
   transition: margin-left .25s ease;
 }
 
-/* ========== Sidebar (Desktop) ========== */
-.sidebar {
+/* ========== Navbar (Desktop) ========== */
+.navbar-sidebar {
   position: fixed;
   z-index: 1000;
   left: 0;
@@ -35,9 +36,11 @@ html, body { overflow-x: hidden; }
 }
 
 /* Profile Icon */
-.sidebar-profile { margin-bottom: 20px; }
+.navbar-sidebar-profile {
+  margin-bottom: 20px;
+}
 
-.sidebar-icon {
+.navbar-sidebar-icon {
   width: 100px;
   height: 100px;
   border-radius: 90%;
@@ -46,7 +49,7 @@ html, body { overflow-x: hidden; }
 }
 
 /* Title */
-.sidebar-title {
+.navbar-sidebar-title {
   margin-bottom: 30px;
   font-size: 1.5rem;
   font-weight: bold;
@@ -55,14 +58,14 @@ html, body { overflow-x: hidden; }
 }
 
 /* Nav */
-.sidebar-nav {
+.navbar-sidebar-nav {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 25px;
 }
 
-.sidebar-link {
+.navbar-sidebar-link {
   display: block;
   width: 100%;
   padding: 12px;
@@ -76,12 +79,16 @@ html, body { overflow-x: hidden; }
   transition: background-color .2s ease, transform .15s ease;
 }
 
-.sidebar-link:hover { background-color: #f0f0f0; }
-.sidebar-link:active { transform: scale(.98); }
+.navbar-sidebar-link:hover {
+  background-color: #f0f0f0;
+}
+
+.navbar-sidebar-link:active {
+  transform: scale(.98);
+}
 
 /* Optional: a button you position in your header to toggle the drawer on mobile */
-.menu-button {
-  /* example styles — place wherever your header is */
+.navbar-menu-button {
   border: none;
   background: transparent;
   cursor: pointer;
@@ -89,44 +96,43 @@ html, body { overflow-x: hidden; }
 
 /* ========== Responsive ========== */
 
-/* <= 1024px: use slightly narrower sidebar; turn it into an off-canvas drawer.
-   Content becomes full width unless the drawer is opened (you’ll toggle classes). */
+/* <= 1024px: use slightly narrower sidebar; turn it into an off-canvas drawer. Content becomes full width unless the drawer is opened (you’ll toggle classes). */
 @media (max-width: 1024px) {
-
-  .sidebar {
+  .navbar-sidebar {
     width: var(--sidebar-w-md);
     padding: 30px 15px;
-
-    /* slide it off screen by default on small widths */
     transform: translateX(-100%);
   }
 
   /* When you add .open (e.g., clicking your hamburger), it slides in */
-  .sidebar.open {
+  .navbar-sidebar.open {
     transform: translateX(0);
   }
 
-  /* Content: full width by default on small screens */
-  .main-content {
+  .navbar-main-content {
     margin-left: 0;
   }
 
-  /* If you want the content to shift when the drawer is open,
-     add .content--shift to your main-content container */
-  .main-content.content--shift {
+  .navbar-main-content.content--shift {
     margin-left: var(--sidebar-w-md);
   }
 
-  /* Tweak visuals */
-  .sidebar-profile { display: none; }
-  .sidebar-title {
+  .navbar-sidebar-profile {
+    display: none;
+  }
+
+  .navbar-sidebar-title {
     font-size: 1.3rem;
     text-align: left;
     width: 100%;
     padding-left: 8px;
   }
-  .sidebar-nav { gap: 20px; }
-  .sidebar-link {
+
+  .navbar-sidebar-nav {
+    gap: 20px;
+  }
+
+  .navbar-sidebar-link {
     font-size: 1.1rem;
     padding: 10px;
   }
@@ -134,23 +140,25 @@ html, body { overflow-x: hidden; }
 
 /* <= 768px: even narrower drawer */
 @media (max-width: 768px) {
-
-  .sidebar {
+  .navbar-sidebar {
     width: var(--sidebar-w-sm);
     padding: 20px 10px;
   }
 
-  .main-content.content--shift {
+  .navbar-main-content.content--shift {
     margin-left: var(--sidebar-w-sm);
   }
 
-  .sidebar-title {
+  .navbar-sidebar-title {
     font-size: 1.1rem;
     padding-left: 6px;
   }
 
-  .sidebar-nav { gap: 15px; }
-  .sidebar-link {
+  .navbar-sidebar-nav {
+    gap: 15px;
+  }
+
+  .navbar-sidebar-link {
     font-size: 1rem;
     padding: 8px;
   }

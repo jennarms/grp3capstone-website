@@ -3,36 +3,40 @@ import './navBar.css'; // Make sure this path is correct
 
 export function Navbar() {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-profile">
-        <img
-          src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png"
-          alt="Admin Icon"
-          className="sidebar-icon"
+    <aside className="navbar-sidebar">
+      <div className="navbar-sidebar-profile">
+        <img 
+          src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png" 
+          alt="Admin Icon" 
+          className="navbar-sidebar-icon" 
         />
       </div>
-      <h2 className="sidebar-title">Main Admin</h2>
-      <nav className="sidebar-nav">
-        <Link to="/announcement" className="sidebar-link">
+
+      <h2 className="navbar-sidebar-title">Main Admin</h2>
+
+      <nav className="navbar-sidebar-nav">
+        <Link to="/announcement" className="navbar-sidebar-link">
           General Announcement
         </Link>
-        <Link to="/broadcast" className="sidebar-link">
+        <Link to="/broadcast" className="navbar-sidebar-link">
           Broadcast Channel
         </Link>
-        <Link to="/vehicle" className="sidebar-link">Operations Management</Link>
-        <Link to="/passenger" className="sidebar-link">
-          Passenger Management 
+        <Link to="/operations/vehicle" className="navbar-sidebar-link">
+          Operations Management
         </Link>
-        <Link to="/feedback" className="sidebar-link">
+        <Link to="/passenger" className="navbar-sidebar-link">
+          Passenger Management
+        </Link>
+        <Link to="/feedback" className="navbar-sidebar-link">
           Feedback
         </Link>
-        <Link to="/faqs" className="sidebar-link">
+        <Link to="/faqs" className="navbar-sidebar-link">
           FAQs Management
         </Link>
-        <Link to="/UICustomization" className="sidebar-link">
+        <Link to="/UICustomization" className="navbar-sidebar-link">
           UI Customization
         </Link>
-        <Link to="/reports" className="sidebar-link">
+        <Link to="/reports" className="navbar-sidebar-link">
           Report Generation
         </Link>
       </nav>
