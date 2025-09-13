@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./headerButton.css";
+import "./logout_button.css"; // Keep this if necessary, or comment out to debug
 
-export function HeaderButton() {
+export function LogoutButton() {
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -18,7 +18,7 @@ export function HeaderButton() {
     // 2. Close modal
     closeConfirm();
 
-    // 3. Redirect to login page (your login route is '/')
+    // 3. Redirect to login page
     navigate("/");
   };
 
@@ -32,57 +32,36 @@ export function HeaderButton() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showConfirm]);
 
-  const goToAccountSettings = () => {
-    navigate("/accountSettings");
-  };
-
   return (
     <>
-      {/* Header buttons */}
-      <div className="header-btn-fixed">
+      {/* Logout button */}
+      <div className="logout-btn-fixed">
         <button
           type="button"
-          className="header-btn-settings"
-          onClick={goToAccountSettings}
-          aria-label="Account settings"
-          title="Account settings"
-        >
-          <img
-            src="https://cdn-icons-png.flaticon.com/512/3524/3524659.png"
-            alt="Settings"
-            className="header-btn-settings-icon"
-          />
-        </button>
-
-        <button
-          type="button"
-          className="header-btn-logout"
+          className="logout-btn"
           onClick={openConfirm}
-          aria-haspopup="dialog"
-          aria-expanded={showConfirm ? "true" : "false"}
         >
           Log Out
         </button>
       </div>
 
-      {/* Logout confirmation modal */}
+      {/* Temporarily removed modal */}
       {showConfirm && (
         <div
-          className="header-btn-confirm-overlay"
+          className="logout-btn-confirm-overlay"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="logout-title"
           onClick={(e) => e.target === e.currentTarget && closeConfirm()}
         >
-          <div className="header-btn-confirm-box" role="document">
+          <div className="logout-btn-confirm-box" role="document">
             <h3 id="logout-title">Log out</h3>
             <p>Are you sure you want to log out?</p>
 
-            <div className="header-btn-confirm-buttons">
-              <button type="button" className="header-btn-cancel-btn" onClick={closeConfirm}>
+            <div className="logout-btn-confirm-buttons">
+              <button type="button" className="logout-btn-cancel-btn" onClick={closeConfirm}>
                 Cancel
               </button>
-              <button type="button" className="header-btn-yes-btn" onClick={confirmLogout}>
+              <button type="button" className="logout-btn-yes-btn" onClick={confirmLogout}>
                 Log out
               </button>
             </div>

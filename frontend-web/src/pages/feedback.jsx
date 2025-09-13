@@ -110,28 +110,27 @@ export function Feedback() {
           </div>
 
           <div className="fb-controls-row">
-  <select
-    className="fb-filter"
-    value={filter}
-    onChange={(e) => setFilter(e.target.value)}
-    aria-label="Sort by category"
-  >
-    <option value="all">Sort by category</option>
-    <option value="Complaint">Complaint</option>
-    <option value="Compliment">Compliment</option>
-    <option value="Suggestion">Suggestion</option>
-    <option value="Inquiry">Inquiry</option>
-  </select>
+            <select
+              className="fb-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              aria-label="Sort by category"
+            >
+              <option value="all">Sort by category</option>
+              <option value="Complaint">Complaint</option>
+              <option value="Compliment">Compliment</option>
+              <option value="Suggestion">Suggestion</option>
+              <option value="Inquiry">Inquiry</option>
+            </select>
 
-  <Link className="fb-settings" to="/feedbackSettings">
-    Settings
-  </Link>
-</div>
+            <Link className="fb-settings" to="/feedbackSettings">
+              Settings
+            </Link>
+          </div>
 
           <hr className="fb-title-rule" />
         </div>
 
-  
         <div className="fb-scroll">
           {filtered.length === 0 ? (
             <div className="fb-empty">
@@ -145,20 +144,24 @@ export function Feedback() {
             filtered.map((f) => (
               <article key={f.id} className="fb-card">
                 <div className="fb-actions">
-                <button
-  className="icon-btn danger"
-  title="Delete"
-  aria-label="Delete"
-  onClick={() => onDelete(f.id)}
->
-  <svg viewBox="0 0 24 24" className="icon-trash" aria-hidden="true">
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-    <path d="M10 11v6" />
-    <path d="M14 11v6" />
-    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-  </svg>
-</button>
+                  <button
+                    className="icon-btn danger"
+                    title="Delete"
+                    aria-label="Delete"
+                    onClick={() => onDelete(f.id)}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="icon-trash"
+                      aria-hidden="true"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                  </button>
                 </div>
 
                 <div className="fb-row">
@@ -206,28 +209,32 @@ export function Feedback() {
 
       {/* Delete modal */}
       {confirmDeleteOpen && (
-        <div className="modal-overlay" onClick={cancelDelete} aria-hidden="true">
+        <div
+          className="fb-modal-overlay"
+          onClick={cancelDelete}
+          aria-hidden="true"
+        >
           <div
-            className="modal"
+            className="fb-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="del-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-header">
-              <span className="modal-title" id="del-title">
+            <div className="fb-modal-header">
+              <span className="fb-modal-title" id="del-title">
                 Delete Feedback
               </span>
             </div>
-            <div className="modal-body">
+            <div className="fb-modal-body">
               Are you sure you want to delete this feedback? This action cannot
               be undone.
             </div>
-            <div className="modal-actions">
-              <button className="btn btn-outline" onClick={cancelDelete}>
+            <div className="fb-modal-actions">
+              <button className="fb-btn fb-btn-outline" onClick={cancelDelete}>
                 Cancel
               </button>
-              <button className="btn btn-danger" onClick={confirmDelete}>
+              <button className="fb-btn fb-btn-danger" onClick={confirmDelete}>
                 Delete
               </button>
             </div>

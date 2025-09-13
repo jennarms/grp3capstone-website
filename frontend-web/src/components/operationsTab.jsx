@@ -3,11 +3,11 @@ import "./operationsTab.css";
 
 export function OperationsTab() {
   const tabs = [
-    { to: "/vehicle",   label: "Vehicle" },
-    { to: "/stations",  label: "Stations" },
-    { to: "/routes",    label: "Routes" },
-    { to: "/schedules", label: "Schedules" },
-    { to: "/fares",     label: "Fares" },
+    { to: "/operations/vehicle",   label: "Vehicle" },
+    { to: "/operations/stations",  label: "Stations" },
+    { to: "/operations/routes",    label: "Routes" },
+    { to: "/operations/schedules", label: "Schedules" },
+    { to: "/operations/fares",     label: "Fares" },
   ];
 
   return (
@@ -16,7 +16,14 @@ export function OperationsTab() {
         <h1 className="ops-title">Operations Management</h1>
         <nav className="ops-tabs" aria-label="Operations sections">
           {tabs.map((t) => (
-            <NavLink key={t.to} to={t.to} className={({isActive}) => "ops-tab" + (isActive ? " active" : "")} end>
+            <NavLink
+              key={t.to}
+              to={t.to}
+              className={({ isActive }) =>
+                "ops-tab" + (isActive ? " active" : "")
+              }
+              end
+            >
               {t.label}
             </NavLink>
           ))}
