@@ -1,29 +1,46 @@
+// FeedbackSettings.jsx
+import axios from "axios";
 import { useEffect, useState } from "react";
-import { Navbar } from "../components/navBar";
 import { HeaderButton } from "../components/headerButton";
+import { Navbar } from "../components/navBar";
 import "./feedbackSettings.css";
 
-const LS_KEY = "fb:autoResponse";
+const apiUrl = import.meta.env.VITE_API_URL;
+console.log("API URL from env:", apiUrl);
 
 export function FeedbackSettings() {
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
+  const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(false);
-  const [message, setMessage] = useState(
-    "Thank you for your feedback. We truly appreciate you taking the time to share your experience with us. Your input is important and greatly valued, as it helps us enhance our services. We are committed to continuously improving our procedures to strengthen communication and provide a better overall experience for all our passengers."
-  );
+  const [backup, setBackup] = useState({ enabled: false, message: "" });
 
+  // Load settings
   useEffect(() => {
-    const saved = localStorage.getItem(LS_KEY);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved);
-      if (typeof parsed.enabled === "boolean") setEnabled(parsed.enabled);
-      if (typeof parsed.message === "string") setMessage(parsed.message);
-    } catch {}
+    axios
+      .get(`${apiUrl}/api/feedback/settings`)
+      .then((res) => {
+        setEnabled(res.data.enabled);
+        setMessage(res.data.message);
+        setBackup({ enabled: res.data.enabled, message: res.data.message });
+      })
+      .catch((err) => console.error("Failed to load settings:", err));
   }, []);
 
+  // Save settings
   const onSave = () => {
-    localStorage.setItem(LS_KEY, JSON.stringify({ enabled, message }));
+    axios
+      .put(`${apiUrl}/api/feedback/settings`, { enabled, message })
+      .then(() => {
+        setBackup({ enabled, message }); // keep the latest saved values
+        setEditing(false);
+      })
+      .catch((err) => console.error("Failed to update settings:", err));
+  };
+
+  // Cancel editing
+  const onCancel = () => {
+    setEnabled(backup.enabled);
+    setMessage(backup.message);
     setEditing(false);
   };
 
@@ -32,7 +49,6 @@ export function FeedbackSettings() {
       <Navbar />
 
       <div className="fs-main">
-        {/* Title row (icon + label) */}
         <div className="fs-header-row">
           <div className="fs-title-wrap">
             <svg className="fs-title-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -55,6 +71,7 @@ export function FeedbackSettings() {
             className="fs-check"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
+            disabled={!editing} // ✅ only editable in edit mode
             aria-label="Enable auto-response"
           />
         </label>
@@ -67,7 +84,7 @@ export function FeedbackSettings() {
               className="fs-textarea"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              readOnly={!editing}
+              readOnly={!editing} // ✅ lock when not editing
               rows={6}
             />
           </div>
@@ -75,22 +92,24 @@ export function FeedbackSettings() {
 
         {/* Actions */}
         <div className="fs-actions">
-          <button
-            type="button"
-            className="fs-btn fs-btn-dark"
-            onClick={() => setEditing((v) => !v)}
-          >
-            {editing ? "Cancel" : "Edit"}
-          </button>
-
-          <button
-            type="button"
-            className={`fs-btn fs-btn-dark ${editing ? "" : "fs-disabled"}`}
-            onClick={onSave}
-            disabled={!editing}
-          >
-            Save
-          </button>
+          {editing ? (
+            <>
+              <button type="button" className="fs-btn fs-btn-dark" onClick={onSave}>
+                Save
+              </button>
+              <button type="button" className="fs-btn fs-btn-light" onClick={onCancel}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="fs-btn fs-btn-dark"
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </button>
+          )}
         </div>
       </div>
     </>
