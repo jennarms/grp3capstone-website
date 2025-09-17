@@ -58,5 +58,10 @@ def create_app():
     from app.routes.passengerManagement import passenger_bp
     app.register_blueprint(passenger_bp, url_prefix="/api/users")
 
+    from app.routes.feedback import feedback_bp
+    app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
+
+    from app.routes.vehicle import vehicle_bp
+    app.register_blueprint(vehicle_bp, url_prefix="/api/vehicle")
 
     return app

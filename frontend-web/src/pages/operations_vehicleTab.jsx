@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { Navbar } from "../components/navBar";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
+import { Navbar } from "../components/navBar";
 import { OperationsTab } from "../components/operationsTab";
 import "./operations_vehicleTab.css";
 
@@ -9,21 +10,59 @@ export default function VehicleTab() {
   const [capacity, setCapacity] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Open confirm instead of submitting immediately
+  const token = localStorage.getItem("token");
+
+  // ✅ Auto-fetch existing vehicle on load
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      try {
+        const response = await axios.get("http://127.0.0.1:5000/api/vehicle/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.data) {
+          setType(response.data.type);
+          setCapacity(response.data.capacity);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching vehicle:", err.response?.data || err.message);
+      }
+    };
+
+    fetchVehicle();
+  }, [token]);
+
+  // Save confirm
   const onSave = (e) => {
     e.preventDefault();
     setShowConfirm(true);
   };
 
-  const handleConfirmYes = () => {
-    // 👉 plug your API call here
-    console.log({ type, capacity });
+  const handleConfirmYes = async () => {
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/vehicle/",
+        { vehicleType: type, capacity },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("✅ Saved:", response.data);
+      alert("Vehicle saved successfully!");
+    } catch (err) {
+      console.error("❌ Error saving vehicle:", err.response?.data || err.message);
+      alert("Failed to save vehicle. Check console for details.");
+    }
     setShowConfirm(false);
   };
 
   const handleConfirmCancel = () => setShowConfirm(false);
 
-  // ESC to close
+  // ESC to close confirm
   useEffect(() => {
     if (!showConfirm) return;
     const onKey = (e) => e.key === "Escape" && setShowConfirm(false);
@@ -51,9 +90,9 @@ export default function VehicleTab() {
                 className="input"
               >
                 <option>Ferry</option>
+                <option>Roll-on/Roll-off Vessels</option>
                 <option>Bus</option>
-                <option>Tram</option>
-                <option>Train</option>
+                <option>Shuttle Vans</option>
               </select>
             </div>
 
@@ -66,12 +105,14 @@ export default function VehicleTab() {
                 className="input"
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                placeholder=""
+                placeholder="Enter capacity"
               />
             </div>
 
             <div className="form-actions">
-              <button className="primary-btn" type="submit">Save</button>
+              <button className="primary-btn" type="submit">
+                Save
+              </button>
             </div>
           </form>
         </div>
@@ -86,10 +127,7 @@ export default function VehicleTab() {
           aria-labelledby="confirm-title"
           onClick={handleConfirmCancel}
         >
-          <div
-            className="confirm-box"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
             <h3 id="confirm-title">Save Changes</h3>
             <p>Are you sure with this action?</p>
 
