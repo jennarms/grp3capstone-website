@@ -19,7 +19,7 @@ export function StationNavbar() {
         <Link to="/boarding" className="station-admin-sidebar-link">
           Boarding Management
         </Link>
-        <Link to="/disembarking-management" className="station-admin-sidebar-link">
+        <Link to="/disembarking" className="station-admin-sidebar-link">
           Disembarking Management
         </Link>
         <Link to="/sos" className="station-admin-sidebar-link">

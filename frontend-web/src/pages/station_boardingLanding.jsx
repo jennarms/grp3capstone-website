@@ -1,19 +1,18 @@
-import { useState, useEffect } from "react";
-import { Link } from 'react-router-dom'; // For linking the buttons to other pages (optional)
-import { LogoutButton } from "../components/logout_button"; // Assuming LogoutButton is available
-import './station_boardingLanding.css'; // You can customize your CSS
-import { StationNavbar } from "../components/station_navbar"; // Ensure the path is correct
+import { useState } from "react";
+import { LogoutButton } from "../components/logout_button";
+import { StationNavbar } from "../components/station_navbar";
+import "./station_boardingLanding.css";
 
 export function BoardingLandingPage() {
-  const [kalawaanSeats, setKalawaanSeats] = useState([
-    { time: "8:40 AM", availableSeats: "4 / 30" },
+  const [kalawaanSeats] = useState([
+    { time: "8:40 AM", availableSeats: "6 / 30" },
     { time: "9:26 AM", availableSeats: "2 / 30" },
     { time: "10:22 AM", availableSeats: "1 / 30" },
     { time: "11:22 AM", availableSeats: "0 / 30" },
   ]);
 
-  const [escoltaSeats, setEscoltaSeats] = useState([
-    { time: "7:40 AM", availableSeats: "15 / 30" },
+  const [escoltaSeats] = useState([
+    { time: "7:40 AM", availableSeats: "7 / 30" },
     { time: "8:07 AM", availableSeats: "5 / 30" },
     { time: "8:58 AM", availableSeats: "2 / 30" },
     { time: "9:59 AM", availableSeats: "0 / 30" },
@@ -21,62 +20,73 @@ export function BoardingLandingPage() {
 
   return (
     <div className="boarding-landing-container">
-    
+      <StationNavbar />
 
-      {/* Main Content */}
       <div className="main-content">
         <header className="main-header">
           <h1>Boarding Management</h1>
           <LogoutButton />
-          <StationNavbar />
         </header>
 
-        <section className="boarding-table-section">
-          {/* PUP TO KALAWAN Table */}
-          <div className="boarding-table">
-            <h2>PUP TO KALAWAN</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Available Seats</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kalawaanSeats.map((seat, index) => (
-                  <tr key={index}>
-                    <td>{seat.time}</td>
-                    <td>{seat.availableSeats}</td>
-                    <td><button className="view-btn">View</button></td>
+        <section className="table-section">
+          {/* TABLE 1 */}
+          <div className="card">
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr className="caption-row">
+                    <th className="caption-th" colSpan={3}>PUP TO KALAWAAN</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  <tr className="cols-row">
+                    <th>Time</th>
+                    <th>Available Seats</th>
+                    <th className="action-col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kalawaanSeats.map((seat, i) => (
+                    <tr key={i}>
+                      <td>{seat.time}</td>
+                      <td>{seat.availableSeats}</td>
+                      <td className="action-cell">
+                        <button className="view-btn">View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* PUP TO ESCOLTA Table */}
-          <div className="boarding-table">
-            <h2>PUP TO ESCOLTA</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Available Seats</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {escoltaSeats.map((seat, index) => (
-                  <tr key={index}>
-                    <td>{seat.time}</td>
-                    <td>{seat.availableSeats}</td>
-                    <td><button className="view-btn">View</button></td>
+          {/* TABLE 2 */}
+          <div className="card">
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr className="caption-row">
+                    <th className="caption-th" colSpan={3}>PUP TO ESCOLTA</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  <tr className="cols-row">
+                    <th>Time</th>
+                    <th>Available Seats</th>
+                    <th className="action-col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {escoltaSeats.map((seat, i) => (
+                    <tr key={i}>
+                      <td>{seat.time}</td>
+                      <td>{seat.availableSeats}</td>
+                      <td className="action-cell">
+                        <button className="view-btn">View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
+
         </section>
       </div>
     </div>

@@ -18,6 +18,8 @@ import { SchedulesTab } from './pages/operations_schedulesTab'
 import FaresTab from './pages/operations_faresTab'
 import { StationDashboard } from './pages/station_dashboard'
 import { BoardingLandingPage } from './pages/station_boardingLanding'
+import { Boarding } from './pages/station_boarding'
+import { DisembarkingLandingPage } from './pages/station_disembarkingLanding'
 
 
 
@@ -43,6 +45,8 @@ function App() {
         <Route path="/operations/fares" element={<FaresTab />} /> 
         <Route path="/dashboard" element={<StationDashboard />} />
         <Route path="/boarding" element={<BoardingLandingPage />} />
+        <Route path="/boarding/passengerlist" element={<Boarding />} />
+        <Route path="/disembarking" element={<DisembarkingLandingPage />} />
 
 
 
