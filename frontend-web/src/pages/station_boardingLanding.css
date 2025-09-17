@@ -1,101 +1,138 @@
 .boarding-landing-container {
     display: flex;
     height: 100vh;
-  }
-  
-  /* Sidebar */
-  .sidebar {
-    width: 250px;
-    background: linear-gradient(to bottom, #00bcd4, #0097a7);
-    padding: 20px;
-    color: white;
-    display: flex;
     flex-direction: column;
-    justify-content: space-between;
   }
   
-  .sidebar-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .sidebar-icon {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .sidebar-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 40px;
-  }
-  
-  .sidebar-menu a {
-    color: white;
-    text-decoration: none;
-    padding: 10px;
-    background: #00796b;
-    border-radius: 5px;
-    font-weight: bold;
-  }
-  
-  .sidebar-menu a.active {
-    background: #004d40;
-  }
-  
-  /* Main Content */
-  .main-content {
-    flex: 1;
-    padding: 20px;
-  }
+  .main-content { flex: 1; padding: 20px; }
   
   .main-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+  }
+  .main-header h1 { font-size: 44px; font-weight: 800; color: #000; }
+  
+  /* Hold both tables and add spacing between them */
+  .table-section {
+    display: grid;
+    grid-auto-rows: min-content;
+    gap: 50px;                 /* vertical gap between tables */
+    margin-top: 8px;
   }
   
-  .main-header h1 {
-    font-size: 28px;
+  /* If you have outer wrappers, make them neutral (no white panel) */
+  .card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
     margin: 0;
   }
   
-  .boarding-table-section {
-    margin-top: 40px;
+  /* ---------- Table + Scroll ---------- */
+  .table-wrapper {
+    height: 300px;             /* visible viewport; adjust as needed */
+    overflow-y: auto;          /* independent scrollbar per table */
+    overflow-x: hidden;
+    scrollbar-gutter: stable;  /* avoids layout shift when bar appears */
+    border-radius: 4px;
+    background: transparent;   /* no white block behind the table */
+    direction: ltr;            /* scrollbar on the right */
   }
   
-  .boarding-table {
-    margin-bottom: 40px;
-  }
+  /* Scrollbar styling */
+  .table-wrapper { scrollbar-width: thin; scrollbar-color: #7f91d6 #eef3ff; }
+  .table-wrapper::-webkit-scrollbar { width: 10px; }
+  .table-wrapper::-webkit-scrollbar-track { background: #eef3ff; }
+  .table-wrapper::-webkit-scrollbar-thumb { background: #7f91d6; border-radius: 8px; }
+  .table-wrapper::-webkit-scrollbar-thumb:hover { background: #5162b3; }
   
-  .boarding-table h2 {
-    font-size: 22px;
-    margin-bottom: 20px;
-  }
-  
-  .boarding-table table {
+  /* ---------- Table grid (single-width seams; no double borders) ---------- */
+  .data-table {
     width: 100%;
-    border-collapse: collapse;
+    table-layout: fixed;
+    border-collapse: separate;   /* draw borders ourselves to avoid doubles */
+    border-spacing: 0;
   }
   
-  .boarding-table th,
-  .boarding-table td {
-    padding: 10px;
-    text-align: left;
-    border: 1px solid #ddd;
+  /* Reset borders so we control every seam */
+  .data-table th,
+  .data-table td {
+    border: 0;
+    padding: 8px 10px;
+    font-size: 20px;
+    text-align: center;
   }
+  
+  /* Vertical seams: only left borders on all cells, plus right border on last col */
+  .data-table th,
+  .data-table td {
+    border-left: 2px solid #000;
+  }
+  .data-table th:last-child,
+  .data-table td:last-child {
+    border-right: 2px solid #000;
+  }
+  
+  /* Header rows (sticky) */
+  .data-table thead th {
+    position: sticky;
+    top: 0;                     /* default when not using caption row */
+    z-index: 2;
+    background: #cfe0ff;       /* light blue */
+    font-weight: 700;
+    border-top: 2px solid #000; /* top outer edge */
+  }
+  
+  /* Put a line under the (last) header row */
+  .data-table thead tr:last-child th {
+    border-bottom: 2px solid #000;
+  }
+  
+  /* Horizontal seams in body */
+  .data-table tbody tr + tr td {
+    border-top: 2px solid #000;
+  }
+  /* Bottom outer edge */
+  .data-table tbody tr:last-child td {
+    border-bottom: 2px solid #000;
+  }
+  
+  /* ---------- OPTIONAL: Route title INSIDE the table header ---------- */
+  /* If you render a first thead row like:
+     <tr class="caption-row"><th class="caption-th" colSpan="3">PUP TO KALAWAAN</th></tr>
+     this row will stick above the column headers. */
+  :root { --caption-h: 44px; }
+  .caption-th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #cfe0ff;       /* match header color (change if you prefer) */
+    font-weight: 800;
+    font-size: 24px;
+    padding: 8px 10px;
+    height: var(--caption-h);
+    text-align: center;
+  }
+  /* When using a caption row, push the column header row under it */
+  .cols-row th { top: var(--caption-h); }
+  
+  /* ---------- Buttons / Action column ---------- */
+  .action-col { width: 220px; }
+  .action-cell { text-align: center; }
   
   .view-btn {
-    background-color: #000c6f;
-    color: white;
+    background: #051a7a;
+    color: #fff;
     padding: 8px 16px;
-    border-radius: 5px;
     border: none;
+    border-radius: 10px;
+    font-weight: 700;
     cursor: pointer;
+    width: 180px;
   }
-  
-  .view-btn:hover {
-    background-color: #003366;
-  }
+  .view-btn:hover { background: #0a2aa0; }
+  /* Optional: remove focus glow if your UI adds one */
+  .view-btn:focus { outline: none; box-shadow: none; }

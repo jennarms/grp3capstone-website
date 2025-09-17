@@ -1,0 +1,153 @@
+.disembark-container { --caption-h: 44px; }
+
+/* ---------- Layout ---------- */
+.disembark-container {
+  display: flex;
+  height: 100vh;
+  width: 1580px;
+  flex-direction: column;
+  margin-top: 210px;
+  margin-left: -20px;
+}
+
+.disembark-main {
+  flex: 1;
+  padding: 20px;
+}
+
+.disembark-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.disembark-header h1 {
+  font-size: 44px;
+  font-weight: 800;
+  color: #000;
+  margin: 0 0 10px;
+    line-height: 1.1;
+    color: #000;
+    text-align: start;
+}
+
+/* Space between the two tables */
+.disembark-table-section {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 50px;          /* adjust if you want more/less space */
+  margin-top: 8px;
+}
+
+/* Neutral outer wrapper (no white card) */
+.disembark-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
+}
+
+/* ---------- Table + Scroll ---------- */
+.disembark-table-wrapper {
+  height: 300px;            /* visible viewport; adjust to taste */
+  overflow-y: auto;         /* independent scrollbar per table */
+  overflow-x: hidden;
+  scrollbar-gutter: stable; /* avoid layout shift when bar appears */
+  background: transparent;
+  direction: ltr;           /* scrollbar on the right */
+
+  /* OUTER FRAME so right edge isn't hidden by the scrollbar */
+  border: 2px solid #000;
+  border-top: none;         /* top edge is drawn by sticky caption/header */
+  border-radius: 0;
+}
+
+/* Scrollbar styling */
+.disembark-table-wrapper { scrollbar-width: thin; scrollbar-color: #7f91d6 #eef3ff; }
+.disembark-table-wrapper::-webkit-scrollbar { width: 10px; }
+.disembark-table-wrapper::-webkit-scrollbar-track { background: #eef3ff; }
+.disembark-table-wrapper::-webkit-scrollbar-thumb { background: #7f91d6; border-radius: 8px; }
+.disembark-table-wrapper::-webkit-scrollbar-thumb:hover { background: #5162b3; }
+
+/* ---------- Table grid (single seams; no doubles) ---------- */
+.disembark-data-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;   /* we draw seams manually */
+  border-spacing: 0;
+}
+
+/* reset */
+.disembark-data-table th,
+.disembark-data-table td {
+  border: 0;
+  padding: 8px 10px;
+  font-size: 20px;
+  text-align: center;
+}
+
+/* inner vertical seams only; wrapper draws left/right outer edges */
+.disembark-data-table th,
+.disembark-data-table td { border-left: 2px solid #000; }
+.disembark-data-table th:first-child,
+.disembark-data-table td:first-child { border-left: 0; }
+.disembark-data-table th:last-child,
+.disembark-data-table td:last-child { border-right: 0; }
+
+/* header rows (sticky) */
+.disembark-data-table thead th {
+  position: sticky;
+  top: 0;                         /* default when there is no caption row */
+  z-index: 2;
+  background: #cfe0ff;            /* light blue */
+  font-weight: 700;
+  border-top: 2px solid #000;     /* top outer edge */
+}
+
+/* thin rule under the last header row (the column labels) */
+.disembark-data-table thead tr:last-child th {
+  border-bottom: 2px solid #000;
+}
+
+/* horizontal seams in body */
+.disembark-data-table tbody tr + tr td { border-top: 2px solid #000; }
+
+/* bottom edge provided by wrapper to avoid a double line */
+.disembark-data-table tbody tr:last-child td { border-bottom: 0; }
+
+/* ---------- Caption inside the table header (sticky above column labels) ---------- */
+.disembark-caption-th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #cfe0ff;            /* same as header */
+  font-weight: 800;
+  font-size: 24px;
+  padding: 8px 10px;
+  height: var(--caption-h);
+  text-align: center;
+  border-top: 2px solid #000;     /* continue the outer top border */
+}
+
+/* push the column header row below the caption */
+.disembark-cols-row th { top: var(--caption-h); }
+
+/* ---------- Buttons / Action column ---------- */
+.disembark-action-col { width: 220px; }
+.disembark-action-cell { text-align: center; }
+
+.disembark-view-btn {
+  background: #051a7a;
+  color: #fff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 180px;
+}
+
+.disembark-view-btn:hover { background: #0a2aa0; }
+.disembark-view-btn:focus { outline: none; box-shadow: none; }
