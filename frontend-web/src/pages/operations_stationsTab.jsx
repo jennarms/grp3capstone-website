@@ -20,20 +20,16 @@ export function StationsTab() {
 
   const [query, setQuery] = useState("");
 
-  // Add Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddConfirm, setShowAddConfirm] = useState(false);
 
-  // Edit Modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [editStation, setEditStation] = useState(null);
 
-  // Delete Modal
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteStationId, setDeleteStationId] = useState(null);
 
-  // Form
   const [formError, setFormError] = useState("");
   const [newStation, setNewStation] = useState({
     stationId: "",
@@ -59,7 +55,6 @@ export function StationsTab() {
     );
   }, [rows, query]);
 
-  // === ADD LOGIC ===
   const onAdd = () => {
     setFormError("");
     setShowAddModal(true);
@@ -94,7 +89,6 @@ export function StationsTab() {
     });
   };
 
-  // === EDIT LOGIC ===
   const onEdit = (id) => {
     const station = rows.find((r) => r.stationId === id);
     setEditStation({ ...station, confirmPassword: station.password });
@@ -127,7 +121,6 @@ export function StationsTab() {
     setEditStation(null);
   };
 
-  // === DELETE LOGIC ===
   const onDelete = (id) => {
     setDeleteStationId(id);
     setShowDeleteConfirm(true);
@@ -203,10 +196,10 @@ export function StationsTab() {
       {/* ADD MODAL */}
       {showAddModal && (
         <div className="stn-modal-overlay-stations">
-          <div className="stn-modal-stations">
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Add Station</h3>
-              <button onClick={() => setShowAddModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowAddModal(false)}>×</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -228,7 +221,8 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-save-btn-stations" onClick={handleAddSave}>Save</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowAddModal(false)}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={handleAddSave}>Save</button>
             </div>
           </div>
         </div>
@@ -236,13 +230,15 @@ export function StationsTab() {
 
       {/* ADD CONFIRM */}
       {showAddConfirm && (
-        <div className="stn-modal-overlay-stations">
-          <div className="stn-modal-stations">
-            <h3 className="stn-modal-title-stations">Confirm Add</h3>
-            <p>Are you sure you want to add this station?</p>
+        <div className="stn-modal-overlay-stations" onClick={() => setShowAddConfirm(false)}>
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
+            <div className="stn-modal-header-stations">
+              <h3 className="stn-modal-title-stations">Confirm Add</h3>
+            </div>
+            <div className="stn-modal-msg-stations">Are you sure you want to add this station?</div>
             <div className="stn-modal-actions-stations">
-              <button onClick={() => setShowAddConfirm(false)}>Cancel</button>
-              <button onClick={confirmAdd}>Yes</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowAddConfirm(false)}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={confirmAdd}>Add</button>
             </div>
           </div>
         </div>
@@ -251,10 +247,10 @@ export function StationsTab() {
       {/* EDIT MODAL */}
       {showEditModal && editStation && (
         <div className="stn-modal-overlay-stations">
-          <div className="stn-modal-stations">
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Edit Station</h3>
-              <button onClick={() => setShowEditModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowEditModal(false)}>×</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -275,7 +271,8 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-save-btn-stations" onClick={handleEditSave}>Save</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditModal(false)}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={handleEditSave}>Save</button>
             </div>
           </div>
         </div>
@@ -283,13 +280,15 @@ export function StationsTab() {
 
       {/* EDIT CONFIRM */}
       {showEditConfirm && (
-        <div className="stn-modal-overlay-stations">
-          <div className="stn-modal-stations">
-            <h3 className="stn-modal-title-stations">Confirm Edit</h3>
-            <p>Are you sure you want to save changes?</p>
+        <div className="stn-modal-overlay-stations" onClick={() => setShowEditConfirm(false)}>
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
+            <div className="stn-modal-header-stations">
+              <h3 className="stn-modal-title-stations">Confirm Edit</h3>
+            </div>
+            <div className="stn-modal-msg-stations">Are you sure you want to save changes?</div>
             <div className="stn-modal-actions-stations">
-              <button onClick={() => setShowEditConfirm(false)}>Cancel</button>
-              <button onClick={confirmEdit}>Yes</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditConfirm(false)}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={confirmEdit}>Save</button>
             </div>
           </div>
         </div>
@@ -297,13 +296,15 @@ export function StationsTab() {
 
       {/* DELETE CONFIRM */}
       {showDeleteConfirm && (
-        <div className="stn-modal-overlay-stations">
-          <div className="stn-modal-stations">
-            <h3 className="stn-modal-title-stations">Confirm Delete</h3>
-            <p>Are you sure you want to delete this station?</p>
+        <div className="stn-modal-overlay-stations" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
+            <div className="stn-modal-header-stations">
+              <h3 className="stn-modal-title-stations">Confirm Delete</h3>
+            </div>
+            <div className="stn-modal-msg-stations">Are you sure you want to delete this station?</div>
             <div className="stn-modal-actions-stations">
-              <button onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-              <button onClick={confirmDelete}>Yes</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={confirmDelete}>Delete</button>
             </div>
           </div>
         </div>

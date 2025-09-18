@@ -118,22 +118,32 @@ export default function VehicleTab() {
         </div>
       </div>
 
-      {/* Confirm dialog */}
+      {/* Confirm dialog — standardized layout */}
       {showConfirm && (
         <div
-          className="confirm-overlay"
+          className="ops-modalOverlay"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="confirm-title"
+          aria-labelledby="ops-confirm-title"
           onClick={handleConfirmCancel}
         >
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 id="confirm-title">Save Changes</h3>
-            <p>Are you sure with this action?</p>
+          <div
+            className="ops-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ops-modalHeader">
+              <h3 id="ops-confirm-title" className="ops-modalTitle">
+                Save Changes
+              </h3>
+            </div>
 
-            <div className="confirm-buttons">
+            <div className="ops-modalBody">
+              Are you sure you want to save these changes?
+            </div>
+
+            <div className="ops-modalFooter">
               <button
-                className="cancel-btn"
+                className="ops-btn ops-btnOutline"
                 type="button"
                 onClick={handleConfirmCancel}
                 autoFocus
@@ -141,11 +151,11 @@ export default function VehicleTab() {
                 Cancel
               </button>
               <button
-                className="yes-btn"
+                className="ops-btn ops-btnNavy"
                 type="button"
                 onClick={handleConfirmYes}
               >
-                Yes
+                Save
               </button>
             </div>
           </div>

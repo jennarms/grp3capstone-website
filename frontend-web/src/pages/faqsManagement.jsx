@@ -148,7 +148,7 @@ export function FAQs() {
                 alt="Search"
                 className="search-icon"
               />
-              <input
+            <input
                 type="text"
                 placeholder="Search"
                 className="search-input"
@@ -222,7 +222,7 @@ export function FAQs() {
         </div>
       </div>
 
-      {/* Add FAQ Modal (renamed classes) */}
+      {/* Add FAQ Modal */}
       {showModal && (
         <div className="fm-modalOverlay" onClick={() => setShowModal(false)}>
           <div className="fm-modal" onClick={(e) => e.stopPropagation()}>
@@ -259,7 +259,7 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Edit FAQ Modal (renamed classes) */}
+      {/* Edit FAQ Modal */}
       {editModalVisible && faqToEdit && (
         <div className="fm-modalOverlay" onClick={() => setEditModalVisible(false)}>
           <div className="fm-modal" onClick={(e) => e.stopPropagation()}>
@@ -296,25 +296,33 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Confirm Delete (left as-is) */}
+      {/* Confirm Delete — now matches previous modal style */}
       {showDeleteConfirm && faqToDelete && (
-        <div className="confirm-overlay">
-          <div className="confirm-box">
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete?</p>
-            <div className="confirm-buttons">
-              <button className="cancel-btn" onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </button>
-              <button className="yes-btn" onClick={handleDelete}>
-                Yes
-              </button>
+        <div className="fm-modalOverlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div
+            className="fm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fm-del-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="fm-modalHeader">
+              <h2 id="fm-del-title" className="fm-modalTitle">Delete FAQ</h2>
+            </div>
+
+            <div className="fm-modalBody">
+              Are you sure you want to delete this FAQ? This action cannot be undone.
+            </div>
+
+            <div className="fm-modalFooter">
+              <button className="btn cancel" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+              <button className="btn primary" onClick={handleDelete}>Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Success / Notice Modal (unchanged) */}
+      {/* Success / Notice Modal */}
       {notice.open && (
         <div className="fm-noticeOverlay" onClick={closeNotice}>
           <div
