@@ -3,14 +3,13 @@
   font-size: 16px;
   font-family: Arial, sans-serif;
   width: 1250px;               /* fixed (was 1250x) */
-  max-width: none;
   box-sizing: border-box;
 }
 
 /* ===== Card wrapper that holds the toolbar + table ===== */
 .table-card {
-  width: 1408px;
-  margin-left: 70px;
+  width: 1508px;
+  margin-left: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
   overflow: hidden;            /* keeps borders clean */
@@ -130,7 +129,7 @@
 /* ===== Top page header (title) ===== */
 .faqs-top-header {
   position: absolute;
-  top: 20px;
+  top: 40px;
   left: 340px;
   right: 40px;
   display: flex;
@@ -138,6 +137,7 @@
   align-items: center;
   padding-right: 40px;
   z-index: 10;
+  color: #000;
 }
 .faqs-top-header h1 {
   font-size: 45px;

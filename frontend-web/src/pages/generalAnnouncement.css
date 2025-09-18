@@ -2,7 +2,6 @@
   --sidebar-w: 300px;
   --sidebar-w-md: 250px;
   --sidebar-w-sm: 200px;
-
   --accent-navy: #0b1a78;
   --card-br: 14px;
   --card-border: #e9e9ee;
@@ -11,18 +10,20 @@
 html, body { overflow-x: hidden; }
 
 .main-content {
+  margin-top: 50px;
   padding: 24px 24px 56px;
   transition: margin-left .25s ease;
   box-sizing: border-box;
-  width: 1550px; /* allow it to flex naturally */
+  width: 1590px;
+  margin-left: -25x;
 }
 
 /* ===== Header ===== */
 .header-row{
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+  justify-content: flex-start;
 }
 
 .page-title {
@@ -32,32 +33,28 @@ html, body { overflow-x: hidden; }
   margin-bottom: 5px;
 }
 
-.header-row { justify-content: flex-start; }
-
 /* ===== Content layout ===== */
-/* Form stays in row 1, list scrolls in row 2 so the form never moves */
 .general-announcement {
   max-width: 100%;
-  display: grid;                            /* NEW */
-  grid-template-rows: auto minmax(0,1fr);   /* NEW: form | list */
-  gap: 20px;                                 /* NEW */
-  height: calc(100vh - 220px);               /* NEW: visible area; tweak if needed */
-  overflow: hidden;                           /* NEW: confine scrolling to list */
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  gap: 20px;
+  height: calc(100vh - 220px);
+  overflow: hidden;
 }
 
-/* The list becomes the only scrollable area under the form */
 .announcements-container{
   display: grid;
   gap: 18px;
-  margin-top: 0;                 /* avoid extra shift */
-  min-height: 0;                 /* NEW: allow scrolling inside grid child */
-  overflow-y: auto;              /* NEW: scroll only the list */
+  margin-top: 0;
+  min-height: 0;
+  overflow-y: auto;
   padding-right: 8px;
-  overflow-anchor: none;         /* prevent scroll-anchoring jumps */
-  overscroll-behavior: contain;  /* stop scroll chaining to page */
+  overflow-anchor: none;
+  overscroll-behavior: contain;
 }
 
-/* ===== Cards (form + announcement items) ===== */
+/* ===== Cards ===== */
 .card{
   background: #fff;
   border: 2px solid var(--card-border);
@@ -112,38 +109,23 @@ html, body { overflow-x: hidden; }
   letter-spacing: .2px;
 }
 
-/* icons on the right */
 .announcement-actions{ display: flex; gap: 8px; }
-
-.icon-btn{
-  border: none;
-  background: transparent;
-  padding: 4px;
-  cursor: pointer;
-}
-
+.icon-btn{ border: none; background: transparent; padding: 4px; cursor: pointer; }
 .action-icon{ width: 30px; height: 30px; display: block; }
-
 .card-message{ line-height: 1.45; color: #000000; }
 
-/* ===== Responsive tweaks ===== */
+/* ===== Responsive ===== */
 @media (max-width: 1024px){
   .page-title{ font-size: 2rem; }
 }
-
 @media (max-width: 768px){
   .page-title{ font-size: 1.75rem; }
   .card-header h2{ font-size: 1.35rem; }
 }
 
-/* Horizontal line under title */
-.title-divider {
-  border: none;
-  border-top: 2px solid #ddd;
-  margin: 8px 0;
-}
+/* ===== Misc ===== */
+.title-divider { border: none; border-top: 2px solid #ddd; margin: 8px 0; }
 
-/* Date & time styling */
 .posted-date-time {
   margin-top: 10px;
   font-size: 1rem;
@@ -151,15 +133,25 @@ html, body { overflow-x: hidden; }
   text-align: start;
 }
 
-/* Optional: custom scrollbar styling for the list */
 .announcements-container::-webkit-scrollbar { width: 6px; }
-.announcements-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 3px;
-}
+.announcements-container::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.3); border-radius: 3px; }
 .announcements-container::-webkit-scrollbar-track { background: transparent; }
 
-.ga-modal-overlay{
+/* ===== Overlays / Navbar layering ===== */
+.dark-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.navbar { position: relative; z-index: 1; }
+.header-buttons-fixed { z-index: 100; }
+
+/* ===== Modal (overlay, header, body, actions) ===== */
+.ga-modal-overlay,
+.ga-modalOverlay{
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.35);
@@ -171,29 +163,45 @@ html, body { overflow-x: hidden; }
 
 .ga-modal{
   width: 560px;
-  height: 200px;
+  max-width: 92vw;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(0,0,0,.2);
   overflow: hidden;
 }
 
-.ga-modal-header{ padding: 16px 20px 8px; }
-.ga-modal-title{ font-weight: 800; font-size: 1.5rem; }
+.ga-modal-header,
+.ga-modalHeader{
+  padding: 16px 20px 10px;
+  border-bottom: 1px solid #eee;
+}
 
-.ga-odal-body{
-  padding: 0 20px 16px;
-  color: #000000;
+.ga-modal-title,
+.ga-modalTitle{
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: #111;
+  margin-left: -250px;
+}
+
+.ga-modal-body,
+.ga-modalBody{
+  padding: 14px 20px;
+  color: #000;
   font-size: 18px;
 }
 
-.ga-modal-actions{
+
+/* actions (footer) */
+.ga-modal-actions,
+.ga-modalActions{
   display: flex;
   gap: 10px;
   justify-content: flex-end;
   padding: 12px 16px 16px;
 }
 
+/* ===== Buttons ===== */
 .btn{
   border: none;
   border-radius: 8px;
@@ -204,10 +212,31 @@ html, body { overflow-x: hidden; }
 }
 
 .btn-outline{ background: #fff; border: 1px solid #cfd1d8; }
-.btn-danger{ background: #bf2d2d; color: #fff; }
 .btn-outline:hover{ background: #f5f6f8; }
-.btn-danger:hover{ filter: brightness(1.05); }
 
+.btn-danger,
+.ga-modal .btn-danger,
+.actions .btn-danger,
+button.delete,
+button[data-variant="danger"],
+a.button.delete,
+.action-delete{
+  background: var(--accent-navy) !important;
+  border-color: var(--accent-navy) !important;
+  color: #fff !important;
+}
+
+.btn-danger:hover,
+.ga-modal .btn-danger:hover,
+.actions .btn-danger:hover,
+button.delete:hover,
+button[data-variant="danger"]:hover,
+a.button.delete:hover,
+.action-delete:hover{
+  filter: brightness(1.05);
+}
+
+/* ===== Announcement card ===== */
 .announcement-card {
   background-color: #fff;
   border-radius: 10px;
@@ -243,91 +272,36 @@ html, body { overflow-x: hidden; }
   background: #fff;
 }
 
-.dark-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-  z-index: 1; /* Ensure it stays above most other elements */
-}
-
-.dark-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-  z-index: 1000; /* Ensure it stays above the Navbar */
-}
-
-/* Navbar */
-.navbar {
-  position: relative;
-  z-index: 1;
-}
-
-/* Ensure HeaderButton is also above the dark overlay */
-.header-buttons-fixed {
-  z-index: 100; /* Above Navbar but below the overlay */
-}
-
-.ga-modalBody--center {
-  text-align: center;
-}
-
-/* Optional: center the modal title when used */
-.ga-modalHeader--center {
-  text-align: center;
-}
-
-.ga-modalOverlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.35);
+.ga-modal-header,
+.ga-modalHeader{
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 30001;         /* above navbar & overlays */
+  justify-content: space-between;
 }
 
-/* Match other pages: clean frame, no fixed height, nice padding */
-.ga-modal{
-  width: 560px;           /* same base width as other modals */
-  max-width: 92vw;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0,0,0,.2);
-  overflow: hidden;       /* keep rounded corners clean */
-}
-
-/* Header matches delete/confirm modals: left title, divider */
-.ga-modalHeader{
-  padding: 16px 20px 10px;
-  border-bottom: 1px solid #eee;
-}
+.ga-modal-title,
 .ga-modalTitle{
-  font-weight: 800;
-  font-size: 1.5rem;
-  color: #111;
+  margin: 0;
+  text-align: left !important;
+  margin-left: 0 !important; /* undo the -250px */
 }
 
-/* Center the notice text (only this modal’s body) */
-.ga-modalBody{
-  padding: 14px 20px;
-  color: #000;
-  font-size: 18px;
-}
-.ga-modalBody--center{
-  text-align: center;
+/* ----- OK button blue (several safe selectors) ----- */
+/* EITHER: give your OK button a class like .btn-ok or .btn-primary */
+/* OR: add .is-success to the modal container after delete and it will style
+   the last footer button as blue */
+.ga-modal.is-success .ga-modal-actions .btn:last-child,
+.ga-modal-actions .btn-ok,
+.ga-modal-actions .btn-primary,
+.ga-modal .btn-ok,
+.ga-modal .btn-primary{
+  background: blue;
+  border-color: var(--accent-navy) !important;
+  color: #fff !important;
 }
 
-/* Actions row: buttons on the right, like other modals */
-.ga-modalActions{
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 16px 16px;
+.ga-modal.is-success .ga-modal-actions .btn:last-child:hover,
+.ga-modal-actions .btn-ok:hover,
+.ga-modal-actions .btn-primary:hover{
+  filter: brightness(1.05);
 }

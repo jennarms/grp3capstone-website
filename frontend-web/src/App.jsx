@@ -34,7 +34,7 @@ function App() {
         <Route path='/broadcast' element={<Broadcast/>}/>
         <Route path='/passenger' element={<Passenger/>}/>
         <Route path='/feedback' element={<Feedback/>}/>
-        <Route path='/feedbackSettings' element={<FeedbackSettings/>}/>
+        <Route path='/feedback/settings' element={<FeedbackSettings/>}/>
         <Route path='/accountSettings' element={<AccountSettings/>}/>
         <Route path='/reports' element={<Report/>}/>
         <Route path='/UICustomization' element ={<UI/>}/>

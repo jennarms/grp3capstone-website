@@ -1,18 +1,17 @@
 :root{
   --nav-h: 100px;
-  --sidebar-w: 260px;         /* match your sidebar width */
+  --sidebar-w: 260px;
   --ink: #0b1a78;
   --stroke: #cfd8ea;
 }
 
 /* place content to the right of the left sidebar */
 .ops-page {
-  margin-left: var(--ops-left);   /* line up with other tabs */
+  margin-left: var(--ops-left);
   margin-right: var(--ops-right);
   padding: 20px 24px 40px;
   box-sizing: border-box;
 }
-
 
 /* section label */
 .ops-section {
@@ -23,7 +22,6 @@
   text-align: left;
   margin-left: -620px;
   margin-top: -300px;
-
 }
 
 /* form */
@@ -59,81 +57,101 @@
   width: 300px;
 }
 
-/* save centered */
+/* save centered — blue consistent with other pages */
 .form-actions {
   display: flex;
   justify-content: center;
   margin-top: 16px;
 }
 
-.primary-btn {
-  background: #0b1a78;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 5px 36px;
+.ops-page .form-actions .primary-btn{
+  background: var(--ink) !important;
+  border: 1px solid var(--ink) !important;
+  color: #fff !important;
+
+  border-radius: 12px;
+  padding: 8px 36px;
   font-weight: 800;
-  font-size: 22px;
+  font-size: 18px;
   cursor: pointer;
   width: 250px;
-  margin-top: 30px
+  margin-top: 30px;
+  transition: filter .15s ease, box-shadow .15s ease;
 }
-
-/* confirm modal */
-.confirm-overlay {
+.ops-page .form-actions .primary-btn:hover{ filter: brightness(1.05); }
+.ops-page .form-actions .primary-btn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(11,26,120,.2);
+}
+/* ===== Standardized modal (matches previous pages) ===== */
+.ops-modalOverlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.5);   /* darken background */
+  background: rgba(0,0,0,.45);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 3000;                /* above nav/header */
+  justify-content: center;
+  z-index: 3000;
 }
 
-.confirm-box {
+.ops-modal{
+  width: 560px;
+  max-width: 92vw;
   background: #fff;
-  width: 420px;
-  max-width: 90vw;
-  padding: 22px 24px 18px;
-  border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.2);
+  border: 1px solid var(--stroke);
+  overflow: hidden;
 }
 
-.confirm-box h3 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 800;
-  color: #000;
+.ops-modalHeader{
+  padding: 16px 20px 10px;
+  border-bottom: 1px solid #eee;
 }
-
-.confirm-box p {
+.ops-modalTitle{
   margin: 0;
-  color: #222;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111;
+  text-align: left; /* title left */
 }
 
-.confirm-buttons {
-  margin-top: 18px;
+.ops-modalBody{
+  padding: 14px 22px 4px;
+  color: #111;
+  font-size: 1rem;
+}
+
+.ops-modalFooter{
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: flex-end; /* buttons right */
+  gap: 10px;
+  padding: 14px 16px 18px;
 }
 
-.cancel-btn {
-  background: #fff;
-  border: 1px solid #aaa;
-  padding: 8px 18px;
-  border-radius: 8px;
+/* Buttons inside modal */
+.ops-btn{
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 22px;
   font-weight: 700;
   cursor: pointer;
+  min-width: 120px;
+  transition: filter .15s ease, box-shadow .15s ease, background .15s ease;
 }
-
-.yes-btn {
-  background: #0b1a78;
+.ops-btn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(11,26,120,.2);
+}
+.ops-btnOutline{
+  background: #fff;
+  border-color: #cfd1d8;
+  color: #111;
+}
+.ops-btnOutline:hover{ background: #f5f6f8; }
+.ops-btnNavy{
+  background: var(--ink);
+  border-color: var(--ink);
   color: #fff;
-  border: none;
-  padding: 8px 22px;
-  border-radius: 8px;
-  font-weight: 800;
-  cursor: pointer;
-  min-width: 84px;
 }
+.ops-btnNavy:hover{ filter: brightness(1.05); }

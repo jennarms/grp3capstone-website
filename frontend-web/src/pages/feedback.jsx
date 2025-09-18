@@ -1,4 +1,3 @@
-// Feedback.jsx
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -51,7 +50,7 @@ export function Feedback() {
           res.data.map((f) => ({
             id: f.id || f.feedback_id,
             date: f.date || f.datetime,
-            category: f.category, // ✅ full name from backend
+            category: f.category,
             station: f.station,
             rating: f.rating,
             message: f.message,
@@ -101,7 +100,7 @@ export function Feedback() {
     setPendingDeleteId(null);
   };
 
-  // 🔹 Reply
+  // 🔹 Reply (left intact; button removed per your request)
   const onReply = (id) => {
     const text = window.prompt("Write admin reply:");
     if (!text) return;
@@ -138,7 +137,7 @@ export function Feedback() {
               <option value="Inquiry">Inquiry</option>
             </select>
 
-            <Link className="fb-settings" to="/feedbackSettings">
+            <Link className="fb-settings" to="/feedback/settings">
               Settings
             </Link>
           </div>
@@ -161,18 +160,22 @@ export function Feedback() {
                   <button
                     className="icon-btn danger"
                     title="Delete"
+                    aria-label={`Delete feedback ${f.id}`}
                     onClick={() => onDelete(f.id)}
                   >
-                    🗑️
+                    {/* SVG trash icon */}
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                    </svg>
                   </button>
-                  <button
-                    className="icon-btn"
-                    title="Reply"
-                    onClick={() => onReply(f.id)}
-                  >
-                    💬
-                  </button>
+
+                  {/* Reply button removed per request */}
                 </div>
+
                 <div className="fb-row">
                   <span className="fb-label">Date: </span>
                   <span className="fb-value">{fmtDate(f.date)}</span>
@@ -202,7 +205,6 @@ export function Feedback() {
                   <img className="fb-photo" src={f.image} alt="attachment" />
                 )}
 
-                {/* ✅ Priority: individual reply > auto-reply */}
                 {f.adminResponse ? (
                   <div className="fb-admin-reply">
                     <b>Admin:</b> {f.adminResponse}

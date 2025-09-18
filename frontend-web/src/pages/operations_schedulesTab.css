@@ -1,90 +1,112 @@
-.ops-page {
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-  }
-  
-  .ops-main {
-    display: flex;
-    flex-direction: column;
-    margin-top: 20px;
-  }
-  
-  .ops-section {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 20px;
-  }
-  
-  .schedules-form {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .form-row {
-    margin-bottom: 15px;
-  }
-  
-  .input {
-    padding: 10px;
-    font-size: 16px;
-    margin-top: 5px;
-  }
-  
-  .form-actions {
-    margin-top: 20px;
-  }
-  
-  .primary-btn {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .primary-btn:hover {
-    background-color: #45a049;
-  }
-  
-  /* Confirm dialog styles */
-  .confirm-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .confirm-box {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 300px;
-  }
-  
-  .confirm-buttons {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-  }
-  
-  .cancel-btn,
-  .yes-btn {
-    padding: 10px 15px;
-    cursor: pointer;
-  }
-  
-  .cancel-btn {
-    background-color: #f44336;
-    color: white;
-  }
-  
-  .yes-btn {
-    background-color: #4CAF50;
-    color: white;
-  }
+:root {
+  --ops-stn-blue: #0b1a78;
+  --ops-stn-blue-200: #dfe7ff;
+  --ops-stn-border: #c8d1e6;
+  --ops-stn-text: #0f172a;
+}
+
+.ops-routes-main { max-width: 1200px; margin-left: 340px; margin-right: 40px; font-size: 16px; }
+.ops-routes-wrap { color: var(--ops-stn-text); }
+
+.ops-routes-title { font-size: 50px; font-weight: 800; margin: 10px 0 14px; text-align: start; }
+
+.ops-routes-table-title {
+  font-size: 37px; font-weight: 600; color: black; margin-bottom: -2px; text-align: left; margin-left: -330px;
+}
+
+.ops-routes-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 10px 20px; }
+.ops-routes-toolbar label { font-size: 16px; font-weight: 600; }
+
+.ops-routes-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border: 2px solid var(--ops-stn-border);
+  border-radius: 999px; width: 320px; background: #fff; margin-left: -350px;
+}
+.ops-routes-search-input { all: unset; width: 100%; font-size: 14px; color: #111827; }
+
+.ops-routes-toolbar select {
+  padding: 8px 14px; font-size: 14px; border: 2px solid var(--ops-stn-border);
+  border-radius: 999px; background: #fff; color: #111827; appearance: none;
+}
+
+.ops-routes-add-btn {
+  padding: 8px 18px; border-radius: 99px; border: 2px solid;
+  background: #fff; color: var(--ops-stn-blue); font-weight: 700; cursor: pointer;
+  width: 250px; margin-right: -350px;
+}
+.ops-routes-add-btn:hover { background: var(--ops-stn-blue-200); }
+
+.ops-routes-table-wrap {
+  height: 180px; width: 1500px; overflow-y: scroll;
+  border: 1px solid var(--ops-stn-border); border-radius: 6px; background: #fff; margin-left: -330px;
+}
+.ops-routes-table { width: 1477px; border-collapse: separate; border-spacing: 0; }
+.ops-routes-table thead th {
+  position: sticky; top: 0; background: var(--ops-stn-blue-200); color: #0b1a78;
+  text-align: left; font-weight: 700; padding: 10px 12px;
+  border-bottom: 1px solid var(--ops-stn-border); border-right: 1px solid var(--ops-stn-border);
+}
+.ops-routes-table tbody td {
+  padding: 3px 12px; border-bottom: 1px solid var(--ops-stn-border); border-right: 1px solid var(--ops-stn-border);
+  vertical-align: middle; background: #fdfefe;
+}
+.ops-routes-table tbody tr:hover td { background: #f7faff; }
+
+.ops-routes-actions { display: flex; gap: 8px; justify-content: center; }
+.ops-routes-action {
+  padding: 6px 12px; font-size: 12px; border-radius: 8px; border: 2px solid var(--ops-stn-blue);
+  background: #fff; color: var(--ops-stn-blue); font-weight: 700; cursor: pointer; width: 100px;
+}
+.ops-routes-action:hover { background: var(--ops-stn-blue-200); }
+.ops-routes-delete { border-color: #1e3a8a; color: #1e3a8a; }
+.ops-routes-delete:hover { background: #e8efff; }
+
+.ops-routes-empty { text-align: center; padding: 24px; color: #6b7280; }
+
+.ops-routes-water-flow select, .ops-routes-station-route select {
+  padding: 5px; font-size: 15px; font-weight: 600; border: 1px solid var(--ops-stn-border);
+  border-radius: 99px; background: #fff; color: #111827; appearance: none; cursor: pointer; width: 240px; text-align: center;
+}
+.ops-routes-water-flow select:focus, .ops-routes-station-route select:focus { outline: none; border-color: var(--ops-stn-blue); }
+.ops-routes-water-flow { position: relative; display: inline-block; font-size: 17px; color: black; font-weight: 650; margin-left: -1100px; }
+.ops-routes-station-route{ position: relative; display: inline-block; font-size: 17px; color: black; font-weight: 650; margin-left: -1200px; }
+.ops-routes-water-flow::after, .ops-routes-station-route::after {
+  content: "▼"; font-size: 12px; color: #111827; position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%); pointer-events: none;
+}
+
+/* ===== Routes/Stations unified modal (matches other pages) ===== */
+.rt-modalOverlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center; z-index: 30001;
+}
+.rt-modal {
+  width: 520px; max-width: 92vw; background: #fff; border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.2); overflow: hidden;
+}
+.rt-modalHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid #eee;
+}
+.rt-modalTitle { font-weight: 800; font-size: 1.25rem; color: #111; margin: 0; }
+.rt-close { background: transparent; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: #555; }
+
+.rt-modalBody { padding: 16px 18px; color: #000; font-size: 16px; text-align: left; display: grid; gap: 10px; }
+.rt-modalBody input, .rt-modalBody select {
+  width: 100%; border: 1px solid var(--ops-stn-border); border-radius: 10px; padding: 10px 12px; font-size: 15px; outline: none;
+}
+
+.rt-modalActions {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 12px 18px 16px; border-top: 1px solid #eee;
+}
+
+.rt-btn {
+  border: 1px solid transparent; border-radius: 12px; padding: 10px 20px; font-weight: 700;
+  cursor: pointer; min-width: 110px; transition: filter .15s ease, box-shadow .15s ease;
+}
+.rt-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(11,26,120,.2); }
+.rt-btnOutline { background: #fff; border-color: #cfd1d8; color: #111; }
+.rt-btnOutline:hover { background: #f5f6f8; }
+.rt-btnNavy { background: var(--ops-stn-blue); border-color: var(--ops-stn-blue); color: #fff; }
+.rt-btnNavy:hover { filter: brightness(1.05); }
