@@ -1,45 +1,102 @@
-import React, { useState, useMemo } from "react";
-import { Navbar } from "../components/navBar";
+import { useEffect, useMemo, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
+import { Navbar } from "../components/navBar";
 import { OperationsTab } from "../components/operationsTab";
 import "./operations_stationsTab.css";
 
 export function StationsTab() {
-  const [rows, setRows] = useState([
-    { stationId: "S001", companyId: "C001", stationName: "Escolta", email: "escolta@email.com", username: "escoltastation", password: "$2y$10$1J..." },
-    { stationId: "S002", companyId: "C001", stationName: "Lawton", email: "lawton@email.com", username: "lawtonstation", password: "$2y$10$1J..." },
-    { stationId: "S003", companyId: "C001", stationName: "Quinta", email: "quinta@email.com", username: "quintastation", password: "$2y$10a3.." },
-    { stationId: "S004", companyId: "C001", stationName: "PUP", email: "pup@email.com", username: "pupstation", password: "$2y$10$JU.." },
-    { stationId: "S005", companyId: "C001", stationName: "Sta. Ana", email: "staana@email.com", username: "staanastation", password: "$2y$10$d.." },
-    { stationId: "S006", companyId: "C001", stationName: "Lambingan", email: "lambingan@email.com", username: "lambinganstation", password: "$2y$10$0.." },
-    { stationId: "S007", companyId: "C001", stationName: "Valenzuela", email: "valenzuela@email.com", username: "valenzuelastation", password: "$2y$10$p.." },
-    { stationId: "S008", companyId: "C001", stationName: "Hulo", email: "hulo@email.com", username: "hulostation", password: "$2y$10$U.." },
-    { stationId: "S009", companyId: "C001", stationName: "Guadalupe", email: "guadalupe@email.com", username: "guadalupestation", password: "$2y$10$V.." },
-    { stationId: "S010", companyId: "C001", stationName: "Maybunga", email: "maybunga@email.com", username: "maybungastation", password: "$2y$10$H.." },
-  ]);
-
+  const [rows, setRows] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showAddConfirm, setShowAddConfirm] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
 
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [showEditOtpModal, setShowEditOtpModal] = useState(false);
   const [editStation, setEditStation] = useState(null);
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteOtpModal, setShowDeleteOtpModal] = useState(false);
   const [deleteStationId, setDeleteStationId] = useState(null);
 
   const [formError, setFormError] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [newStation, setNewStation] = useState({
-    stationId: "",
-    companyId: "C001",
+    companyId: "",
     stationName: "",
     username: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+
+  const apiUrl = import.meta.env.VITE_API_URL;
+
+  const getToken = () => {
+    return localStorage.getItem("token") || sessionStorage.getItem("token");
+  };
+
+  const apiRequest = async (url, options = {}) => {
+    const token = getToken();
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    };
+
+    const response = await fetch(`${apiUrl}${url}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        error: "Request failed",
+      }));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const data = await apiRequest("/api/company/");
+      setCompanies(data);
+
+      if (data.length > 0 && !newStation.companyId) {
+        setNewStation((prev) => ({
+          ...prev,
+          companyId: data[0].companyId || data[0].Company_ID,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch companies:", err);
+      setCompanies([{ companyId: "C001", companyName: "Default Company" }]);
+      setNewStation((prev) => ({ ...prev, companyId: "C001" }));
+    }
+  };
+
+  const fetchStations = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await apiRequest("/api/station/");
+      setRows(data);
+    } catch (err) {
+      setError(`Failed to fetch stations: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanies();
+    fetchStations();
+  }, []);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return rows;
@@ -55,82 +112,205 @@ export function StationsTab() {
     );
   }, [rows, query]);
 
+  // ADD
   const onAdd = () => {
     setFormError("");
     setShowAddModal(true);
   };
 
-  const handleAddSave = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newStation.email)) {
-      setFormError("Please enter a valid email address.");
+  const handleAddSave = async () => {
+    const { companyId, stationName, username, email, password, confirmPassword } = newStation;
+
+    if (!companyId || !stationName || !username || !email || !password || !confirmPassword) {
+      setFormError("All fields are required.");
       return;
     }
-    if (newStation.password !== newStation.confirmPassword) {
+    if (password !== confirmPassword) {
       setFormError("Passwords do not match.");
       return;
     }
-    setFormError("");
-    setShowAddConfirm(true);
+
+    // ✅ Prevent duplicate emails before backend call
+    if (rows.some(station => station.email === email)) {
+      setFormError("This email is already used by another station.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiRequest("/api/station/request-add", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setShowAddModal(false);
+      setShowOtpModal(true);
+    } catch (err) {
+      setFormError(`Failed to send OTP: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const confirmAdd = () => {
-    setRows((prev) => [...prev, newStation]);
-    setShowAddConfirm(false);
-    setShowAddModal(false);
-    setNewStation({
-      stationId: "",
-      companyId: "C001",
-      stationName: "",
-      username: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    });
+  const confirmAdd = async () => {
+    if (!otpCode) {
+      setFormError("Please enter the OTP code.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await apiRequest("/api/station/confirm-add", {
+        method: "POST",
+        body: JSON.stringify({ otpCode, details: newStation }),
+      });
+
+      setShowOtpModal(false);
+      setOtpCode("");
+      setNewStation({
+        companyId: companies.length > 0 ? (companies[0].companyId || companies[0].Company_ID) : "",
+        stationName: "",
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+
+      await fetchStations();
+      alert(`Station created successfully! ID: ${response.stationId}`);
+    } catch (err) {
+      setFormError(`Failed to create station: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // EDIT
   const onEdit = (id) => {
     const station = rows.find((r) => r.stationId === id);
-    setEditStation({ ...station, confirmPassword: station.password });
+    setEditStation({ ...station, password: "", confirmPassword: "" });
     setShowEditModal(true);
     setFormError("");
   };
 
-  const handleEditSave = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(editStation.email)) {
-      setFormError("Please enter a valid email address.");
-      return;
-    }
-    if (editStation.password !== editStation.confirmPassword) {
+  const handleEditSave = async () => {
+    if (!editStation) return;
+
+    const original = rows.find((r) => r.stationId === editStation.stationId);
+    const emailChanged = original?.email !== editStation.email;
+    const passwordChanged = editStation.password !== "";
+
+    if (passwordChanged && editStation.password !== editStation.confirmPassword) {
       setFormError("Passwords do not match.");
       return;
     }
-    setFormError("");
-    setShowEditConfirm(true);
+
+    // ✅ Prevent duplicate emails before backend call
+    if (emailChanged && rows.some(station => station.email === editStation.email)) {
+      setFormError("This email is already used by another station.");
+      return;
+    }
+
+    if (emailChanged) {
+      try {
+        setLoading(true);
+        await apiRequest(`/api/station/request-update/${editStation.stationId}`, {
+          method: "POST",
+          body: JSON.stringify({ email: editStation.email }),
+        });
+        setShowEditModal(false);
+        setShowEditOtpModal(true);
+      } catch (err) {
+        setFormError(`Failed to send OTP: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      await confirmEdit();
+    }
   };
 
-  const confirmEdit = () => {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.stationId === editStation.stationId ? { ...editStation } : r
-      )
-    );
-    setShowEditConfirm(false);
-    setShowEditModal(false);
-    setEditStation(null);
+  const confirmEdit = async () => {
+    if (!editStation) return;
+
+    const original = rows.find((r) => r.stationId === editStation.stationId);
+    const emailChanged = original?.email !== editStation.email;
+
+    if (emailChanged && !otpCode) {
+      setFormError("Please enter the OTP code.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiRequest(`/api/station/update/${editStation.stationId}`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...(emailChanged && { otpCode }),
+          details: {
+            stationName: editStation.stationName,
+            email: editStation.email,
+            username: editStation.username,
+            ...(editStation.password && { password: editStation.password }),
+          },
+        }),
+      });
+
+      setShowEditOtpModal(false);
+      setShowEditModal(false);
+      setOtpCode("");
+      setEditStation(null);
+
+      await fetchStations();
+      alert("Station updated successfully!");
+    } catch (err) {
+      setFormError(`Failed to update station: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const onDelete = (id) => {
-    setDeleteStationId(id);
-    setShowDeleteConfirm(true);
+  // DELETE
+  const onDelete = async (id) => {
+    try {
+      setLoading(true);
+      await apiRequest(`/api/station/request-delete/${id}`, { method: "POST" });
+      setDeleteStationId(id);
+      setShowDeleteOtpModal(true);
+      alert("OTP has been sent to the station email.");
+    } catch (err) {
+      setFormError(`Failed to request delete: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const confirmDelete = () => {
-    setRows((prev) => prev.filter((r) => r.stationId !== deleteStationId));
-    setShowDeleteConfirm(false);
-    setDeleteStationId(null);
+  const confirmDelete = async () => {
+    if (!otpCode || !adminPassword) {
+      setFormError("OTP and Admin password are required.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiRequest(`/api/station/confirm-delete/${deleteStationId}`, {
+        method: "POST",
+        body: JSON.stringify({ otpCode, adminPassword }),
+      });
+
+      setShowDeleteOtpModal(false);
+      setAdminPassword("");
+      setOtpCode("");
+      setDeleteStationId(null);
+
+      await fetchStations();
+      alert("Station deleted successfully!");
+    } catch (err) {
+      setFormError(`Failed to delete station: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <div className="ops-stn-container">
@@ -139,6 +319,13 @@ export function StationsTab() {
       <OperationsTab />
 
       <main className="ops-stn-main">
+        {error && (
+          <div className="stn-error-banner" style={{ margin: '10px 0' }}>
+            {error}
+            <button onClick={() => setError("")} style={{ marginLeft: '10px', background: 'transparent', border: 'none', color: 'white' }}>×</button>
+          </div>
+        )}
+
         <div className="ops-stn-toolbar">
           <label className="ops-stn-search" aria-label="Search stations">
             <svg className="ops-stn-search-ico" viewBox="0 0 24 24" width="18" height="18">
@@ -168,26 +355,38 @@ export function StationsTab() {
                 <th>StationName</th>
                 <th>Email</th>
                 <th>Username</th>
-                <th>Password</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r, i) => (
-                <tr key={r.stationId}>
-                  <td>{i + 1}</td>
-                  <td>{r.stationId}</td>
-                  <td>{r.companyId}</td>
-                  <td>{r.stationName}</td>
-                  <td>{r.email}</td>
-                  <td>{r.username}</td>
-                  <td>{r.password}</td>
-                  <td className="ops-stn-actions">
-                    <button className="ops-stn-action ops-stn-edit" onClick={() => onEdit(r.stationId)}>Edit</button>
-                    <button className="ops-stn-action ops-stn-delete" onClick={() => onDelete(r.stationId)}>Delete</button>
+              {loading && rows.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                    Loading stations...
                   </td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                    No stations found
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((r, i) => (
+                  <tr key={r.stationId}>
+                    <td>{i + 1}</td>
+                    <td>{r.stationId}</td>
+                    <td>{r.companyId}</td>
+                    <td>{r.stationName}</td>
+                    <td>{r.email}</td>
+                    <td>{r.username}</td>
+                    <td className="ops-stn-actions">
+                      <button className="ops-stn-action ops-stn-edit" onClick={() => onEdit(r.stationId)}>Edit</button>
+                      <button className="ops-stn-action ops-stn-delete" onClick={() => onDelete(r.stationId)}>Delete</button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -205,40 +404,99 @@ export function StationsTab() {
             {formError && <div className="stn-error-banner">{formError}</div>}
 
             <div className="stn-modal-body-stations">
-              <label>Station ID:</label>
-              <input type="text" value={newStation.stationId} onChange={(e) => setNewStation({ ...newStation, stationId: e.target.value })} />
-              <label>Company ID: {newStation.companyId}</label>
+              <label>Company:</label>
+              <select 
+                value={newStation.companyId} 
+                onChange={(e) => setNewStation({ ...newStation, companyId: e.target.value })}
+                disabled={loading}
+              >
+                <option value="">Select a company...</option>
+                {companies.map(company => (
+                  <option 
+                    key={company.companyId || company.Company_ID} 
+                    value={company.companyId || company.Company_ID}
+                  >
+                    {company.companyName || company.Company_Name || `Company ${company.companyId || company.Company_ID}`}
+                  </option>
+                ))}
+              </select>
+              
               <label>Station Name:</label>
-              <input type="text" value={newStation.stationName} onChange={(e) => setNewStation({ ...newStation, stationName: e.target.value })} />
+              <input 
+                type="text" 
+                value={newStation.stationName} 
+                onChange={(e) => setNewStation({ ...newStation, stationName: e.target.value })} 
+                disabled={loading}
+              />
               <label>Username:</label>
-              <input type="text" value={newStation.username} onChange={(e) => setNewStation({ ...newStation, username: e.target.value })} />
+              <input 
+                type="text" 
+                value={newStation.username} 
+                onChange={(e) => setNewStation({ ...newStation, username: e.target.value })} 
+                disabled={loading}
+              />
               <label>Email:</label>
-              <input type="email" value={newStation.email} onChange={(e) => setNewStation({ ...newStation, email: e.target.value })} />
+              <input 
+                type="email" 
+                value={newStation.email} 
+                onChange={(e) => setNewStation({ ...newStation, email: e.target.value })} 
+                disabled={loading}
+              />
               <label>New Password:</label>
-              <input type="text" value={newStation.password} onChange={(e) => setNewStation({ ...newStation, password: e.target.value })} />
+              <input 
+                type="password" 
+                value={newStation.password} 
+                onChange={(e) => setNewStation({ ...newStation, password: e.target.value })} 
+                disabled={loading}
+              />
               <label>Confirm New Password:</label>
-              <input type="text" value={newStation.confirmPassword} onChange={(e) => setNewStation({ ...newStation, confirmPassword: e.target.value })} />
+              <input 
+                type="password" 
+                value={newStation.confirmPassword} 
+                onChange={(e) => setNewStation({ ...newStation, confirmPassword: e.target.value })} 
+                disabled={loading}
+              />
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={handleAddSave}>Save</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowAddModal(false)} disabled={loading}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={handleAddSave} disabled={loading}>
+                {loading ? 'Sending OTP...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ADD CONFIRM */}
-      {showAddConfirm && (
-        <div className="stn-modal-overlay-stations" onClick={() => setShowAddConfirm(false)}>
+      {/* OTP VERIFICATION MODAL FOR ADD */}
+      {showOtpModal && (
+        <div className="stn-modal-overlay-stations">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
-              <h3 className="stn-modal-title-stations">Confirm Add</h3>
+              <h3 className="stn-modal-title-stations">Enter OTP</h3>
+              <button className="stn-close-stations" onClick={() => setShowOtpModal(false)}>×</button>
             </div>
-            <div className="stn-modal-msg-stations">Are you sure you want to add this station?</div>
+
+            {formError && <div className="stn-error-banner">{formError}</div>}
+
+            <div className="stn-modal-body-stations">
+              <p>An OTP has been sent to your email. Please enter it below:</p>
+              <label>OTP Code:</label>
+              <input 
+                type="text" 
+                value={otpCode} 
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="Enter 6-digit OTP"
+                maxLength="6"
+                disabled={loading}
+              />
+            </div>
+
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowAddConfirm(false)}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={confirmAdd}>Add</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowOtpModal(false)} disabled={loading}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={confirmAdd} disabled={loading}>
+                {loading ? 'Creating...' : 'Confirm'}
+              </button>
             </div>
           </div>
         </div>
@@ -257,54 +515,127 @@ export function StationsTab() {
 
             <div className="stn-modal-body-stations">
               <label>Station ID: {editStation.stationId}</label>
-              <label>Company ID: {editStation.companyId}</label>
+              <label>Company: {editStation.companyId}</label>
               <label>Station Name:</label>
-              <input type="text" value={editStation.stationName} onChange={(e) => setEditStation({ ...editStation, stationName: e.target.value })} />
+              <input 
+                type="text" 
+                value={editStation.stationName} 
+                onChange={(e) => setEditStation({ ...editStation, stationName: e.target.value })} 
+                disabled={loading}
+              />
               <label>Username:</label>
-              <input type="text" value={editStation.username} onChange={(e) => setEditStation({ ...editStation, username: e.target.value })} />
+              <input 
+                type="text" 
+                value={editStation.username} 
+                onChange={(e) => setEditStation({ ...editStation, username: e.target.value })} 
+                disabled={loading}
+              />
               <label>Email:</label>
-              <input type="email" value={editStation.email} onChange={(e) => setEditStation({ ...editStation, email: e.target.value })} />
+              <input 
+                type="email" 
+                value={editStation.email} 
+                onChange={(e) => setEditStation({ ...editStation, email: e.target.value })} 
+                disabled={loading}
+              />
               <label>New Password:</label>
-              <input type="text" value={editStation.password} onChange={(e) => setEditStation({ ...editStation, password: e.target.value })} />
+              <input 
+                type="password" 
+                value={editStation.password} 
+                onChange={(e) => setEditStation({ ...editStation, password: e.target.value })} 
+                disabled={loading}
+              />
               <label>Confirm New Password:</label>
-              <input type="text" value={editStation.confirmPassword} onChange={(e) => setEditStation({ ...editStation, confirmPassword: e.target.value })} />
+              <input 
+                type="password" 
+                value={editStation.confirmPassword} 
+                onChange={(e) => setEditStation({ ...editStation, confirmPassword: e.target.value })} 
+                disabled={loading}
+              />
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={handleEditSave}>Save</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditModal(false)} disabled={loading}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={handleEditSave} disabled={loading}>
+                {loading ? 'Processing...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* EDIT CONFIRM */}
-      {showEditConfirm && (
-        <div className="stn-modal-overlay-stations" onClick={() => setShowEditConfirm(false)}>
+      {/* EDIT OTP MODAL */}
+      {showEditOtpModal && (
+        <div className="stn-modal-overlay-stations">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
-              <h3 className="stn-modal-title-stations">Confirm Edit</h3>
+              <h3 className="stn-modal-title-stations">Enter OTP for Email Change</h3>
+              <button className="stn-close-stations" onClick={() => setShowEditOtpModal(false)}>×</button>
             </div>
-            <div className="stn-modal-msg-stations">Are you sure you want to save changes?</div>
+
+            {formError && <div className="stn-error-banner">{formError}</div>}
+
+            <div className="stn-modal-body-stations">
+              <p>An OTP has been sent to the new email address. Please enter it below:</p>
+              <label>OTP Code:</label>
+              <input 
+                type="text" 
+                value={otpCode} 
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="Enter 6-digit OTP"
+                maxLength="6"
+                disabled={loading}
+              />
+            </div>
+
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditConfirm(false)}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={confirmEdit}>Save</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditOtpModal(false)} disabled={loading}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={confirmEdit} disabled={loading}>
+                {loading ? 'Updating...' : 'Confirm'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* DELETE CONFIRM */}
-      {showDeleteConfirm && (
-        <div className="stn-modal-overlay-stations" onClick={() => setShowDeleteConfirm(false)}>
+      {/* DELETE MODAL WITH OTP + ADMIN PASSWORD */}
+      {showDeleteOtpModal && (
+        <div className="stn-modal-overlay-stations">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
-              <h3 className="stn-modal-title-stations">Confirm Delete</h3>
+              <h3 className="stn-modal-title-stations">Confirm Deletion</h3>
+              <button className="stn-close-stations" onClick={() => setShowDeleteOtpModal(false)}>×</button>
             </div>
-            <div className="stn-modal-msg-stations">Are you sure you want to delete this station?</div>
+
+            {formError && <div className="stn-error-banner">{formError}</div>}
+
+            <div className="stn-modal-body-stations">
+              <p>Enter OTP sent to the station’s email and your admin password:</p>
+
+              <label>OTP Code:</label>
+              <input
+                type="text"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="Enter 6-digit OTP"
+                maxLength="6"
+                disabled={loading}
+              />
+
+              <label>Admin Password:</label>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Enter admin password"
+                disabled={loading}
+              />
+            </div>
+
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={confirmDelete}>Delete</button>
+              <button className="stn-btn stn-btnOutline" onClick={() => setShowDeleteOtpModal(false)} disabled={loading}>Cancel</button>
+              <button className="stn-btn stn-btnNavy" onClick={confirmDelete} disabled={loading}>
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
