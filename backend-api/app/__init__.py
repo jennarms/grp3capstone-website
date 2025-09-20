@@ -6,6 +6,7 @@ from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 import os
 
+
 # Global extension instances
 mysql = MySQL()
 mail = Mail()
@@ -14,11 +15,15 @@ jwt = JWTManager()
 def create_app():
     app = Flask(__name__)
 
-    # ✅ Allow CORS for React frontend
-    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
-
-    # Load environment variables
+    # Load environment variables early
     load_dotenv()
+
+    # ✅ Allow CORS for React frontend (both localhost + 127.0.0.1 just in case)
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
+        supports_credentials=True
+    )
 
     # MySQL Config
     app.config['MYSQL_HOST'] = os.getenv('DB_HOST')
@@ -33,6 +38,7 @@ def create_app():
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
     app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'False').lower() == 'true'
     app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
     # JWT Config
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
@@ -63,5 +69,8 @@ def create_app():
 
     from app.routes.vehicle import vehicle_bp
     app.register_blueprint(vehicle_bp, url_prefix="/api/vehicle")
+
+    from app.routes.station import station_bp
+    app.register_blueprint(station_bp, url_prefix="/api/station")
 
     return app
