@@ -14,11 +14,10 @@ export function Announcement() {
   const [feedback, setFeedback] = useState({ open: false, message: '' });
 
   const apiUrl = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem('token'); // must match login
-  const adminId = localStorage.getItem('admin_id'); // must match login
+  const token = localStorage.getItem('token');
+  const adminId = localStorage.getItem('admin_id');
   const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
 
-  // Fetch all announcements
   const fetchAnnouncements = useCallback(async () => {
     try {
       const res = await axios.get(`${apiUrl}/api/announcement`, { headers });
@@ -35,15 +34,11 @@ export function Announcement() {
     }
   }, [apiUrl, headers]);
 
-  useEffect(() => {
-    fetchAnnouncements();
-  }, [fetchAnnouncements]);
+  useEffect(() => { fetchAnnouncements(); }, [fetchAnnouncements]);
 
-  // Add or update announcement
   const handleSubmit = async () => {
     if (!title.trim() || !message.trim()) return;
     if (!adminId) return console.error('Admin ID missing in localStorage');
-
     const payload = { title, content: message, admin_id: adminId };
 
     try {
@@ -55,77 +50,48 @@ export function Announcement() {
         setFeedback({ open: true, message: 'Announcement successfully posted!' });
       }
       await fetchAnnouncements();
-      setTitle('');
-      setMessage('');
-      setEditingId(null);
+      setTitle(''); setMessage(''); setEditingId(null);
     } catch (err) {
       console.error('Error saving announcement:', err.response?.data || err.message);
       setFeedback({ open: true, message: 'Failed to save announcement. It may already exist.' });
     }
   };
 
-  // Delete announcement
   const confirmDelete = async () => {
     if (!pendingDeleteId || !adminId) return console.error('Admin ID missing in localStorage');
-
     try {
       await axios.delete(`${apiUrl}/api/announcement/${pendingDeleteId}`, {
-        headers,
-        data: { admin_id: adminId },
+        headers, data: { admin_id: adminId },
       });
       setAnnouncements(prev => prev.filter(a => a.id !== pendingDeleteId));
-      if (pendingDeleteId === editingId) {
-        setEditingId(null);
-        setTitle('');
-        setMessage('');
-      }
+      if (pendingDeleteId === editingId) { setEditingId(null); setTitle(''); setMessage(''); }
       setFeedback({ open: true, message: 'Announcement successfully deleted!' });
     } catch (err) {
       console.error('Error deleting announcement:', err.response?.data || err.message);
       setFeedback({ open: true, message: 'Failed to delete announcement.' });
     }
-
-    setConfirmOpen(false);
-    setPendingDeleteId(null);
+    setConfirmOpen(false); setPendingDeleteId(null);
   };
 
-  const askDelete = id => {
-    setPendingDeleteId(id);
-    setConfirmOpen(true);
-  };
-
-  const cancelDelete = () => {
-    setConfirmOpen(false);
-    setPendingDeleteId(null);
-  };
-
-  const handleEdit = a => {
-    setEditingId(a.id);
-    setTitle(a.title);
-    setMessage(a.message);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setTitle('');
-    setMessage('');
-  };
+  const askDelete = id => { setPendingDeleteId(id); setConfirmOpen(true); };
+  const cancelDelete = () => { setConfirmOpen(false); setPendingDeleteId(null); };
+  const handleEdit = a => { setEditingId(a.id); setTitle(a.title); setMessage(a.message); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const cancelEdit = () => { setEditingId(null); setTitle(''); setMessage(''); };
 
   return (
     <>
       <Navbar />
       <HeaderButton />
-      {confirmOpen && <div className="dark-overlay"></div>}
-      {feedback.open && <div className="dark-overlay"></div>}
+      {confirmOpen && <div className="dark-overlay" />}
+      {feedback.open && <div className="dark-overlay" />}
 
-      <div className="main-content">
-        <div className="header-row">
-          <h1 className="page-title">General Announcement</h1>
+      <div className="ga-main">
+        <div className="ga-header-row">
+          <h1 className="ga-page-title">General Announcement</h1>
         </div>
 
-        <div className="general-announcement">
-          <div className="announcement-form card">
+        <div className="ga-wrap">
+          <div className="ga-form">
             <input
               type="text"
               placeholder="Announcement Title"
@@ -137,8 +103,8 @@ export function Announcement() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
             />
-            <div className="form-actions">
-              <button className="submit-btn" onClick={handleSubmit}>
+            <div className="ga-form-actions">
+              <button className="ga-submit" onClick={handleSubmit}>
                 {editingId ? 'Update' : 'Submit'}
               </button>
               {editingId && (
@@ -149,27 +115,35 @@ export function Announcement() {
             </div>
           </div>
 
-          <div className="announcements-container">
+          <div className="ga-list">
             {announcements.map(a => (
-              <div key={a.id} className={`announcement-card card ${editingId === a.id ? 'editing' : ''}`}>
-                <div className="card-header">
-                  <h2>{a.title}</h2>
-                  <div className="announcement-actions">
-                    <button onClick={() => handleEdit(a)} className="icon-btn" aria-label="Edit">
-                      <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="" className="action-icon" />
+              <div
+                key={a.id}
+                className={`ga-announcement-card ${editingId === a.id ? 'is-editing' : ''}`}
+              >
+                <div className="ga-card-header">
+                  <h2 className="ga-card-title">{a.title}</h2>
+                  <div className="ga-actions">
+                    <button onClick={() => handleEdit(a)} className="ga-icon-btn" aria-label="Edit">
+                      <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="" className="ga-action-icon" />
                     </button>
-                    <button onClick={() => askDelete(a.id)} className="icon-btn" aria-label="Delete">
-                      <img src="https://cdn-icons-png.flaticon.com/512/1214/1214428.png" alt="" className="action-icon" />
+                    <button onClick={() => askDelete(a.id)} className="ga-icon-btn" aria-label="Delete">
+                      <img src="https://cdn-icons-png.flaticon.com/512/1214/1214428.png" alt="" className="ga-action-icon" />
                     </button>
                   </div>
                 </div>
-                <hr className="title-divider" />
-                <p className="card-message">{a.message}</p>
-                {a.datePosted && a.timePosted && (
-                  <p className="posted-date-time">
-                    <strong>Posted:</strong> {a.datePosted} at {a.timePosted}
-                  </p>
-                )}
+
+                <hr className="ga-divider" />
+
+                {/* Scrollable body area */}
+                <div className="ga-card-scroll">
+                  <p className="ga-message">{a.message}</p>
+                  {a.datePosted && a.timePosted && (
+                    <p className="ga-posted">
+                      <strong>Posted:</strong> {a.datePosted} at {a.timePosted}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -201,14 +175,9 @@ export function Announcement() {
             <div className="ga-modal-header">
               <span className="ga-modal-title">Notice</span>
             </div>
-            <div className="ga-modalBody ga-modalBody--center">
-              {feedback.message}
-            </div>
+            <div className="ga-modal-body">{feedback.message}</div>
             <div className="ga-modal-actions">
-              <button
-                className="btn btn-outline"
-                onClick={() => setFeedback({ ...feedback, open: false })}
-              >
+              <button className="btn btn-outline" onClick={() => setFeedback({ ...feedback, open: false })}>
                 OK
               </button>
             </div>
