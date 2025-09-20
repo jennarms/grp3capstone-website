@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import { OperationsTab } from "../components/operationsTab";
@@ -39,64 +39,67 @@ export function StationsTab() {
     return localStorage.getItem("token") || sessionStorage.getItem("token");
   };
 
-  const apiRequest = async (url, options = {}) => {
-    const token = getToken();
-    const headers = {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    };
-
-    const response = await fetch(`${apiUrl}${url}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: "Request failed",
-      }));
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-
-    return response.json();
+  const apiRequest = useCallback(async (url, options = {}) => {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
   };
 
-  const fetchCompanies = async () => {
-    try {
-      const data = await apiRequest("/api/company/");
-      setCompanies(data);
+  const response = await fetch(`${apiUrl}${url}`, {
+    ...options,
+    headers,
+  });
 
-      if (data.length > 0 && !newStation.companyId) {
-        setNewStation((prev) => ({
-          ...prev,
-          companyId: data[0].companyId || data[0].Company_ID,
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to fetch companies:", err);
-      setCompanies([{ companyId: "C001", companyName: "Default Company" }]);
-      setNewStation((prev) => ({ ...prev, companyId: "C001" }));
-    }
-  };
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({
+      error: "Request failed",
+    }));
+    throw new Error(errorData.error || `HTTP ${response.status}`);
+  }
 
-  const fetchStations = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await apiRequest("/api/station/");
-      setRows(data);
-    } catch (err) {
-      setError(`Failed to fetch stations: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  return response.json();
+}, [apiUrl]);
 
+  // ✅ Wrap in useCallback to stabilize reference
+  const fetchCompanies = useCallback(async () => {
+  try {
+    const data = await apiRequest("/api/company/");
+    setCompanies(data);
+
+    // use functional update to safely update state
+    setNewStation((prev) => ({
+      ...prev,
+      companyId: prev.companyId || data[0]?.companyId || data[0]?.Company_ID || "",
+    }));
+  } catch (err) {
+    console.error("Failed to fetch companies:", err);
+    setCompanies([{ companyId: "company001", companyName: "Default Company" }]);
+    setNewStation((prev) => ({ ...prev, companyId: prev.companyId || "company001" }));
+  }
+}, [apiRequest]);
+
+  const fetchStations = useCallback(async () => {
+  setLoading(true);
+  setError("");
+  try {
+    const data = await apiRequest("/api/station/");
+    setRows(data);
+  } catch (err) {
+    setError(`Failed to fetch stations: ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+  }, [apiRequest]);
+
+
+  // ✅ Add callbacks as dependencies in useEffect
   useEffect(() => {
     fetchCompanies();
     fetchStations();
-  }, []);
+  }, [fetchCompanies, fetchStations]);
+
 
   const filtered = useMemo(() => {
     if (!query.trim()) return rows;
@@ -322,7 +325,7 @@ export function StationsTab() {
         {error && (
           <div className="stn-error-banner" style={{ margin: '10px 0' }}>
             {error}
-            <button onClick={() => setError("")} style={{ marginLeft: '10px', background: 'transparent', border: 'none', color: 'white' }}>×</button>
+            <button onClick={() => setError("")} style={{ marginLeft: '10px', background: 'transparent', border: 'none', color: 'white' }}>x</button>
           </div>
         )}
 
@@ -398,7 +401,7 @@ export function StationsTab() {
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Add Station</h3>
-              <button className="stn-close-stations" onClick={() => setShowAddModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowAddModal(false)}>&times;</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -474,7 +477,7 @@ export function StationsTab() {
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Enter OTP</h3>
-              <button className="stn-close-stations" onClick={() => setShowOtpModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowOtpModal(false)}>&times;</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -508,7 +511,7 @@ export function StationsTab() {
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Edit Station</h3>
-              <button className="stn-close-stations" onClick={() => setShowEditModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowEditModal(false)}>&times;</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -569,7 +572,7 @@ export function StationsTab() {
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Enter OTP for Email Change</h3>
-              <button className="stn-close-stations" onClick={() => setShowEditOtpModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowEditOtpModal(false)}>&times;</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -603,13 +606,13 @@ export function StationsTab() {
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Confirm Deletion</h3>
-              <button className="stn-close-stations" onClick={() => setShowDeleteOtpModal(false)}>×</button>
+              <button className="stn-close-stations" onClick={() => setShowDeleteOtpModal(false)}>&times;</button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
 
             <div className="stn-modal-body-stations">
-              <p>Enter OTP sent to the station’s email and your admin password:</p>
+              <p>Enter OTP sent to the station's email and your admin password:</p>
 
               <label>OTP Code:</label>
               <input
@@ -640,6 +643,7 @@ export function StationsTab() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
