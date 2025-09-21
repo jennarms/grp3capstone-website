@@ -62,7 +62,7 @@ export function SchedulesTab() {
       });
       return { ...prev, data: fixedRows };
     });
-  }, [schedules.headers.length]); // eslint-disable-line
+  }, [schedules.headers.length]);
 
   const onCellChange = (r, c, value) => {
     setSchedules((prev) => {

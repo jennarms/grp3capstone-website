@@ -75,5 +75,8 @@ def create_app():
     
     from app.routes.routes import routes_bp
     app.register_blueprint(routes_bp, url_prefix="/api/routes")
+
+    from app.routes.schedules import schedules_bp   
+    app.register_blueprint(schedules_bp, url_prefix="/api/schedules")
     
     return app

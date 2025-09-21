@@ -2,7 +2,6 @@ from flask import Blueprint, request, jsonify
 from app import mysql
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-# Blueprint
 routes_bp = Blueprint("routes", __name__, url_prefix="/api/routes")
 
 # Helper functions
@@ -19,19 +18,6 @@ def generate_route_id(company_id):
         new_num = 1
     return f"R{new_num:03d}"
 
-def generate_route_station_id():
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT RouteStation_ID FROM RouteStations WHERE RouteStation_ID REGEXP '^RS[0-9]+$' ORDER BY RouteStation_ID DESC LIMIT 1")
-    last_id = cur.fetchone()
-    cur.close()
-    
-    if last_id:
-        last_num = int(last_id[0][2:])
-        new_num = last_num + 1
-    else:
-        new_num = 1
-    return f"RS{new_num:03d}"
-
 def get_company_id_for_admin(admin_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT Company_ID FROM MainAdmin WHERE Admin_ID=%s", (admin_id,))
@@ -43,20 +29,18 @@ def get_company_id_for_admin(admin_id):
 # ROUTES CRUD
 # ===========================
 
-# Get all routes for the logged-in admin's company
 @routes_bp.route("/", methods=["GET"])
 @jwt_required()
 def get_routes():
     try:
         admin_id = get_jwt_identity()
         company_id = get_company_id_for_admin(admin_id)
-        
         if not company_id:
             return jsonify([]), 200
 
         cur = mysql.connection.cursor()
         cur.execute("""
-            SELECT Route_ID, Company_ID, Route_name, Water_flow, direction, Vehicle_ID
+            SELECT Route_ID, Company_ID, Route_name, Water_flow, Vehicle_ID, is_active
             FROM Route
             WHERE Company_ID=%s
             ORDER BY Route_ID
@@ -71,92 +55,90 @@ def get_routes():
                 "company_id": r[1],
                 "route_name": r[2],
                 "water_flow": r[3] if r[3] else None,
-                "direction": r[4],
-                "vehicle_id": r[5]
+                "vehicle_id": r[4],
+                "is_active": bool(r[5]) if r[5] is not None else False
             })
 
         return jsonify(routes), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Create a new route (automatic Vehicle_ID + max routes)
 @routes_bp.route("/", methods=["POST"])
 @jwt_required()
 def create_route():
     try:
         admin_id = get_jwt_identity()
         company_id = get_company_id_for_admin(admin_id)
-        
         if not company_id:
-            return jsonify({"error": "Company not found for admin"}), 400
+            return jsonify({"error": "Company not found"}), 400
+
+        data = request.get_json()
+        route_name = data.get("route_name")
+        water_flow = data.get("water_flow")
+
+        if not route_name:
+            return jsonify({"error": "route_name is required"}), 400
 
         cur = mysql.connection.cursor()
 
-        # Get the first available vehicle (no Company_ID filter)
-        cur.execute("SELECT Vehicle_ID, vehicleType FROM Vehicle LIMIT 1")
+        # Fetch first available vehicle
+        cur.execute("SELECT Vehicle_ID FROM Vehicle LIMIT 1")
         vehicle_row = cur.fetchone()
         if not vehicle_row:
             cur.close()
             return jsonify({"error": "No vehicle found"}), 400
 
-        vehicle_id, vehicle_type = vehicle_row
+        vehicle_id = vehicle_row[0]
 
-        # Determine max routes based on vehicle type
-        if vehicle_type in ["Ferry", "Roll-on/Roll-off Vessels"]:
-            max_routes = 4
-        else:  # land vehicles
-            max_routes = 2
-
-        # Check current route count
-        cur.execute("SELECT COUNT(*) FROM Route WHERE Company_ID=%s", (company_id,))
-        count = cur.fetchone()[0]
-        if count >= max_routes:
-            cur.close()
-            return jsonify({"error": f"Maximum of {max_routes} routes reached for this vehicle type"}), 400
-
-        data = request.get_json()
-        route_name = data.get("route_name")
-        water_flow = data.get("water_flow")  # US / DS / null
-        direction = data.get("direction")    # FW / RV
-
-        # Validation
-        if not route_name or not direction:
-            cur.close()
-            return jsonify({"error": "Missing required fields: route_name and direction"}), 400
-
-        if direction not in ['FW', 'RV']:
-            cur.close()
-            return jsonify({"error": "Invalid direction. Must be FW (Forward) or RV (Reverse)"}), 400
-
-        if water_flow and water_flow not in ['US', 'DS']:
-            cur.close()
-            return jsonify({"error": "Invalid water_flow. Must be US (Upstream), DS (Downstream), or null"}), 400
+        # Check route limits based on water flow
+        if water_flow in ['US', 'DS']:  # Water routes
+            cur.execute("SELECT COUNT(*) FROM Route WHERE Company_ID=%s AND Water_flow IN ('US', 'DS')", (company_id,))
+            water_count = cur.fetchone()[0]
+            if water_count >= 2:
+                cur.close()
+                return jsonify({"error": "Maximum of 2 water routes allowed"}), 400
+        else:  # Land routes
+            cur.execute("SELECT COUNT(*) FROM Route WHERE Company_ID=%s AND (Water_flow IS NULL OR Water_flow = '')", (company_id,))
+            land_count = cur.fetchone()[0]
+            if land_count >= 1:
+                cur.close()
+                return jsonify({"error": "Maximum of 1 land route allowed"}), 400
 
         route_id = generate_route_id(company_id)
         
-        # Insert the new route with automatic Vehicle_ID
+        # Insert route with Vehicle_ID
         cur.execute("""
-            INSERT INTO Route (Route_ID, Company_ID, Route_name, Water_flow, direction, Vehicle_ID)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (route_id, company_id, route_name, water_flow, direction, vehicle_id))
+            INSERT INTO Route (Route_ID, Company_ID, Route_name, Water_flow, Vehicle_ID, is_active)
+            VALUES (%s, %s, %s, %s, %s, FALSE)
+        """, (route_id, company_id, route_name, water_flow, vehicle_id))
         mysql.connection.commit()
         cur.close()
 
-        return jsonify({"message": "Route created successfully", "route_id": route_id, "vehicle_id": vehicle_id}), 201
+        return jsonify({
+            "message": "Route created successfully",
+            "route_id": route_id,
+            "vehicle_id": vehicle_id
+        }), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Delete a route
-@routes_bp.route("/<route_id>", methods=["DELETE"])
+
+@routes_bp.route("/<route_id>", methods=["PUT"])
 @jwt_required()
-def delete_route(route_id):
+def update_route(route_id):
     try:
         admin_id = get_jwt_identity()
         company_id = get_company_id_for_admin(admin_id)
-        
         if not company_id:
-            return jsonify({"error": "Company not found for admin"}), 400
+            return jsonify({"error": "Company not found"}), 400
+
+        data = request.get_json()
+        route_name = data.get("route_name")
+        water_flow = data.get("water_flow")
+
+        if not route_name:
+            return jsonify({"error": "route_name is required"}), 400
 
         cur = mysql.connection.cursor()
         
@@ -166,9 +148,38 @@ def delete_route(route_id):
             cur.close()
             return jsonify({"error": "Route not found or access denied"}), 404
 
-        # Delete route stations first (foreign key constraint)
-        cur.execute("DELETE FROM RouteStations WHERE Route_ID=%s", (route_id,))
+        # Update the route
+        cur.execute("""
+            UPDATE Route 
+            SET Route_name=%s, Water_flow=%s 
+            WHERE Route_ID=%s AND Company_ID=%s
+        """, (route_name, water_flow, route_id, company_id))
+        mysql.connection.commit()
+        cur.close()
+
+        return jsonify({"message": "Route updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@routes_bp.route("/<route_id>", methods=["DELETE"])
+@jwt_required()
+def delete_route(route_id):
+    try:
+        admin_id = get_jwt_identity()
+        company_id = get_company_id_for_admin(admin_id)
+        if not company_id:
+            return jsonify({"error": "Company not found"}), 400
+
+        cur = mysql.connection.cursor()
         
+        # Check if route belongs to admin's company
+        cur.execute("SELECT Route_ID FROM Route WHERE Route_ID=%s AND Company_ID=%s", (route_id, company_id))
+        if not cur.fetchone():
+            cur.close()
+            return jsonify({"error": "Route not found"}), 404
+
+        # Delete route stations first
+        cur.execute("DELETE FROM RouteStations WHERE Route_ID=%s", (route_id,))
         # Delete the route
         cur.execute("DELETE FROM Route WHERE Route_ID=%s", (route_id,))
         mysql.connection.commit()
@@ -178,14 +189,93 @@ def delete_route(route_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Get available stations for dropdown
+# ===========================
+# ACTIVE ROUTE
+# ===========================
+
+@routes_bp.route("/<route_id>/set-active", methods=["PUT"])
+@jwt_required()
+def set_active_route(route_id):
+    try:
+        admin_id = get_jwt_identity()
+        company_id = get_company_id_for_admin(admin_id)
+        if not company_id:
+            return jsonify({"error": "Company not found"}), 400
+
+        cur = mysql.connection.cursor()
+        
+        # Check if route exists and belongs to company
+        cur.execute("SELECT Route_ID, Route_name FROM Route WHERE Route_ID=%s AND Company_ID=%s", (route_id, company_id))
+        route_row = cur.fetchone()
+        if not route_row:
+            cur.close()
+            return jsonify({"error": "Route not found"}), 404
+
+        # Set all routes inactive for this company
+        cur.execute("UPDATE Route SET is_active=FALSE WHERE Company_ID=%s", (company_id,))
+        # Set selected route active
+        cur.execute("UPDATE Route SET is_active=TRUE WHERE Route_ID=%s AND Company_ID=%s", (route_id, company_id))
+        mysql.connection.commit()
+        
+        # Return the active route data
+        cur.execute("""
+            SELECT Route_ID, Route_name, Water_flow, Vehicle_ID
+            FROM Route
+            WHERE Route_ID=%s AND Company_ID=%s
+        """, (route_id, company_id))
+        active_route = cur.fetchone()
+        cur.close()
+
+        return jsonify({
+            "route_id": active_route[0],
+            "route_name": active_route[1],
+            "water_flow": active_route[2],
+            "vehicle_id": active_route[3]
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@routes_bp.route("/active", methods=["GET"])
+@jwt_required()
+def get_active_route():
+    try:
+        admin_id = get_jwt_identity()
+        company_id = get_company_id_for_admin(admin_id)
+        if not company_id:
+            return jsonify({}), 200
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT Route_ID, Route_name, Water_flow, Vehicle_ID
+            FROM Route
+            WHERE Company_ID=%s AND is_active=TRUE
+            LIMIT 1
+        """, (company_id,))
+        row = cur.fetchone()
+        cur.close()
+
+        if not row:
+            return jsonify({}), 200
+
+        return jsonify({
+            "route_id": row[0],
+            "route_name": row[1],
+            "water_flow": row[2],
+            "vehicle_id": row[3]
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ===========================
+# AVAILABLE STATIONS
+# ===========================
+
 @routes_bp.route("/available-stations", methods=["GET"])
 @jwt_required()
 def get_available_stations():
     try:
         admin_id = get_jwt_identity()
         company_id = get_company_id_for_admin(admin_id)
-        
         if not company_id:
             return jsonify([]), 200
         
@@ -203,30 +293,17 @@ def get_available_stations():
 # ROUTE STATIONS CRUD
 # ===========================
 
-# Get stations for a route
 @routes_bp.route("/stations/<route_id>", methods=["GET"])
 @jwt_required()
 def get_route_stations(route_id):
     try:
-        admin_id = get_jwt_identity()
-        company_id = get_company_id_for_admin(admin_id)
-        
-        if not company_id:
-            return jsonify([]), 200
-
         cur = mysql.connection.cursor()
-        
-        # Verify route belongs to admin's company
-        cur.execute("SELECT Route_ID FROM Route WHERE Route_ID=%s AND Company_ID=%s", (route_id, company_id))
-        if not cur.fetchone():
-            cur.close()
-            return jsonify({"error": "Route not found or access denied"}), 404
-
         cur.execute("""
-            SELECT RouteStation_ID, Route_ID, Station_ID, StationName, StopOrder
-            FROM RouteStations
-            WHERE Route_ID=%s
-            ORDER BY StopOrder ASC
+            SELECT rs.RouteStation_ID, rs.Route_ID, rs.Station_ID, s.StationName, rs.StopOrder
+            FROM RouteStations rs
+            LEFT JOIN Station s ON rs.Station_ID = s.Station_ID
+            WHERE rs.Route_ID=%s
+            ORDER BY rs.StopOrder
         """, (route_id,))
         rows = cur.fetchall()
         cur.close()
@@ -237,156 +314,82 @@ def get_route_stations(route_id):
                 "route_station_id": r[0],
                 "route_id": r[1],
                 "station_id": r[2],
-                "station_name": r[3],
-                "stop_order": r[4],
+                "station_name": r[3] or "Unknown Station",
+                "stop_order": r[4]
             })
-
         return jsonify(stations), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Add a station to a route
 @routes_bp.route("/stations", methods=["POST"])
 @jwt_required()
 def add_route_station():
     try:
-        admin_id = get_jwt_identity()
-        company_id = get_company_id_for_admin(admin_id)
-        
-        if not company_id:
-            return jsonify({"error": "Company not found for admin"}), 400
-
         data = request.get_json()
         route_id = data.get("route_id")
         station_id = data.get("station_id")
         stop_order = data.get("stop_order")
-
-        if not route_id or not station_id or stop_order is None:
-            return jsonify({"error": "Missing required fields: route_id, station_id, stop_order"}), 400
+        
+        if not route_id or not station_id or not stop_order:
+            return jsonify({"error": "Missing fields"}), 400
 
         cur = mysql.connection.cursor()
         
-        # Verify route belongs to admin's company
-        cur.execute("SELECT Route_ID FROM Route WHERE Route_ID=%s AND Company_ID=%s", (route_id, company_id))
-        if not cur.fetchone():
-            cur.close()
-            return jsonify({"error": "Route not found or access denied"}), 404
-
-        # Verify station exists and belongs to same company
-        cur.execute("SELECT StationName FROM Station WHERE Station_ID=%s AND Company_ID=%s", (station_id, company_id))
+        # Get station name
+        cur.execute("SELECT StationName FROM Station WHERE Station_ID=%s", (station_id,))
         station_row = cur.fetchone()
         if not station_row:
             cur.close()
-            return jsonify({"error": "Station not found or access denied"}), 404
-
+            return jsonify({"error": "Station not found"}), 404
+        
         station_name = station_row[0]
-
-        # Check if station already exists in this route
-        cur.execute("SELECT RouteStation_ID FROM RouteStations WHERE Route_ID=%s AND Station_ID=%s", (route_id, station_id))
-        if cur.fetchone():
-            cur.close()
-            return jsonify({"error": "Station already exists in this route"}), 400
-
-        # Check if stop_order already exists in this route
-        cur.execute("SELECT RouteStation_ID FROM RouteStations WHERE Route_ID=%s AND StopOrder=%s", (route_id, stop_order))
-        if cur.fetchone():
-            cur.close()
-            return jsonify({"error": "Stop order already exists in this route"}), 400
-
-        route_station_id = generate_route_station_id()
-
+        
+        # Generate RouteStation ID
+        cur.execute("SELECT RouteStation_ID FROM RouteStations WHERE RouteStation_ID REGEXP '^RS[0-9]+$' ORDER BY RouteStation_ID DESC LIMIT 1")
+        last_id = cur.fetchone()
+        if last_id:
+            last_num = int(last_id[0][2:])
+            new_num = last_num + 1
+        else:
+            new_num = 1
+        route_station_id = f"RS{new_num:03d}"
+        
         cur.execute("""
             INSERT INTO RouteStations (RouteStation_ID, Route_ID, Station_ID, StationName, StopOrder)
             VALUES (%s, %s, %s, %s, %s)
         """, (route_station_id, route_id, station_id, station_name, stop_order))
         mysql.connection.commit()
         cur.close()
-
+        
         return jsonify({"message": "Station added to route", "route_station_id": route_station_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Update a route station
 @routes_bp.route("/stations/<route_station_id>", methods=["PUT"])
 @jwt_required()
 def update_route_station(route_station_id):
     try:
-        admin_id = get_jwt_identity()
-        company_id = get_company_id_for_admin(admin_id)
-        
-        if not company_id:
-            return jsonify({"error": "Company not found for admin"}), 400
-
         data = request.get_json()
         stop_order = data.get("stop_order")
+        if stop_order is None:
+            return jsonify({"error": "stop_order required"}), 400
 
         cur = mysql.connection.cursor()
-        
-        # Verify route station belongs to admin's company
-        cur.execute("""
-            SELECT rs.Route_ID, rs.StopOrder
-            FROM RouteStations rs
-            JOIN Route r ON rs.Route_ID = r.Route_ID
-            WHERE rs.RouteStation_ID=%s AND r.Company_ID=%s
-        """, (route_station_id, company_id))
-        route_station_row = cur.fetchone()
-        
-        if not route_station_row:
-            cur.close()
-            return jsonify({"error": "Route station not found or access denied"}), 404
-
-        route_id, current_stop_order = route_station_row
-
-        if stop_order is None:
-            cur.close()
-            return jsonify({"error": "No fields to update"}), 400
-
-        # Check if new stop_order conflicts with existing ones (excluding current)
-        cur.execute("""
-            SELECT RouteStation_ID FROM RouteStations 
-            WHERE Route_ID=%s AND StopOrder=%s AND RouteStation_ID!=%s
-        """, (route_id, stop_order, route_station_id))
-        if cur.fetchone():
-            cur.close()
-            return jsonify({"error": "Stop order already exists in this route"}), 400
-
         cur.execute("UPDATE RouteStations SET StopOrder=%s WHERE RouteStation_ID=%s", (stop_order, route_station_id))
         mysql.connection.commit()
         cur.close()
-
-        return jsonify({"message": "Route station updated successfully"}), 200
+        return jsonify({"message": "Route station updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Delete a route station
 @routes_bp.route("/stations/<route_station_id>", methods=["DELETE"])
 @jwt_required()
 def delete_route_station(route_station_id):
     try:
-        admin_id = get_jwt_identity()
-        company_id = get_company_id_for_admin(admin_id)
-        
-        if not company_id:
-            return jsonify({"error": "Company not found for admin"}), 400
-
         cur = mysql.connection.cursor()
-        
-        # Verify route station belongs to admin's company
-        cur.execute("""
-            SELECT rs.RouteStation_ID
-            FROM RouteStations rs
-            JOIN Route r ON rs.Route_ID = r.Route_ID
-            WHERE rs.RouteStation_ID=%s AND r.Company_ID=%s
-        """, (route_station_id, company_id))
-        
-        if not cur.fetchone():
-            cur.close()
-            return jsonify({"error": "Route station not found or access denied"}), 404
-
         cur.execute("DELETE FROM RouteStations WHERE RouteStation_ID=%s", (route_station_id,))
         mysql.connection.commit()
         cur.close()
-        
-        return jsonify({"message": "Route station deleted successfully"}), 200
+        return jsonify({"message": "Route station deleted"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
