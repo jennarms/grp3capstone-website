@@ -7,26 +7,121 @@ import uuid
 schedules_bp = Blueprint('schedules_bp', __name__)
 
 
-# ---- Helper function: Generate unique IDs ----
-def generate_id(prefix):
-    return f"{prefix}{uuid.uuid4().hex[:6].upper()}"
+# ---- Helper function: Generate incremental IDs ----
+def generate_schedule_id():
+    """Generate incremental Schedule_ID like SC0001, SC0002, etc."""
+    cursor = mysql.connection.cursor()
+    try:
+        # Get the highest existing Schedule_ID
+        cursor.execute("SELECT Schedule_ID FROM Schedule WHERE Schedule_ID LIKE 'SC%' ORDER BY Schedule_ID DESC LIMIT 1")
+        result = cursor.fetchone()
+        
+        if result:
+            # Extract number from SC0001 format
+            last_id = result[0]
+            number = int(last_id[2:])  # Remove 'SC' prefix
+            new_number = number + 1
+        else:
+            new_number = 1
+        
+        # Format with leading zeros (4 digits)
+        return f"SC{new_number:04d}"
+    except Exception as e:
+        print(f"Error generating Schedule ID: {e}")
+        # Fallback to timestamp-based ID
+        return f"SC{int(datetime.now().timestamp())}"
+    finally:
+        cursor.close()
 
 
-# ---- Helper function: Compute ETA based on previous departure ----
-def compute_eta(prev_departure, next_departure):
+def generate_ride_id():
+    """Generate incremental Ride_ID like RIDE0001, RIDE0002, etc."""
+    cursor = mysql.connection.cursor()
+    try:
+        # Get the highest existing Ride_ID
+        cursor.execute("SELECT Ride_ID FROM Schedule WHERE Ride_ID LIKE 'RIDE%' GROUP BY Ride_ID ORDER BY Ride_ID DESC LIMIT 1")
+        result = cursor.fetchone()
+        
+        if result:
+            # Extract number from RIDE0001 format
+            last_id = result[0]
+            number = int(last_id[4:])  # Remove 'RIDE' prefix
+            new_number = number + 1
+        else:
+            new_number = 1
+        
+        # Format with leading zeros (4 digits)
+        return f"RIDE{new_number:04d}"
+    except Exception as e:
+        print(f"Error generating Ride ID: {e}")
+        # Fallback to timestamp-based ID
+        return f"RIDE{int(datetime.now().timestamp())}"
+    finally:
+        cursor.close()
+
+
+# ---- Helper function: Simple ETA calculation ----
+from datetime import datetime
+
+def calculate_simple_eta(departure_times_list):
     """
-    ETA = next_departure if provided, else NULL
-    Formula: ETA_next = departure_next - departure_prev (time difference)
+    ETA calculation (segment-based):
+    - First station ETA = 0 (reference).
+    - Each next station ETA = difference in minutes from the *previous station's* departureTime.
+    - If no departureTime, ETA = None.
+    - Returns ETA as integer minutes (works best if ETA column = INT).
     """
-    if not next_departure or not prev_departure:
-        return None
+    print(f"DEBUG: Input departure_times_list: {departure_times_list}")
 
-    fmt = "%H:%M:%S"
-    prev_time = datetime.strptime(prev_departure, fmt)
-    next_time = datetime.strptime(next_departure, fmt)
-    delta = next_time - prev_time
-    eta_time = prev_time + delta
-    return eta_time.strftime(fmt)
+    # Sort by StopOrder just to be sure
+    sorted_departures = sorted(departure_times_list, key=lambda x: x.get('StopOrder', 0))
+
+    results = []
+    prev_datetime = None
+
+    for idx, station_data in enumerate(sorted_departures):
+        route_station_id = station_data.get("RouteStation_ID")
+        departure_time = station_data.get("departureTime")
+        stop_order = station_data.get("StopOrder", 0)
+
+        eta = None
+
+        if departure_time and departure_time.strip() != "":
+            try:
+                # Parse departure time
+                try:
+                    current_datetime = datetime.strptime(departure_time, "%H:%M:%S")
+                except ValueError:
+                    current_datetime = datetime.strptime(departure_time, "%H:%M")
+
+                if prev_datetime:
+                    # ETA = current station time − previous station time
+                    time_diff = current_datetime - prev_datetime
+                    minutes_diff = int(time_diff.total_seconds() / 60)
+                    if minutes_diff < 0:
+                        minutes_diff += 24 * 60  # Handle day wrap
+                    eta = minutes_diff
+                else:
+                    # First station = 0 minutes
+                    eta = 0
+
+                prev_datetime = current_datetime
+                print(f"DEBUG: {route_station_id}: ETA {eta} minutes (from {departure_time})")
+
+            except ValueError as e:
+                print(f"DEBUG: Error parsing departure time {departure_time}: {e}")
+                eta = None
+        else:
+            print(f"DEBUG: {route_station_id}: No departure time → ETA stays None")
+
+        results.append({
+            "RouteStation_ID": route_station_id,
+            "departureTime": departure_time,
+            "ETA": eta,
+            "StopOrder": stop_order
+        })
+
+    return results
 
 
 # ---- Fetch all routes for dropdown ----
@@ -57,6 +152,7 @@ def fetch_route_stations():
 
     cursor = mysql.connection.cursor()
     try:
+        # Only select columns that definitely exist
         cursor.execute("""
             SELECT RouteStation_ID, Station_ID, StationName, StopOrder
             FROM RouteStations
@@ -86,27 +182,29 @@ def create_ride():
     if not route_id or not departure_times:
         return jsonify({"error": "Route_ID and departureTimes are required"}), 400
 
-    ride_id = generate_id("RIDE")
+    ride_id = generate_ride_id()
     cursor = mysql.connection.cursor()
     try:
-        prev_departure = None
-        for dt in sorted(departure_times, key=lambda x: x.get('StopOrder', 0)):
-            schedule_id = generate_id("S")
-            route_station_id = dt.get("RouteStation_ID")
-            departure_time = dt.get("departureTime")  # can be NULL
-            eta = compute_eta(prev_departure, departure_time) if prev_departure else departure_time
+        # Calculate ETAs for all stations
+        calculated_stations = calculate_simple_eta(departure_times)
+        
+        # Insert all schedule entries
+        for station_data in calculated_stations:
+            schedule_id = generate_schedule_id()
+            route_station_id = station_data["RouteStation_ID"]
+            departure_time = station_data["departureTime"]
+            eta = station_data["ETA"]
 
             cursor.execute("""
                 INSERT INTO Schedule (Schedule_ID, Ride_ID, Route_ID, RouteStation_ID, departureTime, ETA)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (schedule_id, ride_id, route_id, route_station_id, departure_time, eta))
 
-            if departure_time:
-                prev_departure = departure_time  # only consider non-null departures for ETA chain
-
         mysql.connection.commit()
         return jsonify({"message": "Ride created successfully", "Ride_ID": ride_id}), 201
     except Exception as e:
+        mysql.connection.rollback()
+        print(f"Error creating ride: {e}")  # Debug logging
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -124,11 +222,22 @@ def update_ride(ride_id):
 
     cursor = mysql.connection.cursor()
     try:
-        prev_departure = None
-        for dt in sorted(departure_times, key=lambda x: x.get('StopOrder', 0)):
-            route_station_id = dt.get("RouteStation_ID")
-            departure_time = dt.get("departureTime")
-            eta = compute_eta(prev_departure, departure_time) if prev_departure else departure_time
+        # Get route_id for this ride
+        cursor.execute("SELECT DISTINCT Route_ID FROM Schedule WHERE Ride_ID=%s", (ride_id,))
+        route_result = cursor.fetchone()
+        if not route_result:
+            return jsonify({"error": "Ride not found"}), 404
+        
+        route_id = route_result[0]
+        
+        # Calculate ETAs for all stations
+        calculated_stations = calculate_simple_eta(departure_times)
+        
+        # Update all schedule entries
+        for station_data in calculated_stations:
+            route_station_id = station_data["RouteStation_ID"]
+            departure_time = station_data["departureTime"]
+            eta = station_data["ETA"]
 
             cursor.execute("""
                 UPDATE Schedule
@@ -136,12 +245,11 @@ def update_ride(ride_id):
                 WHERE Ride_ID=%s AND RouteStation_ID=%s
             """, (departure_time, eta, ride_id, route_station_id))
 
-            if departure_time:
-                prev_departure = departure_time
-
         mysql.connection.commit()
         return jsonify({"message": "Ride updated successfully"})
     except Exception as e:
+        mysql.connection.rollback()
+        print(f"Error updating ride: {e}")  # Debug logging
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -157,6 +265,8 @@ def delete_ride(ride_id):
         mysql.connection.commit()
         return jsonify({"message": "Ride deleted successfully"})
     except Exception as e:
+        mysql.connection.rollback()
+        print(f"Error deleting ride: {e}")  # Debug logging
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -186,6 +296,7 @@ def get_schedules_by_route():
             SELECT Schedule_ID, Ride_ID, RouteStation_ID, departureTime, ETA
             FROM Schedule
             WHERE Route_ID=%s
+            ORDER BY Ride_ID, RouteStation_ID
         """, (route_id,))
         schedules = cursor.fetchall()
 
@@ -217,5 +328,15 @@ def get_schedules_by_route():
             result.append(ride_info)
 
         return jsonify(result)
+    except Exception as e:
+        print(f"Error fetching schedules: {e}")  # Debug logging
+        return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
+
+# ---- Test endpoint to check if backend is working ----
+@schedules_bp.route('/test', methods=['GET'])
+@jwt_required()
+def test_endpoint():
+    return jsonify({"message": "Schedules backend is working!", "timestamp": datetime.now().isoformat()})
