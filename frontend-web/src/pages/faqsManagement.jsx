@@ -190,30 +190,53 @@ export function FAQs() {
                     <td>{faq.admin_id}</td>
                     <td>{faq.question}</td>
                     <td>{faq.answer}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button
-                          className="edit-btn"
-                          onClick={() => {
-                            setFaqToEdit(faq);
-                            setEditQuestion(faq.question);
-                            setEditAnswer(faq.answer);
-                            setEditModalVisible(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="delete-btn"
-                          onClick={() => {
-                            setFaqToDelete(faq);
-                            setShowDeleteConfirm(true);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+                   
+<td>
+  <div className="action-buttons" style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+    <button
+      className="edit-btn"
+      style={{ 
+        display: 'block', 
+        visibility: 'visible', 
+        backgroundColor: '#fff',
+        border: '2px solid #000c6f',
+        color: '#000c6f',
+        padding: '6px 12px',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }}
+      onClick={() => {
+        setFaqToEdit(faq);
+        setEditQuestion(faq.question);
+        setEditAnswer(faq.answer);
+        setEditModalVisible(true);
+      }}
+    >
+      Edit
+    </button>
+    <button
+      className="delete-btn"
+      style={{ 
+        display: 'block !important', 
+        visibility: 'visible !important', 
+        backgroundColor: '#fff',
+        border: '2px solid red',
+        color: 'red',
+        padding: '6px 12px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        minWidth: '60px'
+      }}
+      onClick={() => {
+        console.log('Delete clicked for:', faq); // Add this for debugging
+        setFaqToDelete(faq);
+        setShowDeleteConfirm(true);
+      }}
+    >
+      Delete
+    </button>
+  </div>
+</td>
                   </tr>
                 ))}
               </tbody>
