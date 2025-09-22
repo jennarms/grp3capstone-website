@@ -82,5 +82,7 @@ def create_app():
     from app.routes.fare import fare_bp
     app.register_blueprint(fare_bp, url_prefix="/api/fare")
 
+    from app.routes.ui_customization import ui_bp
+    app.register_blueprint(ui_bp, url_prefix="/api/ui")
     
     return app
