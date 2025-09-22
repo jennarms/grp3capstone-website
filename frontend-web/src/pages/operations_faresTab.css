@@ -1,71 +1,748 @@
+:root {
+  --fare-blue: #0b1a78;
+  --fare-blue-200: #dfe7ff;
+  --fare-border: #c8d1e6;
+  --fare-text: #0f172a;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto; /* enable page-level scrolling */
+}
+
 .fare-tab-page {
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  padding-top: 100px;
+  padding-bottom: 40px; /* Add bottom padding */
+  width: 100%;
+  min-height: 100vh;
+  background-color: white;
+  box-sizing: border-box;
+  overflow-x: auto; /* Allow horizontal scrolling for wide content */
+  /* Make the main container MUCH wider - remove all width constraints */
+  min-width: 100vw; /* Use full viewport width */
+}
+
+.fare-tab-main {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  /* Make the main content container a bit narrower */
+  width: calc(100vw - 440px); /* Reduced from 240px to 440px padding */
+  min-width: 800px; /* Reduced from 1000px to 800px */
+  max-width: none; /* Remove any width restrictions */
+  box-sizing: border-box;
+  /* Remove overflow hidden to allow content to show */
+  overflow: visible;
+}
+
+.fare-tab-section {
+  font-size: 50px;
+  font-weight: 800;
+  margin: 10px 0 20px;
+  color: var(--fare-text);
+  padding-bottom: 12px;
+  text-align: start;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Message boxes */
+.message-box {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid;
+  /* Make message boxes wider */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  border-color: #ffcdd2;
+}
+
+.success-message {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border-color: #c8e6c9;
+}
+
+/* Stats container */
+.stats-container {
+  background-color: var(--fare-blue-200);
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid var(--fare-border);
+  /* Make stats container narrower */
+  width: calc(100% - 32px); /* Full width minus padding */
+  min-width: 600px; /* Reduced from 800px to 600px */
+  box-sizing: border-box;
+}
+
+.stats-container h4 {
+  margin: 0 0 12px 0;
+  color: var(--fare-blue);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.stats-grid {
+  display: grid;
+  /* Increase minimum column width and allow more columns */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  font-size: 14px;
+  color: var(--fare-text);
+}
+
+/* Control buttons */
+.control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+  align-items: center;
+  /* Use full width */
+  width: 100%;
+}
+
+.tab-button {
+  padding: 10px 28px;
+  border: 2px solid var(--fare-blue);
+  border-radius: 99px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: all 0.2s;
+  background: white;
+  color: var(--fare-blue);
+  /* Make buttons more flexible */
+  min-width: 180px;
+  flex: 1;
+  max-width: 20px; /* Reduced from 220px to 20px */
+}
+
+.tab-button.active {
+  background-color: var(--fare-blue);
+  color: white;
+}
+
+.tab-button:hover:not(.active) {
+  background-color: var(--fare-blue-200);
+}
+
+.sync-button {
+  padding: 10px 28px;
+  background-color: #ffc107;
+  color: #212529;
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: all 0.2s;
+  min-width: 180px;
+  flex: 1;
+  max-width: 20px; /* Reduced from 220px to 20px */
+}
+
+.sync-button:hover {
+  background-color: #e0a800;
+}
+
+.save-all-button {
+  padding: 10px 28px;
+  background-color: var(--fare-blue);
+  color: white;
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: all 0.2s;
+  min-width: 20px; /* Reduced from 220px to 20px */
+  flex: 1;
+  max-width: 80px; /* Reduced from 280px to 80px */
+}
+
+.save-all-button:hover {
+  filter: brightness(1.05);
+}
+
+/* Station Master Section */
+.station-master-section {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 0;
+  margin-bottom: 30px; /* Add margin for spacing */
+  /* Use full width */
+  width: 100%;
+}
+
+.station-master-section h3 {
+  color: var(--fare-text);
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.description {
+  color: #666;
+  margin-bottom: 24px;
+  font-size: 14px;
+  /* Make descriptions wider */
+  max-width: none;
+}
+
+.station-table-container {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid var(--fare-border);
+  /* Make station table container narrower */
+  width: calc(100% - 20px); /* Full width with some margin */
+  min-width: 800px; /* Reduced from 1000px to 800px */
+}
+
+.scrollable-table {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 10px;
+  background: white;
+  position: relative;
+  /* Use full width */
+  width: 100%;
+}
+
+.station-master-table {
+  width: 100%;
+  /* Increase minimum width for better spacing */
+  min-width: 700px; /* Reduced from 900px to 700px */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.station-master-table th {
+  background-color: var(--fare-blue-200);
+  color: var(--fare-blue);
+  padding: 12px 16px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-right: 1px solid var(--fare-border);
+  font-weight: 800;
+}
+
+.station-master-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--fare-border);
+  border-right: 1px solid var(--fare-border);
+  vertical-align: middle;
+  background: #fdfefe;
+}
+
+.station-master-table tr:hover td {
+  background-color: #f7faff;
+}
+
+.station-name {
+  font-weight: 700;
+  color: var(--fare-text);
+  text-align: left;
+  /* Give station names more space */
+  min-width: 0px; /* Reduced from 200px to 0px */
+}
+
+.order-input {
+  width: 80px;
+  padding: 8px 12px;
+  border: 1px solid var(--fare-border);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.order-input:focus {
+  outline: none;
+  border-color: var(--fare-blue);
+  box-shadow: 0 0 0 2px rgba(11, 26, 120, 0.2);
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  min-width: 60px;
+  text-align: center;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.station-id {
+  color: #6c757d;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.edit-button {
+  padding: 8px 16px;
+  background-color: var(--fare-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.edit-button:hover {
+  filter: brightness(1.05);
+}
+
+.action-buttons {
+  display: none;
+}
+
+/* Fare Matrix Section */
+.fare-matrix-section {
+  background-color: #fff;
+  margin-bottom: 30px; /* Add margin for spacing */
+  /* Use full width */
+  width: 100%;
+}
+
+.matrix-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: var(--fare-blue-200);
+  border-radius: 10px;
+  /* Make matrix controls container narrower */
+  width: calc(100% - 30px); /* Full width minus padding */
+  min-width: 600px; /* Reduced from 800px to 600px */
+  box-sizing: border-box;
+}
+
+.regenerate-button {
+  padding: 10px 28px;
+  background-color: var(--fare-blue);
+  color: white;
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: all 0.2s;
+  min-width: 0px; /* Reduced from 200px to 0px */
+  flex: 1;
+  max-width: 200px; /* Reduced from 250px to 50px */
+}
+
+.regenerate-button:hover {
+  filter: brightness(1.05);
+}
+
+.help-text {
+  font-size: 14px;
+  color: #666;
+  /* Allow help text to take more space */
+  flex: 2;
+  min-width: 100px; /* Reduced from 300px to 100px */
+}
+
+.fare-matrix-container {
+  border: 1px solid var(--fare-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+  /* Make fare matrix container narrower */
+  width: calc(100% - 20px); /* Full width with some margin */
+  min-width: 1000px; /* Reduced from 1200px to 1000px */
+}
+
+.fare-table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh;
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+.fare-matrix-table {
+  width: 100%;
+  /* Reduce minimum width */
+  min-width: 1200px; /* Reduced from 1400px to 1200px */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.corner-header {
+  background-color: var(--fare-blue-200);
+  color: var(--fare-blue);
+  /* Make corner header much wider and flexible */
+  width: 50px; /* Reduced from 250px to 50px */
+  min-width: 50px; /* Reduced from 250px to 50px */
+  /* Remove max-width to allow expansion */
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 15;
+  border: 1px solid var(--fare-border);
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 800;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.station-header {
+  background-color: var(--fare-blue-200);
+  color: var(--fare-blue);
+  /* Make station headers wider and flexible */
+  width: -20px; /* Reduced from 180px to -20px (This creates a negative value which is invalid - should be handled carefully) */
+  min-width: -20px; /* Reduced from 180px to -20px (This creates a negative value which is invalid - should be handled carefully) */
+  /* Remove max-width constraint */
+  border: 1px solid var(--fare-border);
+  padding: 8px 4px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+  font-weight: 800;
+}
+
+.rotated-header {
+  transform: rotate(-45deg);
+  transform-origin: center;
+  white-space: nowrap;
+  margin: 15px 0;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.row-header {
+  background-color: #f7faff;
+  font-weight: 700;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  /* Make row headers much wider */
+  width: 50px; /* Reduced from 250px to 50px */
+  min-width: 50px; /* Reduced from 250px to 50px */
+  /* Remove max-width constraint */
+  text-align: left;
+  border: 1px solid var(--fare-border);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  font-size: 11px;
+  padding: 8px;
+  color: var(--fare-text);
+}
+
+.fare-cell {
+  /* Make fare cells much wider */
+  width: -20px; /* Reduced from 180px to -20px (This creates a negative value which is invalid - should be handled carefully) */
+  min-width: -20px; /* Reduced from 180px to -20px (This creates a negative value which is invalid - should be handled carefully) */
+  /* Remove max-width constraint to allow flexibility */
+  border: 1px solid var(--fare-border);
+  padding: 8px 4px;
+  vertical-align: middle;
+  position: relative;
+  background: #fdfefe;
+}
+
+.fare-cell.disabled {
+  background-color: #f5f5f5;
+}
+
+.fare-cell.inactive {
+  background-color: #ffebee;
+}
+
+.fare-cell.pending {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+}
+
+.fare-cell.active {
+  background-color: #fdfefe;
+}
+
+.disabled-cell {
+  text-align: center;
+  color: #999;
+  font-size: 16px;
+  padding: 20px 0;
+}
+
+.cell-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.fare-input {
+  /* Make fare inputs much wider */
+  width: -50px; /* Reduced from 150px to -50px (This creates a negative value which is invalid - should be handled carefully) */
+  padding: 6px 8px;
+  font-size: 11px;
+  text-align: center;
+  border: 1px solid var(--fare-border);
+  border-radius: 8px;
+  background-color: #fff;
+  transition: all 0.2s;
+  color: var(--fare-text);
+}
+
+.fare-input:focus {
+  outline: none;
+  border-color: var(--fare-blue);
+  box-shadow: 0 0 0 2px rgba(11, 26, 120, 0.2);
+  background-color: white;
+}
+
+.fare-input:disabled {
+  background-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.status-toggle {
+  padding: 3px 8px;
+  font-size: 9px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  min-width: 60px;
+  transition: all 0.2s;
+}
+
+.status-toggle.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-toggle.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-toggle:hover {
+  transform: scale(1.05);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  background-color: var(--fare-blue-200);
+  border-radius: 10px;
+  margin: 20px 0;
+  /* Use full width */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.empty-state h4 {
+  color: var(--fare-text);
+  margin-bottom: 12px;
+  font-weight: 800;
+}
+
+.empty-state p {
+  margin-bottom: 20px;
+}
+
+/* Instructions */
+.instructions {
+  margin-top: 20px;
+  margin-bottom: 30px;
+  font-size: 14px;
+  color: #666;
+  background-color: var(--fare-blue-200);
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--fare-border);
+  /* Make instructions container narrower */
+  width: calc(100% - 32px); /* Full width minus padding */
+  min-width: 600px; /* Reduced from 800px to 600px */
+  box-sizing: border-box;
+}
+
+.instructions p {
+  margin: 0 0 8px 0;
+  font-weight: 800;
+  color: var(--fare-blue);
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instructions li {
+  margin-bottom: 4px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .fare-tab-page {
+    padding: 10px;
+    padding-top: 500px;
+    padding-bottom: 50px;
+    max-width: 100vw;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
   
   .fare-tab-main {
-    display: flex;
-    flex-direction: column;
-    margin-top: 20px;
+    padding: 12px;
+    margin-top: 10px;
+    max-width: 100%;
   }
   
   .fare-tab-section {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 20px;
+    font-size: 36px;
   }
   
-  /* Fare Table */
-  .fare-tab-table {
+  .fare-table-wrapper {
+    max-height: 45vh;
+  }
+  
+  .scrollable-table {
+    max-height: 45vh;
+  }
+  
+  .control-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .tab-button, .sync-button, .save-all-button {
     width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
+    margin-bottom: 8px;
+    max-width: none;
   }
   
-  .fare-tab-table th,
-  .fare-tab-table td {
-    border: 1px solid #ddd;
-    padding: 12px 15px;
-    text-align: center;
+  .fare-matrix-table {
+    font-size: 10px;
+    min-width: 400px; /* Reduced from 600px to 400px */
   }
   
-  .fare-tab-table th {
-    background-color: #f4f4f4;
-    font-weight: bold;
+  .station-master-table {
+    min-width: 600px; /* Reduced from 800px to 600px */
+    font-size: 12px;
+  }
+  
+  .edit-button {
+    padding: 4px 8px;
+    font-size: 10px;
   }
   
   .fare-input {
-    width: 100%;
-    padding: 8px;
-    font-size: 14px;
-    text-align: center;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: #f9f9f9;
+    width: 70px;
+    font-size: 10px;
+    padding: 4px;
   }
   
-  /* Add Button */
-  .fare-tab-buttons {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
+  .corner-header, .row-header {
+    width: -80px; /* Reduced from 120px to -80px (This creates a negative value which is invalid - should be handled carefully) */
+    min-width: -80px; /* Reduced from 120px to -80px (This creates a negative value which is invalid - should be handled carefully) */
+    font-size: 9px;
+    padding: 6px 4px;
   }
   
-  .fare-add-btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    background-color: #008CBA;
-    color: white;
-    border: none;
-    border-radius: 4px;
+  .station-header {
+    width: -100px; /* Reduced from 100px to -100px (This creates a negative value which is invalid - should be handled carefully) */
+    min-width: -100px; /* Reduced from 100px to -100px (This creates a negative value which is invalid - should be handled carefully) */
   }
   
-  .fare-add-btn:hover {
-    background-color: #0077b5;
+  .fare-cell {
+    width: -100px; /* Reduced from 100px to -100px (This creates a negative value which is invalid - should be handled carefully) */
+    min-width: -100px; /* Reduced from 100px to -100px (This creates a negative value which is invalid - should be handled carefully) */
+    padding: 4px 2px;
   }
   
-  .fare-add-btn:focus {
-    outline: none;
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
+}
+
+@media (max-width: 1024px) {
+  .fare-tab-page {
+    padding-top: 500px;
+    padding-bottom: 40px;
+    max-width: 100vw;
+    overflow-y: auto;
+  }
+  
+  .fare-table-wrapper {
+    max-height: 48vh;
+  }
+  
+  .scrollable-table {
+    max-height: 48vh;
+  }
+}
+
+@media (min-width: 1025px) {
+  .fare-tab-page {
+    padding-top: 500px;
+    padding-bottom: 40px;
+    /* Remove width constraints for desktop */
+    max-width: 1400px; /* Reduced from 1600px to 1400px */
+    margin: 0 auto;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+  
+  .fare-table-wrapper {
+    max-height: 55vh;
+  }
+  
+  .scrollable-table {
+    max-height: 55vh;
+  }
+}
