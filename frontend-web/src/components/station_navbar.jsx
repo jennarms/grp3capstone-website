@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
-import './station_navbar.css'; // Ensure this path is correct
+import './station_navbar.css';
 
 export function StationNavbar() {
+  // Read the stored username directly from localStorage
+  const adminName = localStorage.getItem("admin_name") || "Station Admin";
+
+
   return (
     <aside className="station-admin-sidebar">
       <div className="station-admin-sidebar-profile">
@@ -11,7 +15,10 @@ export function StationNavbar() {
           className="station-admin-sidebar-icon"
         />
       </div>
-      <h2 className="station-admin-sidebar-title">PUP Admin</h2>
+
+      {/* Display the logged-in username */}
+      <h2 className="station-admin-sidebar-title">{adminName}</h2>
+
       <nav className="station-admin-sidebar-nav">
         <Link to="/dashboard" className="station-admin-sidebar-link">
           Dashboard

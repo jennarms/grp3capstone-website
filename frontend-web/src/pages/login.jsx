@@ -46,31 +46,34 @@ export function Login() {
     setLoginErrorMessage("");
 
     try {
-      const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
-      const data = res.data;
+    const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
+    const data = res.data;
 
-      // optional: persist
-      if (data.token) localStorage.setItem("token", data.token);
-      if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
-      if (data.role) localStorage.setItem("role", data.role);
+    // Persist existing info
+    if (data.token) localStorage.setItem("token", data.token);
+    if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
+    if (data.role) localStorage.setItem("role", data.role);
 
-      setLoginMessage(data.message || "Login successful!");
-      setShowLoginSuccess(true);
+    // NEW: store username for navbar display
+    if (data.username) localStorage.setItem("admin_name", data.username);
 
-      setTimeout(() => {
-        if (data.role === "main-admin") navigate("/announcement");
-        else if (data.role === "station-admin") navigate("/dashboard");
-        else navigate("/dashboard");
-      }, REDIRECT_DELAY_MS);
-    } catch (err) {
-      const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message;
-      setLoginErrorMessage(`Login failed: ${msg}`);
-    } finally {
-      setIsSubmitting(false);
-    }
+    setLoginMessage(data.message || "Login successful!");
+    setShowLoginSuccess(true);
+
+    setTimeout(() => {
+      if (data.role === "main-admin") navigate("/announcement");
+      else if (data.role === "station-admin") navigate("/dashboard");
+      else navigate("/dashboard");
+    }, REDIRECT_DELAY_MS);
+  } catch (err) {
+    const msg =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message;
+    setLoginErrorMessage(`Login failed: ${msg}`);
+  } finally {
+    setIsSubmitting(false);
+  }
   };
 
   // ---------- Send OTP ----------
