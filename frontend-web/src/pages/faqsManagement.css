@@ -2,7 +2,7 @@
 .faqs-page {
   font-size: 16px;
   font-family: Arial, sans-serif;
-  width: 1250px;               /* fixed (was 1250x) */
+  width: 1250px;
   box-sizing: border-box;
 }
 
@@ -12,8 +12,8 @@
   margin-left: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  overflow: hidden;            /* keeps borders clean */
-  background: #fff;            /* white/transparent look */
+  overflow: hidden;
+  background: #fff;
   display: flex;
   flex-direction: column;
   height: 595px;
@@ -24,11 +24,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;            /* no blue */
+  background: #fff;
   padding: 10px 15px;
   border-bottom: 1px solid #ddd;
-  position: sticky;            /* keeps it visible while scrolling table */
-  top: 0;                      /* adjust if needed relative to your navbar */
+  position: sticky;
+  top: 0;
   z-index: 3;
 }
 
@@ -47,7 +47,7 @@
 }
 .search-input {
   width: 100%;
-  padding: 10px 12px 10px 36px; /* space for icon */
+  padding: 10px 12px 10px 36px;
   font-size: 16px;
   border-radius: 20px;
   border: 1px solid gray;
@@ -64,9 +64,9 @@
   min-width: 140px;
 }
 
-/* ===== Stable table area (prevents layout jump on add/delete) ===== */
+/* ===== Stable table area ===== */
 .table-scroll {
-  height: 520px;               /* tweak for your viewport */
+  height: 520px;
   overflow-y: auto;
 }
 
@@ -75,16 +75,36 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  table-layout: fixed;         /* consistent column widths */
+  table-layout: fixed;
 }
+
+/* Column widths - this is key for showing buttons properly */
+.faqs-table th:nth-child(1),
+.faqs-table td:nth-child(1) { width: 50px; }    /* # */
+.faqs-table th:nth-child(2),
+.faqs-table td:nth-child(2) { width: 80px; }    /* Faq_ID */
+.faqs-table th:nth-child(3),
+.faqs-table td:nth-child(3) { width: 80px; }    /* Admin_ID */
+.faqs-table th:nth-child(4),
+.faqs-table td:nth-child(4) { width: 300px; }   /* Question */
+.faqs-table th:nth-child(5),
+.faqs-table td:nth-child(5) { width: 400px; }   /* Answer */
+.faqs-table th:nth-child(6),
+.faqs-table td:nth-child(6) { 
+  width: 220px; 
+  min-width: 220px;
+} /* Actions - ensures enough space */
+
 .faqs-table thead th {
   position: sticky;
-  top: 0;                      /* sticks under the toolbar */
-  background-color: #fff;      /* white header */
+  top: 0;
+  background-color: #fff;
   z-index: 2;
   text-align: center;
-  height: 60px;   
+  height: 60px;
+  font-weight: bold;
 }
+
 .faqs-table td,
 .faqs-table th {
   padding: 12px;
@@ -94,29 +114,7 @@
   height: 75px;
 }
 
-/* ===== Buttons in table ===== */
-.edit-btn,
-.delete-btn {
-  width: 100px;
-  text-align: center;
-  border: 2px solid #000c6f;
-  background-color: #fff;
-  color: #000;
-  font-weight: bold;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 10px;
-  padding: 6px 12px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.delete-btn {
-  border-color: red;
-  color: red;
-  min-width: 60px;
-}
+/* ===== Action Buttons Container - Fixed ===== */
 .action-buttons {
   display: flex;
   flex-direction: row;
@@ -124,6 +122,45 @@
   align-items: center;
   gap: 10px;
   height: 100%;
+  min-width: 200px;
+  flex-wrap: nowrap;
+  padding: 5px;
+}
+
+/* ===== Buttons in table - Fixed ===== */
+.edit-btn,
+.delete-btn {
+  min-width: 80px;
+  max-width: 100px;
+  text-align: center;
+  border: 2px solid #000c6f;
+  background-color: #fff;
+  color: #000c6f;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 6px 12px;
+  height: 36px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.delete-btn {
+  border-color: red !important;
+  color: red !important;
+}
+
+.edit-btn:hover {
+  background-color: #000c6f;
+  color: #fff;
+}
+
+.delete-btn:hover {
+  background-color: red;
+  color: #fff;
 }
 
 /* ===== Top page header (title) ===== */
@@ -163,11 +200,11 @@
   background: #fff;
   padding: 20px 24px;
   border-radius: 12px;
-  width: 640px;            /* size of modal */
+  width: 640px;
   max-width: 90vw;
-  min-height: 540px;       /* ensures space for footer */
-  max-height: 900px;        /* prevents overflow off-screen */
-  display: flex;           /* column layout: header, body, footer */
+  min-height: 540px;
+  max-height: 900px;
+  display: flex;
   flex-direction: column;
   gap: 12px;
   box-shadow: 0 10px 20px rgba(0,0,0,0.2);
@@ -199,9 +236,9 @@
 .modal-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;              /* more space between fields */
-  flex: unset;            /* don’t force scroll */
-  overflow-y: visible;    /* no scrollbars */
+  gap: 16px;
+  flex: unset;
+  overflow-y: visible;
 }
 
 /* Field row: label + input */
@@ -215,12 +252,12 @@
   font-weight: 700;
   color: #333;
   font-size: 15px;
-  width: 100px;           /* fixed width for alignment */
-  text-align: right;      /* align labels neatly */
+  width: 100px;
+  text-align: right;
 }
 
 .modal-body input {
-  flex: 1;                /* input takes remaining space */
+  flex: 1;
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 6px;
@@ -231,7 +268,7 @@
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;              /* space between buttons */
+  gap: 12px;
   padding-top: 10px;
   border-top: 1px solid #eee;
 }
@@ -242,7 +279,7 @@
   border-radius: 6px;
   font-weight: 700;
   cursor: pointer;
-  min-width: 110px;       /* consistent width */
+  min-width: 110px;
   text-align: center;
   border: 1px solid #aaa;
   background: #fff;
@@ -349,14 +386,14 @@
 }
 
 .fm-modal{
-  width: 520px;                /* tighter width */
+  width: 520px;
   max-width: 95vw;
-  max-height: 78vh;            /* keep it short */
+  max-height: 78vh;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(0,0,0,.2);
   display: grid;
-  grid-template-rows: auto 1fr auto;  /* header | body (scrolls) | footer */
+  grid-template-rows: auto 1fr auto;
   overflow: hidden;
 }
 
@@ -383,7 +420,7 @@
 
 .fm-modalBody{
   padding: 14px 16px;
-  overflow-y: auto;          /* body scrolls if inputs overflow */
+  overflow-y: auto;
 }
 .fm-field{ margin-bottom: 12px; }
 .fm-label{
@@ -417,7 +454,6 @@
   text-align: left;
 }
 
-/* Optional: keep inputs left-aligned even if a parent sets center */
 .fm-modalBody input {
   text-align: left;
 }
