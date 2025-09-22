@@ -5,19 +5,18 @@
     --ops-space: 170px;  /* reserved height (title + tabs) */
   }
   
-  .ops-header {
-    position: fixed;            /* pin to top */
-    top: var(--ops-top);
-    left: var(--ops-left);
-    right: var(--ops-right);
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding-right: 40px;
-    background: #fff;           /* make sure content doesn't bleed through */
-  }
-  
+.ops-header {
+  position: fixed;
+  top: var(--ops-top);
+  left: var(--ops-left);
+  right: var(--ops-right);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-right: 40px;
+  background: #fff;
+}
   /* Title — force left alignment and shared style */
   .ops-title{
     font-size: 48px !important;

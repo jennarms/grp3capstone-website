@@ -321,6 +321,8 @@ export function StationsTab() {
       <HeaderButton />
       <OperationsTab />
 
+      <h2 className="ops-stn-title">Stations</h2>
+
       <main className="ops-stn-main">
         {error && (
           <div className="stn-error-banner" style={{ margin: '10px 0' }}>
