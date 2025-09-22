@@ -19,37 +19,39 @@ export function BoardingLandingPage() {
   ]);
 
   return (
-    <div className="boarding-landing-container">
+    <div className="blp-container">
       <StationNavbar />
 
-      <div className="main-content">
-        <header className="main-header">
+      <div className="blp-main">
+        <header className="blp-header">
           <h1>Boarding Management</h1>
           <LogoutButton />
         </header>
 
-        <section className="table-section">
+        <section className="blp-table-section">
           {/* TABLE 1 */}
-          <div className="card">
-            <div className="table-wrapper">
-              <table className="data-table">
+          <div className="blp-card">
+            <div className="blp-table-wrapper">
+              <table className="blp-data-table">
                 <thead>
-                  <tr className="caption-row">
-                    <th className="caption-th" colSpan={3}>PUP TO KALAWAAN</th>
+                  <tr className="blp-caption-row">
+                    <th className="blp-caption-th" colSpan={3}>
+                      PUP TO KALAWAAN
+                    </th>
                   </tr>
-                  <tr className="cols-row">
+                  <tr className="blp-cols-row">
                     <th>Time</th>
                     <th>Available Seats</th>
-                    <th className="action-col">Action</th>
+                    <th className="blp-action-col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {kalawaanSeats.map((seat, i) => (
-                    <tr key={i}>
+                    <tr key={`k-${i}`}>
                       <td>{seat.time}</td>
                       <td>{seat.availableSeats}</td>
-                      <td className="action-cell">
-                        <button className="view-btn">View</button>
+                      <td className="blp-action-cell">
+                        <button className="blp-view-btn">View</button>
                       </td>
                     </tr>
                   ))}
@@ -59,26 +61,28 @@ export function BoardingLandingPage() {
           </div>
 
           {/* TABLE 2 */}
-          <div className="card">
-            <div className="table-wrapper">
-              <table className="data-table">
+          <div className="blp-card">
+            <div className="blp-table-wrapper">
+              <table className="blp-data-table">
                 <thead>
-                  <tr className="caption-row">
-                    <th className="caption-th" colSpan={3}>PUP TO ESCOLTA</th>
+                  <tr className="blp-caption-row">
+                    <th className="blp-caption-th" colSpan={3}>
+                      PUP TO ESCOLTA
+                    </th>
                   </tr>
-                  <tr className="cols-row">
+                  <tr className="blp-cols-row">
                     <th>Time</th>
                     <th>Available Seats</th>
-                    <th className="action-col">Action</th>
+                    <th className="blp-action-col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {escoltaSeats.map((seat, i) => (
-                    <tr key={i}>
+                    <tr key={`e-${i}`}>
                       <td>{seat.time}</td>
                       <td>{seat.availableSeats}</td>
-                      <td className="action-cell">
-                        <button className="view-btn">View</button>
+                      <td className="blp-action-cell">
+                        <button className="blp-view-btn">View</button>
                       </td>
                     </tr>
                   ))}

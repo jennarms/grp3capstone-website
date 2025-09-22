@@ -3,6 +3,23 @@ import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_boarding.css";
 
+/* All stations for the dropdowns */
+const STATIONS = [
+  "Pinagbuhatan",
+  "San Joaquin",
+  "Maybunga",
+  "Kalawaan",
+  "Guadalupe",
+  "Valenzuela",
+  "Hulo",
+  "Lambingan",
+  "Santa Ana",
+  "PUP",
+  "Lawton",
+  "Quinta",
+  "Escolta",
+];
+
 export function Boarding() {
   const [tableQuery, setTableQuery] = useState("");
 
@@ -109,7 +126,7 @@ export function Boarding() {
 
   const validateManual = (d) => {
     const errs = {};
-    const req = (k, label) => { if (!String(d[k] ?? "").trim()) errs[k] = `${label} is required`; };
+    const req = (k, label) => { if (!String(d[k] ?? "").trim()) errs[k] = label + " is required"; };
 
     req("bookingID", "Booking ID");
     req("userID", "User ID");
@@ -125,10 +142,10 @@ export function Boarding() {
     req("bookingSource", "Booking source");
 
     // Unique IDs
-    if (d.bookingID && passengerList.some(p => p.bookingID === d.bookingID)) {
+    if (d.bookingID && passengerList.some((p) => p.bookingID === d.bookingID)) {
       errs.bookingID = "Booking ID already exists";
     }
-    if (d.qrCodeID && passengerList.some(p => p.qrCodeID === d.qrCodeID)) {
+    if (d.qrCodeID && passengerList.some((p) => p.qrCodeID === d.qrCodeID)) {
       errs.qrCodeID = "QR Code ID already exists";
     }
 
@@ -137,23 +154,29 @@ export function Boarding() {
       errs.destination = "Destination must be different from origin";
     }
 
-    // Formats
-    const dateRe = /^\d{4}\/\d{2}\/\d{2}$/;                 // YYYY/MM/DD
-    const timeRe = /^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(am|pm)$/i; // h:mm am/pm
-    if (d.departureDate && !dateRe.test(d.departureDate)) errs.departureDate = "Use YYYY/MM/DD";
+    // Formats (accept YYYY-MM-DD or YYYY/MM/DD)
+    const dateRe = /^\d{4}[/-]\d{2}[/-]\d{2}$/;
+    const timeRe = /^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(am|pm)$/i;
+    if (d.departureDate && !dateRe.test(d.departureDate)) errs.departureDate = "Use YYYY-MM-DD";
     if (d.departureTime && !timeRe.test(d.departureTime)) errs.departureTime = "Use h:mm am/pm";
 
     const okPay = ["P", "PG", "F"];
-    if (d.paymentStatus && !okPay.includes(d.paymentStatus)) errs.paymentStatus = "Use P, PG, or F";
+    if (d.paymentStatus && okPay.indexOf(d.paymentStatus) === -1) {
+      errs.paymentStatus = "Use P, PG, or F";
+    }
 
     const okStatus = ["OB", "CO", "PE", "CA", "DI"];
-    if (d.bookingStatus && !okStatus.includes(d.bookingStatus)) errs.bookingStatus = "Use OB, CO, PE, CA, DI";
+    if (d.bookingStatus && okStatus.indexOf(d.bookingStatus) === -1) {
+      errs.bookingStatus = "Use OB, CO, PE, CA, DI";
+    }
 
     const okSource = ["MA", "MB", "CB", "GM"];
-    if (d.bookingSource && !okSource.includes(d.bookingSource)) errs.bookingSource = "Use MA, MB, CB, GM";
+    if (d.bookingSource && okSource.indexOf(d.bookingSource) === -1) {
+      errs.bookingSource = "Use MA, MB, CB, GM";
+    }
 
     const amt = Number(d.paidAmount);
-    if (String(d.paidAmount).trim() === "" || Number.isNaN(amt) || amt < 0) {
+    if (String(d.paidAmount).trim() === "" || isNaN(amt) || amt < 0) {
       errs.paidAmount = "Enter a non-negative number";
     }
 
@@ -168,11 +191,14 @@ export function Boarding() {
     const errs = validateManual(manualData);
     setManualErrors(errs);
     if (Object.keys(errs).length === 0) {
-      // 1) Add to table
-      const newRow = { ...manualData, paidAmount: Number(manualData.paidAmount) };
+      const newRow = {
+        ...manualData,
+        paidAmount: Number(manualData.paidAmount),
+        // Normalize to slashes for table consistency
+        departureDate: (manualData.departureDate || "").replace(/-/g, "/"),
+      };
       setPassengerList((prev) => [...prev, newRow]);
 
-      // 2) Prep success details and show success modal
       setAddedManual({
         userID: newRow.userID,
         qrCodeID: newRow.qrCodeID,
@@ -181,7 +207,6 @@ export function Boarding() {
       });
       setShowManualSuccess(true);
 
-      // 3) Reset/close form
       setShowManualForm(false);
       setManualData(emptyManual);
       setManualErrors({});
@@ -254,9 +279,9 @@ export function Boarding() {
         const pending = passengerList.find((p) => p.bookingStatus === "PE") || passengerList[0];
         setScanResult({
           name: "Elijah Trinidad",
-          code: pending?.qrCodeID ?? "—",
-          from: pending?.origin ?? "—",
-          to: pending?.destination ?? "—",
+          code: (pending && pending.qrCodeID) || "—",
+          from: (pending && pending.origin) || "—",
+          to: (pending && pending.destination) || "—",
         });
         setScanState("success");
       }, 1500);
@@ -288,9 +313,15 @@ export function Boarding() {
                 {stops.map((s) => {
                   const isCurrent = s.name === currentStop;
                   return (
-                    <div className={`stop-row${isCurrent ? " is-current" : ""}`} key={s.name}>
+                    <div className={"stop-row" + (isCurrent ? " is-current" : "")} key={s.name}>
                       <span className="stop-pin-slot" aria-hidden="true">
-                        {isCurrent ? <span className="pin">📍</span> : null}
+                        {isCurrent ? (
+                          <span className="pin" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+                              <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                            </svg>
+                          </span>
+                        ) : null}
                       </span>
                       <span className="stop-name">{s.name}</span>
                       <span className="stop-time">{s.time}</span>
@@ -403,7 +434,7 @@ export function Boarding() {
                               setBookingToAccept(p.bookingID);
                               setShowAcceptPrompt(true);
                             }}
-                            aria-label={`Accept booking ${p.bookingID}`}
+                            aria-label={"Accept booking " + p.bookingID}
                           >
                             Accept
                           </button>
@@ -413,7 +444,7 @@ export function Boarding() {
                               setBookingToCancel(p.bookingID);
                               setShowCancelPrompt(true);
                             }}
-                            aria-label={`Cancel booking ${p.bookingID}`}
+                            aria-label={"Cancel booking " + p.bookingID}
                           >
                             Cancel
                           </button>
@@ -425,7 +456,7 @@ export function Boarding() {
                   </tr>
                 ))}
                 {Array.from({ length: Math.max(0, 8 - finalFiltered.length) }).map((_, i) => (
-                  <tr key={`empty-${i}`}>
+                  <tr key={"empty-" + i}>
                     <td colSpan={13}>&nbsp;</td>
                   </tr>
                 ))}
@@ -560,10 +591,10 @@ export function Boarding() {
                   {/* Booking ID */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.bookingID ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.bookingID ? "boarding-field-error" : "")}
                       placeholder="Booking ID"
                       value={manualData.bookingID}
-                      onChange={(e) => setManualData(v => ({ ...v, bookingID: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, bookingID: e.target.value }))}
                     />
                     {manualErrors.bookingID && <div className="boarding-error-text">{manualErrors.bookingID}</div>}
                   </div>
@@ -571,10 +602,10 @@ export function Boarding() {
                   {/* User ID */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.userID ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.userID ? "boarding-field-error" : "")}
                       placeholder="User ID"
                       value={manualData.userID}
-                      onChange={(e) => setManualData(v => ({ ...v, userID: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, userID: e.target.value }))}
                     />
                     {manualErrors.userID && <div className="boarding-error-text">{manualErrors.userID}</div>}
                   </div>
@@ -582,43 +613,58 @@ export function Boarding() {
                   {/* QR Code ID */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.qrCodeID ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.qrCodeID ? "boarding-field-error" : "")}
                       placeholder="Qr Code ID"
                       value={manualData.qrCodeID}
-                      onChange={(e) => setManualData(v => ({ ...v, qrCodeID: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, qrCodeID: e.target.value }))}
                     />
                     {manualErrors.qrCodeID && <div className="boarding-error-text">{manualErrors.qrCodeID}</div>}
                   </div>
 
-                  {/* Origin */}
+                  {/* Origin (dropdown) */}
                   <div className="boarding-manual-span2">
-                    <input
-                      className={`boarding-manual-input ${manualErrors.origin ? "boarding-field-error" : ""}`}
-                      placeholder="Origin"
+                    <select
+                      className={"boarding-manual-input boarding-manual-select " + (manualErrors.origin ? "boarding-field-error" : "")}
                       value={manualData.origin}
-                      onChange={(e) => setManualData(v => ({ ...v, origin: e.target.value }))}
-                    />
+                      onChange={(e) => {
+                        const origin = e.target.value;
+                        setManualData((v) => ({
+                          ...v,
+                          origin,
+                          destination: v.destination === origin ? "" : v.destination
+                        }));
+                      }}
+                    >
+                      <option value="" disabled>Select Origin</option>
+                      {STATIONS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                     {manualErrors.origin && <div className="boarding-error-text">{manualErrors.origin}</div>}
                   </div>
 
-                  {/* Destination */}
+                  {/* Destination (dropdown, excludes selected origin) */}
                   <div>
-                    <input
-                      className={`boarding-manual-input ${manualErrors.destination ? "boarding-field-error" : ""}`}
-                      placeholder="Destination"
+                    <select
+                      className={"boarding-manual-input boarding-manual-select " + (manualErrors.destination ? "boarding-field-error" : "")}
                       value={manualData.destination}
-                      onChange={(e) => setManualData(v => ({ ...v, destination: e.target.value }))}
-                    />
+                      onChange={(e) => setManualData((v) => ({ ...v, destination: e.target.value }))}
+                    >
+                      <option value="" disabled>Select Destination</option>
+                      {STATIONS.filter((s) => s !== manualData.origin).map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                     {manualErrors.destination && <div className="boarding-error-text">{manualErrors.destination}</div>}
                   </div>
 
-                  {/* Departure Date */}
+                  {/* Departure Date (native calendar) */}
                   <div className="boarding-manual-span2">
                     <input
-                      className={`boarding-manual-input ${manualErrors.departureDate ? "boarding-field-error" : ""}`}
-                      placeholder="Departure Date (YYYY/MM/DD)"
-                      value={manualData.departureDate}
-                      onChange={(e) => setManualData(v => ({ ...v, departureDate: e.target.value }))}
+                      type="date"
+                      className={"boarding-manual-input boarding-manual-date " + (manualErrors.departureDate ? "boarding-field-error" : "")}
+                      value={manualData.departureDate}  /* expects YYYY-MM-DD from browser */
+                      onChange={(e) => setManualData((v) => ({ ...v, departureDate: e.target.value }))}
                     />
                     {manualErrors.departureDate && <div className="boarding-error-text">{manualErrors.departureDate}</div>}
                   </div>
@@ -626,10 +672,10 @@ export function Boarding() {
                   {/* Departure Time */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.departureTime ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.departureTime ? "boarding-field-error" : "")}
                       placeholder="Departure Time (h:mm am/pm)"
                       value={manualData.departureTime}
-                      onChange={(e) => setManualData(v => ({ ...v, departureTime: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, departureTime: e.target.value }))}
                     />
                     {manualErrors.departureTime && <div className="boarding-error-text">{manualErrors.departureTime}</div>}
                   </div>
@@ -637,10 +683,10 @@ export function Boarding() {
                   {/* Payment Status */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.paymentStatus ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.paymentStatus ? "boarding-field-error" : "")}
                       placeholder="Payment Status (P/PG/F)"
                       value={manualData.paymentStatus}
-                      onChange={(e) => setManualData(v => ({ ...v, paymentStatus: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, paymentStatus: e.target.value }))}
                     />
                     {manualErrors.paymentStatus && <div className="boarding-error-text">{manualErrors.paymentStatus}</div>}
                   </div>
@@ -648,10 +694,10 @@ export function Boarding() {
                   {/* Payment Amount */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.paidAmount ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.paidAmount ? "boarding-field-error" : "")}
                       placeholder="Payment Amount"
                       value={manualData.paidAmount}
-                      onChange={(e) => setManualData(v => ({ ...v, paidAmount: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, paidAmount: e.target.value }))}
                     />
                     {manualErrors.paidAmount && <div className="boarding-error-text">{manualErrors.paidAmount}</div>}
                   </div>
@@ -659,10 +705,10 @@ export function Boarding() {
                   {/* Paid At */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.paidAt ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.paidAt ? "boarding-field-error" : "")}
                       placeholder="Paid At (e.g., 8:10 am)"
                       value={manualData.paidAt}
-                      onChange={(e) => setManualData(v => ({ ...v, paidAt: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, paidAt: e.target.value }))}
                     />
                     {manualErrors.paidAt && <div className="boarding-error-text">{manualErrors.paidAt}</div>}
                   </div>
@@ -670,10 +716,10 @@ export function Boarding() {
                   {/* Booking Status */}
                   <div className="boarding-manual-span2">
                     <input
-                      className={`boarding-manual-input ${manualErrors.bookingStatus ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.bookingStatus ? "boarding-field-error" : "")}
                       placeholder="Booking Status (OB/CO/PE/CA/DI)"
                       value={manualData.bookingStatus}
-                      onChange={(e) => setManualData(v => ({ ...v, bookingStatus: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, bookingStatus: e.target.value }))}
                     />
                     {manualErrors.bookingStatus && <div className="boarding-error-text">{manualErrors.bookingStatus}</div>}
                   </div>
@@ -681,10 +727,10 @@ export function Boarding() {
                   {/* Booking Source */}
                   <div>
                     <input
-                      className={`boarding-manual-input ${manualErrors.bookingSource ? "boarding-field-error" : ""}`}
+                      className={"boarding-manual-input " + (manualErrors.bookingSource ? "boarding-field-error" : "")}
                       placeholder="Booking Source (MA/MB/CB/GM)"
                       value={manualData.bookingSource}
-                      onChange={(e) => setManualData(v => ({ ...v, bookingSource: e.target.value }))}
+                      onChange={(e) => setManualData((v) => ({ ...v, bookingSource: e.target.value }))}
                     />
                     {manualErrors.bookingSource && <div className="boarding-error-text">{manualErrors.bookingSource}</div>}
                   </div>
@@ -724,10 +770,10 @@ export function Boarding() {
               <h4 className="manual-success-sub">Passenger Added Successfully 🎉</h4>
 
               <div className="manual-success-lines">
-                <div>User ID: <strong>{addedManual?.userID}</strong></div>
-                <div>Ticket Code: <strong>{addedManual?.qrCodeID}</strong></div>
-                <div>From: {addedManual?.origin}</div>
-                <div>Destination: {addedManual?.destination}</div>
+                <div>User ID: <strong>{addedManual && addedManual.userID}</strong></div>
+                <div>Ticket Code: <strong>{addedManual && addedManual.qrCodeID}</strong></div>
+                <div>From: {addedManual && addedManual.origin}</div>
+                <div>Destination: {addedManual && addedManual.destination}</div>
               </div>
 
               <div className="manual-success-banner">
@@ -758,7 +804,7 @@ export function Boarding() {
             aria-hidden="true"
           >
             <div
-              className={`boarding-scan-card ${scanState === "success" ? "boarding-scan--left" : ""}`}
+              className={"boarding-scan-card" + (scanState === "success" ? " boarding-scan--left" : "")}
               role="dialog"
               aria-modal="true"
               aria-labelledby="scanTitle"
@@ -794,16 +840,16 @@ export function Boarding() {
                 <>
                   <h4 className="boarding-scan-confirm">Passenger Confirmed 🎉</h4>
                   <div className="boarding-scan-details">
-                    {scanResult?.name && (
+                    {scanResult && scanResult.name ? (
                       <div className="boarding-scan-line">
                         <strong>{scanResult.name}</strong>
                       </div>
-                    )}
+                    ) : null}
                     <div className="boarding-scan-line">
-                      Ticket Code: <strong>{scanResult?.code ?? "—"}</strong>
+                      Ticket Code: <strong>{(scanResult && scanResult.code) || "—"}</strong>
                     </div>
-                    <div className="boarding-scan-line">From: {scanResult?.from ?? "—"}</div>
-                    <div className="boarding-scan-line">Destination: {scanResult?.to ?? "—"}</div>
+                    <div className="boarding-scan-line">From: {(scanResult && scanResult.from) || "—"}</div>
+                    <div className="boarding-scan-line">Destination: {(scanResult && scanResult.to) || "—"}</div>
                   </div>
                   <div className="boarding-scan-actions">
                     <button

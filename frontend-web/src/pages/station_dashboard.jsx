@@ -1,48 +1,74 @@
-import { useEffect, useState } from "react";
-import { StationNavbar } from "../components/station_navbar"; // Ensure the path is correct
-import { LogoutButton } from "../components/logout_button"; // Ensure the path is correct
-import './station_dashboard.css'; // Ensure this path is correct
-import { Link } from 'react-router-dom'; // Import Link from react-router-dom
+import { StationNavbar } from "../components/station_navbar";
+import { LogoutButton } from "../components/logout_button";
+import "./station_dashboard.css";
 
 export function StationDashboard() {
-  // Use state for dynamic data (if applicable)
-  const [scheduledTrips, setScheduledTrips] = useState(10);
-  const [completedTrips, setCompletedTrips] = useState(6);
-  const [delayedTrips, setDelayedTrips] = useState(1);
-  const [cancelledTrips, setCancelledTrips] = useState(1);
-  const [totalPassengers, setTotalPassengers] = useState(121);
-  const [tripsData, setTripsData] = useState([]);
+  // Simple constants (no state needed since these don’t change on this view)
+  const scheduledTrips = 10;
+  const completedTrips = 6;
+  const delayedTrips = 1;
+  const cancelledTrips = 1;
+  const totalPassengers = 121;
 
-  // Fetching data or simulating loading data for trips (this can be dynamic from API)
-  useEffect(() => {
-    const fetchTripsData = async () => {
-      // Simulate fetching trip data
-      const data = [
-        { route: 'Escolta-Kalawaan', departureTime: '9:00 AM', passengers: 50, status: 'On Time' },
-        { route: 'Dapitan-Tondo', departureTime: '9:30 AM', passengers: 40, status: 'Delayed' },
-        { route: 'Manila-Malabon', departureTime: '10:00 AM', passengers: 35, status: 'On Time' },
-        // More trips data here
-      ];
-      setTripsData(data);
-    };
-    fetchTripsData();
-  }, []);
+  const tripsData = [
+    { route: "Escolta-Kalawaan", departureTime: "9:00 AM", passengers: 50, status: "On Time" },
+    { route: "Dapitan-Tondo", departureTime: "9:30 AM", passengers: 40, status: "Delayed" },
+    { route: "Manila-Malabon", departureTime: "10:00 AM", passengers: 35, status: "On Time" },
+    { route: "Kalawaan-España", departureTime: "10:20 AM", passengers: 28, status: "On Time" },
+    { route: "Navotas-Pasig", departureTime: "10:50 AM", passengers: 31, status: "On Time" },
+  ];
+
+  const announcements = [
+    {
+      title: "Scheduled System Maintenance",
+      body: [
+        "Please be informed that the MetroLayag Passenger Management System will undergo scheduled maintenance on:",
+        "Date: May 25, 2025",
+        "Time: 3:00 PM - 5:00 PM PHT",
+      ],
+    },
+    {
+      title: "Weather Advisory",
+      body: [
+        "Expect intermittent rain showers in the afternoon.",
+        "Some trips may be delayed by 10–15 minutes for safety checks.",
+      ],
+    },
+    {
+      title: "New Boarding Flow",
+      body: [
+        "Starting next week, boarding gates will open 20 minutes before departure.",
+        "Please have your QR code ready at the gate.",
+      ],
+    },
+    {
+      title: "Lost & Found Reminder",
+      body: [
+        "Items are kept for 30 days at the PUP Station office.",
+        "Bring a valid ID to claim.",
+      ],
+    },
+    {
+      title: "System Update",
+      body: [
+        "We’ve improved seat availability syncing across stations.",
+        "Report any glitches via the Help menu.",
+      ],
+    },
+  ];
 
   return (
     <div className="station-dashboard-container">
-      {/* Include the Navbar */}
       <StationNavbar />
 
-      {/* Main Content Section */}
       <main className="station-main-content">
         <h1 className="station-title">PUP STATION</h1>
+
         <header className="station-dashboard-header">
-          {/* Console log to verify rendering of LogoutButton */}
-          {console.log("Rendering LogoutButton")}
-          <LogoutButton /> {/* Ensure LogoutButton is being used */}
+          <LogoutButton />
         </header>
 
-        {/* Stats Section */}
+        {/* ====== Stats ====== */}
         <section className="station-stats">
           <div className="station-stat-box">
             <div className="station-stat-info">
@@ -80,43 +106,49 @@ export function StationDashboard() {
           </div>
         </section>
 
-        {/* Trip Table Section */}
+        {/* ====== Trips Table ====== */}
         <section className="station-trip-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Scheduled Trips</th>
-                <th>Departure Time</th>
-                <th>Route</th>
-                <th>Number of Passengers</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tripsData.map((trip, index) => (
-                <tr key={index}>
-                  <td>{trip.route}</td>
-                  <td>{trip.departureTime}</td>
-                  <td>{trip.route}</td>
-                  <td>{trip.passengers}</td>
-                  <td>{trip.status}</td>
+          <div className="station-trip-table__scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Trip</th>
+                  <th>Departure Time</th>
+                  <th>Route</th>
+                  <th>Number of Passengers</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tripsData.map((trip, index) => (
+                  <tr key={index}>
+                    <td>{trip.route}</td>
+                    <td>{trip.departureTime}</td>
+                    <td>{trip.route}</td>
+                    <td>{trip.passengers}</td>
+                    <td>
+                      <span className={`status-pill ${trip.status === "Delayed" ? "is-delayed" : "is-ontime"}`}>
+                        {trip.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
 
-        {/* Announcement Section */}
+        {/* ====== Announcements (scrollable) ====== */}
         <h2 className="station-title-announcement">GENERAL ANNOUNCEMENTS</h2>
-        <section className="station-announcements">
-          <div className="station-announcement-card">
-            <h3>Scheduled System Maintenance</h3>
-            <p>
-              Please be informed that the MetroLayag Passenger Management System will undergo scheduled maintenance on:
-            </p>
-            <p>Date: May 25, 2025</p>
-            <p>Time: 3:00 PM - 5:00 PM PHT</p>
-          </div>
+        <section className="station-announcements station-announcements--scroll">
+          {announcements.map((a, i) => (
+            <div className="station-announcement-card" key={i}>
+              <h3>{a.title}</h3>
+              {a.body.map((line, j) => (
+                <p key={j}>{line}</p>
+              ))}
+            </div>
+          ))}
         </section>
       </main>
     </div>

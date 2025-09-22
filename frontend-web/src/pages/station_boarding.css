@@ -1,400 +1,510 @@
 .boarding-landing-container {
-    display: flex;
-    height: 100vh;
-    width: 1500px;
-    background: #fff;
-  }
-  
-  /* Main content */
-  .main-content {
-    flex: 1;
-    padding: 24px 28px;
-  }
-  
-  /* Header */
-  .main-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 14px;
-  }
-  
-  .boarding-header-info h1 {
-    font-size: 44px;
-    font-weight: 800;
-    margin: 0 0 10px;
-    line-height: 1.1;
-    color: #000;
-    text-align: start;
-  }
-  
-  /* Route card */
-  .route-card {
-    width: 1500px;
-    background: #fff;
-    border: 1px solid #000;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin: 0 auto;
-  }
-  
-  /* Symmetric header: Route | (center) Time | Booked */
-  .route-card__top {
-    display: grid;
-    grid-template-columns: 1fr 140px 1fr;
-    align-items: baseline;
-    column-gap: 16px;
-    border-bottom: 2px solid #000;
-    padding-bottom: 6px;
-    margin-bottom: 8px;
-  }
-  
-  .route-card__path {
-    font-size: 28px;
-    font-weight: 700;
-    justify-self: start;
-    text-align: left;
-  }
-  
-  .route-card__time {
-    font-size: 28px;
-    text-align: center;
-    font-weight: 600;
-  }
-  
-  .route-card__booked {
-    font-size: 28px;
-    font-weight: 600;
-    justify-self: end;
-    text-align: right;
-  }
-  
-  /* Stops rows: Pin gutter | Stop | Time(center) | Status(right) */
-  .stops-list {
-    display: grid;
-    gap: 10px 16px;
-  }
-  
-  .stop-row {
-    display: grid;
-    grid-template-columns: 24px 1fr 140px 1fr;
-    align-items: center;
-    font-size: 20px;
-  }
-  
-  .stop-pin-slot {
-    width: 24px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .pin {
-    color: #e33;
-    font-size: 18px;
-    line-height: 1;
-  }
-  
-  .stop-name { font-weight: 500; text-align: left; }
-  .stop-time { text-align: center; font-weight: 600; }
-  .status { justify-self: end; text-align: right; }
-  
-  /* ===== Buttons row ===== */
-  .actions-bar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 22px;
-    width: 100%;
-    margin: 14px 0 6px;
-  }
-  
-  .scan-btn,
-  .manual-booking-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 16px 32px;
-    font-size: 24px;
-    font-weight: 800;
-    border-radius: 12px;
-    cursor: pointer;
-    border: none;
-    width: 350px;
-    text-align: center;
-  }
-  
-  .scan-btn { background: #0a1970; color: #fff; }
-  .manual-booking-btn { background: #fff; color: #111; border: 2px solid #111; }
-  
-  .btn-icon { font-size: 26px; }
-  
-  /* ===== Passenger header ===== */
-  .passenger-head-section { margin-top: 6px; }
-  
-  .table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  
-  .table-header h3 {
-    font-size: 28px;
-    font-weight: 800;
-    margin: 0;
-  }
-  
-  /* Search with inline SVG inside input */
-  .table-search { position: relative; width: 300px; }
-  
-  .table-search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    color: #666;
-    pointer-events: none;
-  }
-  
-  .table-search-input {
-    width: 100%;
-    border: 2px solid #999;
-    border-radius: 24px;
-    padding: 8px 14px 8px 38px;
-    font-size: 14px;
-    background: #fff;
-    outline: none;
-  }
-  
-  .table-search-input::placeholder { color: #888; }
-  
-  /* ===== Table block ===== */
-  .boarding-table-section {
-    margin-top: 10px;
-    padding-top: 12px;
-    border-top: 1px solid #d0d5dd;
-    overflow-x: auto;
-  }
-  
-  .table-wrapper { width: 1550px; }
-  
-  .passenger-list-table {
-    width: 100%;
-    min-width: 1400px;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-  
-  .passenger-list-table th,
-  .passenger-list-table td {
-    padding: 10px 8px;
-    text-align: center;
-    border: 1px solid #000;
-    font-size: 14px;
-    width: 250px;
-  }
-  
-  .passenger-list-table th {
-    background: #ccddff;
-    font-weight: 700;
-  }
-  
-  /* Booking status colors */
-  .status-badge { font-weight: 700; letter-spacing: 0.3px; }
-  .status-ob { color: #16a34a; }
-  .status-co { color: #2563eb; }
-  .status-pe { color: #6b7280; }
-  .status-ca { color: #dc2626; }
-  .status-di { color: #d97706; }
-  
-  .action-cell { display: flex; justify-content: center; gap: 8px; }
-  
-  .chip-btn {
-    border: none;
-    border-radius: 9999px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    color: #fff;
-  }
-  
-  .chip-accept { background: #16a34a; }
-  .chip-cancel { background: #dc2626; }
-  
-  .muted { color: #9ca3af; }
-  
-  /* ===== Generic modal shell ===== */
-  .boarding-landing-container .boarding-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    display: grid;
-    place-items: center;
-    z-index: 4000;
-  }
-  
-  .boarding-landing-container .boarding-modal-card {
-    background: #fff;
-    border-radius: 10px;
-    width: min(640px, 92vw);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-    padding: 22px 24px;
-  }
-  
-  .boarding-landing-container .boarding-modal-title-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .boarding-landing-container .boarding-modal-qmark {
-    display: inline-grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: #f3f4f6;
-    color: #111827;
-    font-weight: 800;
-    font-size: 18px;
-  }
-  
-  .boarding-landing-container .boarding-modal-card h4 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 800;
-  }
-  
-  .boarding-landing-container .boarding-modal-sub {
-    margin: 10px 0 18px;
-    color: #374151;
-    font-size: 15px;
-  }
-  
-  .boarding-landing-container .boarding-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-  
-  .boarding-landing-container .boarding-modal-btn {
-    border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  
-  .boarding-landing-container .boarding-modal-cancel {
-    background: #f3f4f6;
-    color: #111827;
-  }
-  
-  .boarding-landing-container .boarding-modal-yes {
-    background: #16a34a;
-    color: #fff;
-  }
-  
-  .boarding-landing-container .boarding-modal-yes-danger {
-    background: #dc2626;
-    color: #fff;
-  }
-  
-  /* ===== Scan modal ===== */
-  .boarding-scan-card {
-    width: 820px;
-    max-width: 92vw;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.25);
-    padding: 28px 32px 24px;
-    text-align: center;
-  }
-  
-  .boarding-scan-title {
-    font-size: 40px;
-    font-weight: 800;
-    margin: 0 0 6px 0;
-  }
-  
-  .boarding-scan-sub { margin: 0 0 16px 0; color: #374151; font-size: 18px; }
-  .boarding-scan-illustration {
-    width: 240px; height: 240px; border-radius: 50%;
-    margin: 8px auto 8px; overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
-    border: 1px solid #e5e7eb; background: #fafafa;
-    font-size: 64px;
-  }
-  .boarding-scan-hint { color: #4b5563; margin: 2px 0; }
-  
-  .boarding-scan-actions { display: flex; justify-content: center; margin-top: 16px; }
-  .boarding-scan-close {
-    padding: 10px 24px; background: #0a1970; color: #fff;
-    border: none; border-radius: 12px; font-weight: 800; cursor: pointer;
-  }
-  
-  /* Success view */
-  .boarding-scan--left .boarding-scan-confirm,
-  .boarding-scan--left .boarding-scan-details { text-align: left; }
-  
-  .boarding-scan-confirm { font-size: 22px; font-weight: 800; margin: 6px 0 12px; }
-  .boarding-scan-details { margin: 6px auto 0; max-width: 520px; font-size: 18px; line-height: 1.55; }
-  .boarding-scan-details strong { font-weight: 800; }
-  
-  /* ===== Manual booking form ===== */
-  .boarding-manual-card {
-    width: 960px; max-width: 92vw; background: #fff; border-radius: 10px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.3); padding: 22px 26px;
-  }
-  
-  .boarding-manual-title { font-size: 32px; font-weight: 800; margin: 2px 0 12px; }
-  .boarding-manual-section { margin-top: 4px; }
-  .boarding-manual-subtitle { font-size: 26px; font-weight: 800; margin: 6px 0; }
-  .boarding-manual-desc { color: #5b5b5b; margin: 0 0 16px 0; }
-  
-  .boarding-manual-grid {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px; margin-top: 8px;
-  }
-  .boarding-manual-span2 { grid-column: span 2; }
-  
-  .boarding-manual-input {
-    width: 100%; border: 2px solid #222; border-radius: 6px;
-    padding: 10px 12px; font-size: 16px; outline: none;
-  }
-  .boarding-manual-input:focus { border-color: #0a1970; }
-  
-  .boarding-manual-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
-  .boarding-manual-next {
-    background: #0a1970; color: #fff; font-weight: 800; border: none;
-    border-radius: 8px; padding: 12px 28px; cursor: pointer;
-  }
-  .boarding-manual-next:hover { filter: brightness(1.05); }
-  .boarding-manual-next[disabled],
-  .boarding-manual-next[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
-  
-  /* Inline validation feedback */
-  .boarding-error-text { margin-top: 4px; font-size: 12px; color: #dc2626; }
-  .boarding-field-error { border-color: #dc2626 !important; }
-  
-  /* ===== Success modal after manual add ===== */
-  .manual-success-title { font-size: 32px; font-weight: 800; margin: 0 0 6px; }
-  .manual-success-sub { font-size: 20px; font-weight: 800; margin: 2px 0 12px; text-align: center; }
-  .manual-success-lines { font-size: 16px; line-height: 1.6; margin: 6px 4px 14px; }
-  .manual-success-lines strong { font-weight: 800; }
-  .manual-success-banner {
-    margin: 6px 0 10px;
-    background: #dbe7ff;
-    color: #111827;
-    border-radius: 6px;
-    padding: 10px 12px;
-    text-align: center;
-    border: 1px solid #c3d4ff;
-  }
+  display: flex;
+  height: 100vh;
+  width: 1550px;
+  background: #fff;
+  margin-left: -40px;
+  margin-top: 150px;
+}
+
+/* Main content */
+.main-content {
+  flex: 1;
+  padding: 24px 28px;
+}
+
+/* Header */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.boarding-header-info h1 {
+  font-size: 44px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  line-height: 1.1;
+  color: #000;
+  text-align: start;
+}
+
+/* Route card */
+.route-card {
+  width: 1550px;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 0 auto;
+}
+
+/* Symmetric header: Route | (center) Time | Booked */
+.route-card__top {
+  display: grid;
+  grid-template-columns: 1fr 140px 1fr;
+  align-items: baseline;
+  column-gap: 16px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.route-card__path {
+  font-size: 28px;
+  font-weight: 700;
+  justify-self: start;
+  text-align: left;
+}
+
+.route-card__time {
+  font-size: 28px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.route-card__booked {
+  font-size: 28px;
+  font-weight: 600;
+  justify-self: end;
+  text-align: right;
+}
+
+/* Stops rows: Pin gutter | Stop | Time(center) | Status(right) */
+/* Stops rows: Pin gutter | Stop | Time(center) | Status(right) */
+.stops-list {
+  display: block;
+  height: 160px;     /* force a small window so scrollbar shows */
+  overflow-y: scroll;    /* 👈 always show scrollbar, not auto */
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  padding-right: 8px;    /* space so text doesn’t overlap scrollbar */
+  background: #fff;
+}
+
+.stop-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 140px 1fr;
+  align-items: center;
+  font-size: 18px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stop-row:last-child {
+  border-bottom: none;
+}
+
+/* Scrollbar style */
+.stops-list::-webkit-scrollbar {
+  width: 10px;
+}
+.stops-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.stops-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+.stops-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
+
+.stop-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 140px 1fr;
+  align-items: center;
+  font-size: 20px;
+}
+
+.stop-pin-slot {
+  width: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pin {
+  color: #e33;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Ensure the new SVG pin sizes nicely */
+.pin svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.stop-name { font-weight: 500; text-align: left; }
+.stop-time { text-align: center; font-weight: 600; }
+.status { justify-self: end; text-align: right; }
+
+/* ===== Buttons row ===== */
+.actions-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  margin: 14px 0 6px;
+}
+
+.scan-btn,
+.manual-booking-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 32px;
+  font-size: 24px;
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  border: none;
+  width: 350px;
+  text-align: center;
+}
+
+.scan-btn { background: #0a1970; color: #fff; }
+.manual-booking-btn { background: #fff; color: #111; border: 2px solid #111; }
+
+.btn-icon { font-size: 26px; }
+
+/* ===== Passenger header ===== */
+.passenger-head-section { margin-top: 6px; }
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.table-header h3 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+}
+
+/* Search with inline SVG inside input */
+.table-search { position: relative; width: 300px; }
+
+.table-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #666;
+  pointer-events: none;
+}
+
+.table-search-input {
+  width: 100%;
+  border: 2px solid #999;
+  border-radius: 24px;
+  padding: 8px 14px 8px 38px;
+  font-size: 14px;
+  background: #fff;
+  outline: none;
+}
+
+.table-search-input::placeholder { color: #888; }
+
+/* ===== Table block ===== */
+/* Passenger Table Section */
+/* Passenger Table Section */
+/* Passenger Table Section */
+.boarding-table-section {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #d0d5dd;
+
+  max-height: 430px;          /* vertical scroll */
+  overflow-y: auto;           /* vertical scroll */
+  overflow-x: auto;           /* horizontal scroll */
+  width: 1550px;
+  background: #fff;
+}
+
+/* Wrapper just ensures scrollbars don’t duplicate */
+.table-wrapper {
+  width: 100%;
+  overflow: visible;          /* let parent handle scrolling */
+}
+
+/* Table */
+.passenger-list-table {
+  width: max-content;         /* expand horizontally to fit columns */
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.passenger-list-table th,
+.passenger-list-table td {
+  padding: 10px 12px;
+  text-align: center;
+  border: 1px solid #000;
+  font-size: 15px;
+  white-space: nowrap;        /* prevent wrapping */
+}
+
+.passenger-list-table th {
+  background: #ccddff;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* ✅ Match scrollbar style with Status Table */
+.boarding-table-section::-webkit-scrollbar {
+  height: 10px;   /* horizontal scrollbar height */
+  width: 10px;    /* vertical scrollbar width */
+}
+.boarding-table-section::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.boarding-table-section::-webkit-scrollbar-thumb {
+  background: #999;        /* gray thumb */
+  border-radius: 4px;
+}
+.boarding-table-section::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* Firefox */
+.boarding-table-section {
+  scrollbar-width: thin;
+  scrollbar-color: #999 #f1f1f1;
+}
+
+
+
+/* Booking status colors */
+.status-badge { font-weight: 700; letter-spacing: 0.3px; }
+.status-ob { color: #16a34a; }
+.status-co { color: #2563eb; }
+.status-pe { color: #6b7280; }
+.status-ca { color: #dc2626; }
+.status-di { color: #d97706; }
+
+.action-cell { display: flex; justify-content: center; gap: 8px; }
+
+.chip-btn {
+  border: none;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+}
+
+.chip-accept { background: #16a34a; }
+.chip-cancel { background: #dc2626; }
+
+.muted { color: #9ca3af; }
+
+/* ===== Generic modal shell ===== */
+.boarding-landing-container .boarding-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: grid;
+  place-items: center;
+  z-index: 4000;
+}
+
+.boarding-landing-container .boarding-modal-card {
+  background: #fff;
+  border-radius: 10px;
+  width: min(640px, 92vw);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  padding: 22px 24px;
+}
+
+.boarding-landing-container .boarding-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.boarding-landing-container .boarding-modal-qmark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.boarding-landing-container .boarding-modal-card h4 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.boarding-landing-container .boarding-modal-sub {
+  margin: 10px 0 18px;
+  color: #374151;
+  font-size: 15px;
+}
+
+.boarding-landing-container .boarding-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.boarding-landing-container .boarding-modal-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.boarding-landing-container .boarding-modal-cancel {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.boarding-landing-container .boarding-modal-yes {
+  background: #16a34a;
+  color: #fff;
+}
+
+.boarding-landing-container .boarding-modal-yes-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* ===== Scan modal ===== */
+.boarding-scan-card {
+  width: 820px;
+  max-width: 92vw;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  padding: 28px 32px 24px;
+  text-align: center;
+}
+
+.boarding-scan-title {
+  font-size: 40px;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+}
+
+.boarding-scan-sub { margin: 0 0 16px 0; color: #374151; font-size: 18px; }
+.boarding-scan-illustration {
+  width: 240px; height: 240px; border-radius: 50%;
+  margin: 8px auto 8px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e5e7eb; background: #fafafa;
+  font-size: 64px;
+}
+.boarding-scan-hint { color: #4b5563; margin: 2px 0; }
+
+.boarding-scan-actions { display: flex; justify-content: center; margin-top: 16px; }
+.boarding-scan-close {
+  padding: 10px 24px; background: #0a1970; color: #fff;
+  border: none; border-radius: 12px; font-weight: 800; cursor: pointer;
+}
+
+/* Success view */
+.boarding-scan--left .boarding-scan-confirm,
+.boarding-scan--left .boarding-scan-details { text-align: left; }
+
+.boarding-scan-confirm { font-size: 22px; font-weight: 800; margin: 6px 0 12px; }
+.boarding-scan-details { margin: 6px auto 0; max-width: 520px; font-size: 18px; line-height: 1.55; }
+.boarding-scan-details strong { font-weight: 800; }
+
+/* ===== Manual booking form ===== */
+.boarding-manual-card {
+  width: 960px; max-width: 92vw; background: #fff; border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3); padding: 22px 26px;
+}
+
+.boarding-manual-title { font-size: 32px; font-weight: 800; margin: 2px 0 px; color: #000;}
+.boarding-manual-section { margin-top: 4px; }
+.boarding-manual-subtitle { font-size: 26px; font-weight: 800; margin: 0px 0; color: black; }
+.boarding-manual-desc { color: #5b5b5b; margin: 0 0 16px 0; }
+
+.boarding-manual-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px; margin-top: 8px;
+}
+.boarding-manual-span2 { grid-column: span 2; }
+
+.boarding-manual-input {
+  width: 100%; border: 2px solid #222; border-radius: 6px;
+  padding: 10px 12px; font-size: 16px; outline: none;
+}
+.boarding-manual-input:focus { border-color: #0a1970; }
+
+.boarding-manual-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
+.boarding-manual-next {
+  background: #0a1970; color: #fff; font-weight: 800; border: none;
+  border-radius: 8px; padding: 12px 28px; cursor: pointer;
+}
+.boarding-manual-next:hover { filter: brightness(1.05); }
+.boarding-manual-next[disabled],
+.boarding-manual-next[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+
+/* Inline validation feedback */
+.boarding-error-text { margin-top: 4px; font-size: 12px; color: #dc2626; }
+.boarding-field-error { border-color: #dc2626 !important; }
+
+/* ===== Success modal after manual add ===== */
+.manual-success-title { font-size: 32px; font-weight: 800; margin: 0 0 6px; }
+.manual-success-sub { font-size: 20px; font-weight: 800; margin: 2px 0 12px; text-align: center; }
+.manual-success-lines { font-size: 16px; line-height: 1.6; margin: 6px 4px 14px; }
+.manual-success-lines strong { font-weight: 800; }
+.manual-success-banner {
+  margin: 6px 0 10px;
+  background: #dbe7ff;
+  color: #111827;
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-align: center;
+  border: 1px solid #c3d4ff;
+}
+
+.boarding-manual-select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #222 50%),
+    linear-gradient(135deg, #222 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(50% - 3px),
+    calc(100% - 15px) calc(50% - 3px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Make selects visually match text inputs in the manual form */
+.boarding-manual-select {
+  appearance: none;
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #222 50%),
+    linear-gradient(135deg, #222 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(50% - 4px),
+    calc(100% - 15px) calc(50% - 4px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
