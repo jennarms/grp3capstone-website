@@ -20,6 +20,9 @@ import { StationDashboard } from './pages/station_dashboard'
 import { BoardingLandingPage } from './pages/station_boardingLanding'
 import { Boarding } from './pages/station_boarding'
 import { DisembarkingLandingPage } from './pages/station_disembarkingLanding'
+import { Disembarking } from './pages/station_disembarking'
+import { StationBroadcast } from './pages/station_broadcast'
+import { StationSOS } from './pages/station_sos'
 
 
 
@@ -47,6 +50,9 @@ function App() {
         <Route path="/boarding" element={<BoardingLandingPage />} />
         <Route path="/boarding/passengerlist" element={<Boarding />} />
         <Route path="/disembarking" element={<DisembarkingLandingPage />} />
+        <Route path="/disembarking/passengerlist" element={<Disembarking />} />
+        <Route path="/stationbroadcast" element={<StationBroadcast />} />
+        <Route path="/stationsos" element={<StationSOS />} />
 
 
 

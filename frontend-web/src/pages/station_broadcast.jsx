@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { HeaderButton } from "../components/headerButton";
-import { Navbar } from "../components/navBar";
-import "./broadcastChannel.css";
+import { LogoutButton } from "../components/logout_button";
+import { StationNavbar } from "../components/station_navbar";
+import "./station_broadcast.css";
 
-
-const EMOJI_PALETTE = [
-  "👍","🥰","😮","😢","👎",
-  "😡", "🙂"
-];
+const EMOJI_PALETTE = ["👍", "🥰", "😮", "😢", "👎", "😡", "🙂"];
 
 /** Single message bubble with dynamic reactions + emoji picker */
 function Message({ msg, onReact, onTogglePicker, isPickerOpen, onPickEmoji }) {
@@ -18,29 +14,29 @@ function Message({ msg, onReact, onTogglePicker, isPickerOpen, onPickEmoji }) {
       : "other";
 
   return (
-    <div className={`bc-msg ${roleClass}`}>
-      <div className="bc-author">{msg.author}</div>
-      <div className="bc-bubble">
+    <div className={`station-bc-msg ${roleClass}`}>
+      <div className="station-bc-author">{msg.author}</div>
+      <div className="station-bc-bubble">
         <p>{msg.text}</p>
       </div>
 
-      <div className="bc-reactions">
+      <div className="station-bc-reactions">
         {reactions.map(([emoji, count]) => (
           <button
             key={emoji}
-            className="bc-chip"
+            className="station-bc-chip"
             type="button"
             onClick={() => onReact(msg.id, emoji)}
             aria-label={`React ${emoji}`}
           >
-            <span className="bc-chip-emoji">{emoji}</span>
-            <span className="bc-chip-count">{count}</span>
+            <span className="station-bc-chip-emoji">{emoji}</span>
+            <span className="station-bc-chip-count">{count}</span>
           </button>
         ))}
 
         {/* Add reaction opens the emoji-only picker */}
         <button
-          className="bc-chip bc-chip-add"
+          className="station-bc-chip station-bc-chip-add"
           type="button"
           title="Add reaction"
           onClick={() => onTogglePicker(msg.id)}
@@ -52,11 +48,15 @@ function Message({ msg, onReact, onTogglePicker, isPickerOpen, onPickEmoji }) {
 
         {/* Inline emoji picker (emojis only) */}
         {isPickerOpen && (
-          <div className="bc-emoji-pop" id={`picker-${msg.id}`} role="menu">
+          <div
+            className="station-bc-emoji-pop"
+            id={`picker-${msg.id}`}
+            role="menu"
+          >
             {EMOJI_PALETTE.map((e) => (
               <button
                 key={e}
-                className="bc-emoji-btn"
+                className="station-bc-emoji-btn"
                 type="button"
                 role="menuitem"
                 onClick={() => onPickEmoji(msg.id, e)}
@@ -71,7 +71,7 @@ function Message({ msg, onReact, onTogglePicker, isPickerOpen, onPickEmoji }) {
   );
 }
 
-export function Broadcast() {
+export function StationBroadcast() {
   const [tab, setTab] = useState("everyone");
   const [draft, setDraft] = useState("");
   const feedRef = useRef(null);
@@ -104,8 +104,8 @@ export function Broadcast() {
         audience: tab,
         author: tab === "admins" ? "Admin" : "Main Administrator",
         text,
-        reactions: {}
-      }
+        reactions: {},
+      },
     ]);
 
     setDraft("");
@@ -124,7 +124,10 @@ export function Broadcast() {
         m.id === id
           ? {
               ...m,
-              reactions: { ...m.reactions, [emoji]: (m.reactions[emoji] || 0) + 1 }
+              reactions: {
+                ...m.reactions,
+                [emoji]: (m.reactions[emoji] || 0) + 1,
+              },
             }
           : m
       )
@@ -143,38 +146,42 @@ export function Broadcast() {
   };
 
   return (
-    <div className="broadcast-channel">
-      <Navbar />
-      <div className="main-content">
-        <HeaderButton />
+    <>
+      <StationNavbar/>
+      <div className="station-bc-main-content">
+        <LogoutButton />
 
         {/* Tabs */}
-        <div className="bc-tabs center-row">
+        <div className="station-bc-tabs station-center-row">
           <button
-            className={`bc-tab ${tab === "everyone" ? "active" : ""}`}
+            className={`station-bc-tab ${
+              tab === "everyone" ? "active" : ""
+            }`}
             onClick={() => setTab("everyone")}
           >
             For Everyone
           </button>
           <button
-            className={`bc-tab ${tab === "admins" ? "active" : ""}`}
+            className={`station-bc-tab ${
+              tab === "admins" ? "active" : ""
+            }`}
             onClick={() => setTab("admins")}
           >
             Admins
           </button>
         </div>
 
-        <div className="header-row">
-          <h1 className="page-title">Broadcast Channel</h1>
-          <HeaderButton />
+        <div className="station-header-row">
+          <h1 className="station-page-title">Broadcast Channel</h1>
+          <LogoutButton />
         </div>
 
-        <hr className="bc-title-rule" />
+        <hr className="station-bc-title-rule" />
 
         {/* Feed */}
-        <div className="bc-feed" ref={feedRef}>
+        <div className="station-bc-feed" ref={feedRef}>
           {filtered.length === 0 ? (
-            <div className="bc-empty">No messages yet.</div>
+            <div className="station-bc-empty">No messages yet.</div>
           ) : (
             filtered.map((m) => (
               <Message
@@ -190,24 +197,28 @@ export function Broadcast() {
         </div>
 
         {/* Composer with icon INSIDE the field */}
-        <div className="bc-composer" style={{ position: "relative" }}>
+        <div className="station-bc-composer" style={{ position: "relative" }}>
           <textarea
-            className="bc-input"
+            className="station-bc-input"
             placeholder="Type a message..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleEnter}
-            style={{ paddingRight: 48 }}        // room for the icon
+            style={{ paddingRight: 48 }} // room for the icon
           />
-          <button className="bc-send" onClick={sendMessage} aria-label="Send">
+          <button
+            className="station-bc-send"
+            onClick={sendMessage}
+            aria-label="Send"
+          >
             <img
               src="https://cdn-icons-png.flaticon.com/512/126/126475.png"
               alt="Send"
-              className="bc-send-icon"
+              className="station-bc-send-icon"
             />
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
