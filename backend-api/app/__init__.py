@@ -43,7 +43,7 @@ def create_app():
 
     # JWT Config
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7) 
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)
 
     # Initialize extensions
     mysql.init_app(app)
