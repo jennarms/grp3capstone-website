@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app import mysql
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 feedback_bp = Blueprint("feedback", __name__)
 
@@ -14,7 +15,7 @@ CATEGORY_MAP = {
 REVERSE_CATEGORY_MAP = {v: k for k, v in CATEGORY_MAP.items()}
 
 
-# 🔹 Fetch all feedback (with global auto-reply applied if enabled)
+# 🔹 Fetch all feedback (public)
 @feedback_bp.route("/", methods=["GET"])
 def get_feedback():
     cur = mysql.connection.cursor()
@@ -56,19 +57,24 @@ def get_feedback():
 
     return jsonify(feedback_list)
 
-# 🔹 Delete feedback
+
+# 🔹 Delete feedback (protected)
 @feedback_bp.route("/<fid>", methods=["DELETE"])
+@jwt_required()
 def delete_feedback(fid):
+    current_user = get_jwt_identity()  # ✅ log who deleted
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM Feedback WHERE Feedback_ID = %s", (fid,))
     mysql.connection.commit()
     cur.close()
-    return jsonify({"success": True, "message": "Feedback deleted"})
+    return jsonify({"success": True, "message": f"Feedback {fid} deleted by {current_user}"})
 
 
-# 🔹 Update reply for a specific feedback
+# 🔹 Update reply for a specific feedback (protected)
 @feedback_bp.route("/<fid>/reply", methods=["PUT"])
+@jwt_required()
 def reply_feedback(fid):
+    current_user = get_jwt_identity()
     data = request.json
     reply = data.get("reply")
     if not reply:
@@ -80,16 +86,19 @@ def reply_feedback(fid):
     row = cur.fetchone()
     if row and row[0]:  # enabled == True
         cur.close()
-        return jsonify({"success": False, "message": "Global auto-reply is enabled. Disable it to set per-feedback replies."}), 403
+        return jsonify({
+            "success": False,
+            "message": "Global auto-reply is enabled. Disable it to set per-feedback replies."
+        }), 403
 
     cur.execute("UPDATE Feedback SET auto_reply = %s WHERE Feedback_ID = %s", (reply, fid))
     mysql.connection.commit()
     cur.close()
 
-    return jsonify({"success": True, "message": "Reply updated"})
+    return jsonify({"success": True, "message": f"Reply updated by {current_user}"})
 
 
-# 🔹 Get global feedback settings
+# 🔹 Get global feedback settings (public)
 @feedback_bp.route("/settings", methods=["GET"])
 def get_feedback_settings():
     cur = mysql.connection.cursor()
@@ -107,9 +116,11 @@ def get_feedback_settings():
     })
 
 
-# 🔹 Update global feedback settings
+# 🔹 Update global feedback settings (protected)
 @feedback_bp.route("/settings", methods=["PUT"])
+@jwt_required()
 def update_feedback_settings():
+    current_user = get_jwt_identity()
     data = request.json
     enabled = bool(data.get("enabled", False))
     message = data.get("message", "")
@@ -123,4 +134,4 @@ def update_feedback_settings():
     mysql.connection.commit()
     cur.close()
 
-    return jsonify({"success": True, "message": "Settings updated"})
+    return jsonify({"success": True, "message": f"Settings updated by {current_user}"})

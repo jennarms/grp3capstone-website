@@ -4,6 +4,7 @@ from flask_mysqldb import MySQL
 from flask_mail import Mail
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 
 
@@ -42,6 +43,7 @@ def create_app():
 
     # JWT Config
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7) 
 
     # Initialize extensions
     mysql.init_app(app)

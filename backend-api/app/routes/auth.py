@@ -62,7 +62,6 @@ def login():
             token = create_access_token(
                 identity=str(user_id),
                 additional_claims={"role": role},
-                expires_delta=timedelta(hours=1)
             )
 
             cur.close()

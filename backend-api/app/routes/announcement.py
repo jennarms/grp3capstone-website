@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mysql
 from datetime import datetime
 import traceback
@@ -6,7 +7,7 @@ import traceback
 announcement_bp = Blueprint("announcement", __name__)
 
 # =====================
-# GET ALL ANNOUNCEMENTS
+# GET ALL ANNOUNCEMENTS (public)
 # =====================
 @announcement_bp.route("", methods=["GET"])
 def get_announcements():
@@ -42,19 +43,20 @@ def get_announcements():
 
 
 # =====================
-# CREATE ANNOUNCEMENT
+# CREATE ANNOUNCEMENT (admin only)
 # =====================
 @announcement_bp.route("", methods=["POST"])
+@jwt_required()
 def create_announcement():
-    data = request.get_json()
-    title = data.get("title")
-    content = data.get("content")
-    admin_id = data.get("admin_id")  # 🔹 Client must send admin_id
-
-    if not title or not content or not admin_id:
-        return jsonify({"error": "Title, content, and admin_id are required"}), 400
-
     try:
+        current_user = get_jwt_identity()  # admin ID from token
+        data = request.get_json()
+        title = data.get("title")
+        content = data.get("content")
+
+        if not title or not content:
+            return jsonify({"error": "Title and content are required"}), 400
+
         cur = mysql.connection.cursor()
 
         # ✅ Get the latest Announce_ID using numeric order
@@ -85,12 +87,12 @@ def create_announcement():
             INSERT INTO Announcements (Announce_ID, Admin_ID, title, date_time, content)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (announce_id, admin_id, title, date_time, content),
+            (announce_id, current_user, title, date_time, content),
         )
         mysql.connection.commit()
 
         # ✅ Fetch admin_name for the response
-        cur.execute("SELECT username FROM MainAdmin WHERE Admin_ID = %s", (admin_id,))
+        cur.execute("SELECT username FROM MainAdmin WHERE Admin_ID = %s", (current_user,))
         admin_row = cur.fetchone()
         admin_name = admin_row[0] if admin_row else "Unknown"
 
@@ -115,19 +117,20 @@ def create_announcement():
 
 
 # =====================
-# UPDATE ANNOUNCEMENT
+# UPDATE ANNOUNCEMENT (admin only)
 # =====================
 @announcement_bp.route("/<announce_id>", methods=["PUT"])
+@jwt_required()
 def update_announcement(announce_id):
-    data = request.get_json()
-    title = data.get("title")
-    content = data.get("content")
-    admin_id = data.get("admin_id")
-
-    if not title or not content or not admin_id:
-        return jsonify({"error": "Title, content, and admin_id are required"}), 400
-
     try:
+        current_user = get_jwt_identity()
+        data = request.get_json()
+        title = data.get("title")
+        content = data.get("content")
+
+        if not title or not content:
+            return jsonify({"error": "Title and content are required"}), 400
+
         cur = mysql.connection.cursor()
         cur.execute(
             """
@@ -135,7 +138,7 @@ def update_announcement(announce_id):
             SET title = %s, content = %s
             WHERE Announce_ID = %s AND Admin_ID = %s
             """,
-            (title, content, announce_id, admin_id),
+            (title, content, announce_id, current_user),
         )
         mysql.connection.commit()
         cur.close()
@@ -148,21 +151,18 @@ def update_announcement(announce_id):
 
 
 # =====================
-# DELETE ANNOUNCEMENT
+# DELETE ANNOUNCEMENT (admin only)
 # =====================
 @announcement_bp.route("/<announce_id>", methods=["DELETE"])
+@jwt_required()
 def delete_announcement(announce_id):
-    data = request.get_json()
-    admin_id = data.get("admin_id")
-
-    if not admin_id:
-        return jsonify({"error": "admin_id is required"}), 400
-
     try:
+        current_user = get_jwt_identity()
+
         cur = mysql.connection.cursor()
         cur.execute(
             "DELETE FROM Announcements WHERE Announce_ID = %s AND Admin_ID = %s",
-            (announce_id, admin_id),
+            (announce_id, current_user),
         )
         mysql.connection.commit()
         cur.close()
