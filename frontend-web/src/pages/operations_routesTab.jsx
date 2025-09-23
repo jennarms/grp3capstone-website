@@ -64,13 +64,11 @@ export function RoutesTab() {
     let filtered = rows;
     
     // Apply direction filter first
-    if (directionFilter !== "All") {
-      if (directionFilter === "Reverse") {
-        filtered = filtered.filter(r => r.direction === 'RE');
-      } else if (directionFilter === "Forward") {
-        filtered = filtered.filter(r => r.direction === 'FO');
-      } else if (directionFilter === "N/A") {
-        filtered = filtered.filter(r => !r.direction || r.direction === null || r.direction === '');
+      if (directionFilter !== "All") {
+        if (directionFilter === "Reverse") {
+          filtered = filtered.filter(r => r.direction === 'RE');
+        } else if (directionFilter === "Forward") {
+          filtered = filtered.filter(r => r.direction === 'FO');
       }
     }
     
@@ -121,7 +119,6 @@ export function RoutesTab() {
   const getDirectionDisplay = (direction) => {
     if (direction === 'RE') return 'Reverse';
     if (direction === 'FO') return 'Forward';
-    if (direction === null || direction === '' || direction === undefined) return 'N/A';
     return direction;
   };
 
@@ -561,7 +558,6 @@ export function RoutesTab() {
             <option value="All">All Routes</option>
             <option value="Reverse">Reverse</option>
             <option value="Forward">Forward</option>
-            <option value="N/A">N/A</option>
           </select>
         </label>
 
@@ -744,7 +740,6 @@ export function RoutesTab() {
               <select value={routeDraft.direction} onChange={(e) => setRouteDraft({ ...routeDraft, direction: e.target.value })}>
                 <option value="Reverse">Reverse</option>
                 <option value="Forward">Forward</option>
-                <option value="Null">Null</option>
               </select>
             </div>
             <div className="rt-modalActions">
@@ -775,7 +770,6 @@ export function RoutesTab() {
               <select value={routeEdit.direction} onChange={(e) => setRouteEdit({ ...routeEdit, direction: e.target.value })}>
                 <option value="Reverse">Reverse</option>
                 <option value="Forward">Forward</option>
-                <option value="Null">Null</option>
               </select>
             </div>
             <div className="rt-modalActions">

@@ -160,7 +160,7 @@ def fetch_routes():
             result = [{
                 "Route_ID": row[0],
                 "Route_name": row[1],
-                "Direction": row[2] if row[2] else "N/A"
+                "Direction": row[2]
             } for row in routes]
             return jsonify(result)
         finally:
