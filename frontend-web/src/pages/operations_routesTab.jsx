@@ -11,7 +11,6 @@ export function RoutesTab() {
   const [rows, setRows] = useState([]);
   const [stationRows, setStationRows] = useState([]);
   const [availableStations, setAvailableStations] = useState([]);
-  const [activeRoute, setActiveRoute] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -168,25 +167,6 @@ export function RoutesTab() {
     } finally {
       setLoading(false);
     }
-  }, [route]);
-
-  const fetchActiveRoute = useCallback(async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/routes/active`, {
-        headers: getAuthHeaders()
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setActiveRoute(data);
-      } else {
-        // If no active route exists, that's okay
-        setActiveRoute(null);
-      }
-    } catch (err) {
-      console.error('Error fetching active route:', err);
-      setActiveRoute(null);
-    }
   }, []);
 
   const fetchAvailableStations = useCallback(async () => {
@@ -248,35 +228,6 @@ export function RoutesTab() {
       console.error('Error fetching route stations:', err);
     }
   }, []);
-
-  const activateRoute = async (routeId) => {
-    try {
-      setLoading(true);
-      setError("");
-      setSuccessMessage("");
-
-      const response = await fetch(`${apiUrl}/api/routes/${routeId}/set-active`, {
-        method: 'PUT',
-        headers: getAuthHeaders()
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setActiveRoute(data);
-        setSuccessMessage("Route set as active successfully!");
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccessMessage(""), 3000);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to set route as active');
-      }
-    } catch (err) {
-      setError('Error setting active route: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const createRoute = async (routeData) => {
     try {
@@ -420,8 +371,7 @@ export function RoutesTab() {
   useEffect(() => {
     fetchRoutes();
     fetchAvailableStations();
-    fetchActiveRoute();
-  }, [fetchRoutes, fetchAvailableStations, fetchActiveRoute]);
+  }, [fetchRoutes, fetchAvailableStations]);
 
   // Load route stations when selected route changes
   useEffect(() => {
@@ -600,12 +550,6 @@ export function RoutesTab() {
           </div>
         )}
 
-        {activeRoute && (
-          <div className="active-route-info" style={{ backgroundColor: '#f0f8ff', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #cce7ff' }}>
-            <strong>Today's Active Route:</strong> {activeRoute.route_name} ({activeRoute.route_id})
-          </div>
-        )}
-
         <h3 className="ops-routes-table-title">Routes</h3>
 
         <label className="ops-routes-water-flow">
@@ -655,71 +599,31 @@ export function RoutesTab() {
               </tr>
             </thead>
             <tbody>
-              {filteredRoutes.map((r) => {
-                const isActive = activeRoute && activeRoute.route_id === r.routeId;
-                return (
-                  <tr 
-                    key={r.routeId} 
-                    style={{
-                      backgroundColor: isActive ? '#e8f5e8' : 'transparent',
-                      borderLeft: isActive ? '4px solid #28a745' : 'none'
-                    }}
-                  >
-                    <td>
-                      {r.routeId}
-                      {isActive && (
-                        <span style={{ 
-                          marginLeft: '8px', 
-                          color: '#28a745', 
-                          fontWeight: 'bold',
-                          fontSize: '12px'
-                        }}>
-                          ✓ ACTIVE
-                        </span>
-                      )}
-                    </td>
-                    <td>{r.companyId}</td>
-                    <td>{r.routeName}</td>
-                    <td>{r.waterFlowDisplay}</td>
-                    <td>{r.vehicleId}</td>
-                    <td className="ops-routes-actions">
-                      <button 
-                        className="ops-routes-action ops-routes-edit" 
-                        onClick={() => openRouteEdit(r.routeId)}
-                        disabled={loading}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="ops-routes-action ops-routes-delete" 
-                        onClick={() => openRouteDelete(r.routeId)}
-                        disabled={loading}
-                      >
-                        Delete
-                      </button>
-                      {!isActive && (
-                        <button 
-                          className="ops-routes-action"
-                          style={{
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            padding: '4px 8px',
-                            borderRadius: '3px',
-                            fontSize: '12px',
-                            marginLeft: '4px',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => activateRoute(r.routeId)}
-                          disabled={loading}
-                        >
-                          Set Active
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredRoutes.map((r) => (
+                <tr key={r.routeId}>
+                  <td>{r.routeId}</td>
+                  <td>{r.companyId}</td>
+                  <td>{r.routeName}</td>
+                  <td>{r.waterFlowDisplay}</td>
+                  <td>{r.vehicleId}</td>
+                  <td className="ops-routes-actions">
+                    <button 
+                      className="ops-routes-action ops-routes-edit" 
+                      onClick={() => openRouteEdit(r.routeId)}
+                      disabled={loading}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="ops-routes-action ops-routes-delete" 
+                      onClick={() => openRouteDelete(r.routeId)}
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
               {filteredRoutes.length === 0 && !loading && (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
@@ -742,14 +646,11 @@ export function RoutesTab() {
             {rows.length === 0 ? (
               <option value="">No routes available</option>
             ) : (
-              rows.map((r) => {
-                const isActive = activeRoute && activeRoute.route_id === r.routeId;
-                return (
-                  <option key={r.routeId} value={r.routeName}>
-                    {r.routeName}{isActive ? " (Active)" : ""}
-                  </option>
-                );
-              })
+              rows.map((r) => (
+                <option key={r.routeId} value={r.routeName}>
+                  {r.routeName}
+                </option>
+              ))
             )}
           </select>
         </label>
