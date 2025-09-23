@@ -1,7 +1,16 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './navBar.css'; // Make sure this path is correct
 
 export function Navbar() {
+  // ✅ Get the username from localStorage
+  const [adminName, setAdminName] = useState("Main Admin");
+
+  useEffect(() => {
+    const storedName = localStorage.getItem("admin_name");
+    if (storedName) setAdminName(storedName);
+  }, []);
+
   return (
     <aside className="navbar-sidebar">
       <div className="navbar-sidebar-profile">
@@ -12,7 +21,8 @@ export function Navbar() {
         />
       </div>
 
-      <h2 className="navbar-sidebar-title">Main Admin</h2>
+      {/* Display the logged-in username */}
+      <h2 className="navbar-sidebar-title">{adminName}</h2>
 
       <nav className="navbar-sidebar-nav">
         <Link to="/announcement" className="navbar-sidebar-link">

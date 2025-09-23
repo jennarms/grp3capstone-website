@@ -32,7 +32,7 @@ def login():
 
         # Check MainAdmin
         cur.execute("""
-            SELECT Admin_ID, passwordHash, 'main-admin' as role
+            SELECT Admin_ID, username, passwordHash, 'main-admin' as role
             FROM MainAdmin
             WHERE username = %s OR email = %s
         """, (username_or_email, username_or_email))
@@ -41,41 +41,46 @@ def login():
         # If not MainAdmin, check Station
         if not account:
             cur.execute("""
-                SELECT Station_ID, password, 'station-admin' as role
+                SELECT Station_ID, username, password, 'station-admin' as role
                 FROM Station
                 WHERE username = %s OR email = %s
             """, (username_or_email, username_or_email))
             account = cur.fetchone()
 
-        cur.close()
-
         if not account:
+            cur.close()
             return jsonify({"error": "Invalid username/email or password"}), 401
 
-        user_id, stored_hash, role = account
-        stored_hash = stored_hash.encode('utf-8')
+        # Unpack values
+        user_id = account[0]
+        username = account[1]  # <-- fetch username directly
+        stored_hash = account[2].encode('utf-8')
+        role = account[3]
 
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-            # ✅ Use user_id only for identity
-            # ✅ Put role in claims
+            # Create JWT token
             token = create_access_token(
-                identity=str(user_id),  
+                identity=str(user_id),
                 additional_claims={"role": role},
                 expires_delta=timedelta(hours=1)
             )
 
+            cur.close()
             return jsonify({
                 "message": "Login successful!",
                 "role": role,
                 "admin_id": user_id,
+                "username": username,  # <-- now returned correctly
                 "token": token
             }), 200
         else:
+            cur.close()
             return jsonify({"error": "Invalid username/email or password"}), 401
 
     except Exception as err:
         print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
+
 
 # =====================
 # FORGOT PASSWORD - SEND OTP (Admin)

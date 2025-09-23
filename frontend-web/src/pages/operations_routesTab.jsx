@@ -11,7 +11,6 @@ export function RoutesTab() {
   const [rows, setRows] = useState([]);
   const [stationRows, setStationRows] = useState([]);
   const [availableStations, setAvailableStations] = useState([]);
-  const [activeRoute, setActiveRoute] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -19,7 +18,7 @@ export function RoutesTab() {
   const [routeQuery, setRouteQuery] = useState("");
   const [stationQuery, setStationQuery] = useState("");
   const [route, setRoute] = useState("");
-  const [waterFlowFilter, setWaterFlowFilter] = useState("All");
+  const [directionFilter, setDirectionFilter] = useState("All");
 
   /* ===== ROUTE modals/state ===== */
   const [routeAddOpen, setRouteAddOpen] = useState(false);
@@ -29,13 +28,13 @@ export function RoutesTab() {
     routeId: "",
     companyId: "",
     routeName: "",
-    waterFlow: "DS",
+    direction: "FO",
   });
   const [routeEdit, setRouteEdit] = useState({
     routeId: "",
     companyId: "",
     routeName: "",
-    waterFlow: "DS",
+    direction: "FO",
     vehicleId: ""
   });
   const [routeToDelete, setRouteToDelete] = useState(null);
@@ -64,14 +63,12 @@ export function RoutesTab() {
   const filteredRoutes = useMemo(() => {
     let filtered = rows;
     
-    // Apply water flow filter first
-    if (waterFlowFilter !== "All") {
-      if (waterFlowFilter === "Upstream") {
-        filtered = filtered.filter(r => r.waterFlow === 'US');
-      } else if (waterFlowFilter === "Downstream") {
-        filtered = filtered.filter(r => r.waterFlow === 'DS');
-      } else if (waterFlowFilter === "N/A") {
-        filtered = filtered.filter(r => !r.waterFlow || r.waterFlow === null || r.waterFlow === '');
+    // Apply direction filter first
+      if (directionFilter !== "All") {
+        if (directionFilter === "Reverse") {
+          filtered = filtered.filter(r => r.direction === 'RE');
+        } else if (directionFilter === "Forward") {
+          filtered = filtered.filter(r => r.direction === 'FO');
       }
     }
     
@@ -79,14 +76,14 @@ export function RoutesTab() {
     if (routeQuery.trim()) {
       const q = routeQuery.toLowerCase();
       filtered = filtered.filter((r) =>
-        (r.routeId + r.companyId + r.routeName + (r.waterFlowDisplay || ''))
+        (r.routeId + r.companyId + r.routeName + (r.directionDisplay || ''))
           .toLowerCase()
           .includes(q)
       );
     }
     
     return filtered;
-  }, [rows, routeQuery, waterFlowFilter]);
+  }, [rows, routeQuery, directionFilter]);
 
   const filteredStations = useMemo(() => {
     if (!stationQuery.trim()) return stationRows;
@@ -118,12 +115,11 @@ export function RoutesTab() {
     };
   };
 
-  // Helper function to format water flow display
-  const getWaterFlowDisplay = (waterFlow) => {
-    if (waterFlow === 'US') return 'Upstream';
-    if (waterFlow === 'DS') return 'Downstream';
-    if (waterFlow === null || waterFlow === '' || waterFlow === undefined) return 'N/A';
-    return waterFlow;
+  // Helper function to format direction display
+  const getDirectionDisplay = (direction) => {
+    if (direction === 'RE') return 'Reverse';
+    if (direction === 'FO') return 'Forward';
+    return direction;
   };
 
   // API Functions
@@ -147,8 +143,8 @@ export function RoutesTab() {
           routeId: routeItem.route_id,
           companyId: routeItem.company_id,
           routeName: routeItem.route_name,
-          waterFlow: routeItem.water_flow,
-          waterFlowDisplay: getWaterFlowDisplay(routeItem.water_flow),
+          direction: routeItem.direction,
+          directionDisplay: getDirectionDisplay(routeItem.direction),
           vehicleId: routeItem.vehicle_id || 'Not Assigned'
         }));
         setRows(mappedData);
@@ -167,25 +163,6 @@ export function RoutesTab() {
       setError('Error fetching routes: ' + err.message);
     } finally {
       setLoading(false);
-    }
-  }, [route]);
-
-  const fetchActiveRoute = useCallback(async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/routes/active`, {
-        headers: getAuthHeaders()
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setActiveRoute(data);
-      } else {
-        // If no active route exists, that's okay
-        setActiveRoute(null);
-      }
-    } catch (err) {
-      console.error('Error fetching active route:', err);
-      setActiveRoute(null);
     }
   }, []);
 
@@ -249,41 +226,12 @@ export function RoutesTab() {
     }
   }, []);
 
-  const activateRoute = async (routeId) => {
-    try {
-      setLoading(true);
-      setError("");
-      setSuccessMessage("");
-
-      const response = await fetch(`${apiUrl}/api/routes/${routeId}/set-active`, {
-        method: 'PUT',
-        headers: getAuthHeaders()
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setActiveRoute(data);
-        setSuccessMessage("Route set as active successfully!");
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccessMessage(""), 3000);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to set route as active');
-      }
-    } catch (err) {
-      setError('Error setting active route: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const createRoute = async (routeData) => {
     try {
       setLoading(true);
       const payload = {
         route_name: routeData.routeName,
-        water_flow: routeData.waterFlow === 'Upstream' ? 'US' : routeData.waterFlow === 'Downstream' ? 'DS' : null
+        direction: routeData.direction === 'Reverse' ? 'RE' : routeData.direction === 'Forward' ? 'FO' : null
       };
 
       const response = await fetch(`${apiUrl}/api/routes/`, {
@@ -420,8 +368,7 @@ export function RoutesTab() {
   useEffect(() => {
     fetchRoutes();
     fetchAvailableStations();
-    fetchActiveRoute();
-  }, [fetchRoutes, fetchAvailableStations, fetchActiveRoute]);
+  }, [fetchRoutes, fetchAvailableStations]);
 
   // Load route stations when selected route changes
   useEffect(() => {
@@ -436,7 +383,7 @@ export function RoutesTab() {
       routeId: "", 
       companyId: "", 
       routeName: "", 
-      waterFlow: "Downstream"
+      direction: "Forward"
     });
     setRouteAddOpen(true);
     setError("");
@@ -463,7 +410,7 @@ export function RoutesTab() {
       routeId: r.routeId,
       companyId: r.companyId,
       routeName: r.routeName,
-      waterFlow: r.waterFlow === 'US' ? 'Upstream' : r.waterFlow === 'DS' ? 'Downstream' : 'Null',
+      direction: r.direction === 'RE' ? 'Reverse' : r.direction === 'FO' ? 'Forward' : 'Null',
       vehicleId: r.vehicleId
     });
     setRouteEditOpen(true);
@@ -480,7 +427,7 @@ export function RoutesTab() {
       setLoading(true);
       const payload = {
         route_name: routeEdit.routeName,
-        water_flow: routeEdit.waterFlow === 'Upstream' ? 'US' : routeEdit.waterFlow === 'Downstream' ? 'DS' : null
+        direction: routeEdit.direction === 'Reverse' ? 'RE' : routeEdit.direction === 'Forward' ? 'FO' : null
       };
 
       const response = await fetch(`${apiUrl}/api/routes/${routeEdit.routeId}`, {
@@ -600,24 +547,17 @@ export function RoutesTab() {
           </div>
         )}
 
-        {activeRoute && (
-          <div className="active-route-info" style={{ backgroundColor: '#f0f8ff', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #cce7ff' }}>
-            <strong>Today's Active Route:</strong> {activeRoute.route_name} ({activeRoute.route_id})
-          </div>
-        )}
-
         <h3 className="ops-routes-table-title">Routes</h3>
 
-        <label className="ops-routes-water-flow">
-          Filter by Water Flow:
+        <label className="ops-routes-direction">
+          Filter by Direction:
           <select 
-            value={waterFlowFilter} 
-            onChange={(e) => setWaterFlowFilter(e.target.value)}
+            value={directionFilter} 
+            onChange={(e) => setDirectionFilter(e.target.value)}
           >
             <option value="All">All Routes</option>
-            <option value="Upstream">Upstream (Water)</option>
-            <option value="Downstream">Downstream (Water)</option>
-            <option value="N/A">N/A (Land)</option>
+            <option value="Reverse">Reverse</option>
+            <option value="Forward">Forward</option>
           </select>
         </label>
 
@@ -649,77 +589,37 @@ export function RoutesTab() {
                 <th>Route_ID</th>
                 <th>Company_ID</th>
                 <th>Route Name</th>
-                <th>Water Flow</th>
+                <th>Direction</th>
                 <th>Vehicle_ID</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRoutes.map((r) => {
-                const isActive = activeRoute && activeRoute.route_id === r.routeId;
-                return (
-                  <tr 
-                    key={r.routeId} 
-                    style={{
-                      backgroundColor: isActive ? '#e8f5e8' : 'transparent',
-                      borderLeft: isActive ? '4px solid #28a745' : 'none'
-                    }}
-                  >
-                    <td>
-                      {r.routeId}
-                      {isActive && (
-                        <span style={{ 
-                          marginLeft: '8px', 
-                          color: '#28a745', 
-                          fontWeight: 'bold',
-                          fontSize: '12px'
-                        }}>
-                          ✓ ACTIVE
-                        </span>
-                      )}
-                    </td>
-                    <td>{r.companyId}</td>
-                    <td>{r.routeName}</td>
-                    <td>{r.waterFlowDisplay}</td>
-                    <td>{r.vehicleId}</td>
-                    <td className="ops-routes-actions">
-                      <button 
-                        className="ops-routes-action ops-routes-edit" 
-                        onClick={() => openRouteEdit(r.routeId)}
-                        disabled={loading}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="ops-routes-action ops-routes-delete" 
-                        onClick={() => openRouteDelete(r.routeId)}
-                        disabled={loading}
-                      >
-                        Delete
-                      </button>
-                      {!isActive && (
-                        <button 
-                          className="ops-routes-action"
-                          style={{
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            padding: '4px 8px',
-                            borderRadius: '3px',
-                            fontSize: '12px',
-                            marginLeft: '4px',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => activateRoute(r.routeId)}
-                          disabled={loading}
-                        >
-                          Set Active
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredRoutes.map((r) => (
+                <tr key={r.routeId}>
+                  <td>{r.routeId}</td>
+                  <td>{r.companyId}</td>
+                  <td>{r.routeName}</td>
+                  <td>{r.directionDisplay}</td>
+                  <td>{r.vehicleId}</td>
+                  <td className="ops-routes-actions">
+                    <button 
+                      className="ops-routes-action ops-routes-edit" 
+                      onClick={() => openRouteEdit(r.routeId)}
+                      disabled={loading}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="ops-routes-action ops-routes-delete" 
+                      onClick={() => openRouteDelete(r.routeId)}
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
               {filteredRoutes.length === 0 && !loading && (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
@@ -742,14 +642,11 @@ export function RoutesTab() {
             {rows.length === 0 ? (
               <option value="">No routes available</option>
             ) : (
-              rows.map((r) => {
-                const isActive = activeRoute && activeRoute.route_id === r.routeId;
-                return (
-                  <option key={r.routeId} value={r.routeName}>
-                    {r.routeName}{isActive ? " (Active)" : ""}
-                  </option>
-                );
-              })
+              rows.map((r) => (
+                <option key={r.routeId} value={r.routeName}>
+                  {r.routeName}
+                </option>
+              ))
             )}
           </select>
         </label>
@@ -839,11 +736,10 @@ export function RoutesTab() {
                 onChange={(e) => setRouteDraft({ ...routeDraft, routeName: e.target.value })} 
                 placeholder="Enter route name"
               />
-              <label>Water Flow</label>
-              <select value={routeDraft.waterFlow} onChange={(e) => setRouteDraft({ ...routeDraft, waterFlow: e.target.value })}>
-                <option value="Upstream">Upstream</option>
-                <option value="Downstream">Downstream</option>
-                <option value="Null">Null</option>
+              <label>Direction</label>
+              <select value={routeDraft.direction} onChange={(e) => setRouteDraft({ ...routeDraft, direction: e.target.value })}>
+                <option value="Reverse">Reverse</option>
+                <option value="Forward">Forward</option>
               </select>
             </div>
             <div className="rt-modalActions">
@@ -870,11 +766,10 @@ export function RoutesTab() {
               <input value={routeEdit.vehicleId || 'Not assigned'} disabled />
               <label>Route Name</label>
               <input value={routeEdit.routeName} onChange={(e) => setRouteEdit({ ...routeEdit, routeName: e.target.value })} />
-              <label>Water Flow</label>
-              <select value={routeEdit.waterFlow} onChange={(e) => setRouteEdit({ ...routeEdit, waterFlow: e.target.value })}>
-                <option value="Upstream">Upstream</option>
-                <option value="Downstream">Downstream</option>
-                <option value="Null">Null</option>
+              <label>Direction</label>
+              <select value={routeEdit.direction} onChange={(e) => setRouteEdit({ ...routeEdit, direction: e.target.value })}>
+                <option value="Reverse">Reverse</option>
+                <option value="Forward">Forward</option>
               </select>
             </div>
             <div className="rt-modalActions">
