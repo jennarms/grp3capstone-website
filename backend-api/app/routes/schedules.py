@@ -150,7 +150,7 @@ def fetch_routes():
         try:
             # Fetch all routes for the company (no active filter)
             cursor.execute("""
-                SELECT Route_ID, Route_name, Water_flow 
+                SELECT Route_ID, Route_name, Direction
                 FROM Route 
                 WHERE Company_ID=%s
                 ORDER BY Route_name
@@ -160,7 +160,7 @@ def fetch_routes():
             result = [{
                 "Route_ID": row[0],
                 "Route_name": row[1],
-                "Water_flow": row[2] if row[2] else "N/A"
+                "Direction": row[2] if row[2] else "N/A"
             } for row in routes]
             return jsonify(result)
         finally:

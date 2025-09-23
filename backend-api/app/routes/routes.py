@@ -46,7 +46,7 @@ def get_routes():
         cur = mysql.connection.cursor()
         cur.execute(
             """
-            SELECT Route_ID, Company_ID, Route_name, Water_flow, Vehicle_ID
+            SELECT Route_ID, Company_ID, Route_name, Direction, Vehicle_ID
             FROM Route
             WHERE Company_ID=%s
             ORDER BY Route_ID
@@ -61,7 +61,7 @@ def get_routes():
                 "route_id": r[0],
                 "company_id": r[1],
                 "route_name": r[2],
-                "water_flow": r[3] if r[3] else None,
+                "direction": r[3] if r[3] else None,
                 "vehicle_id": r[4],
             }
             for r in routes_rows
@@ -83,7 +83,7 @@ def create_route():
 
         data = request.get_json()
         route_name = data.get("route_name")
-        water_flow = data.get("water_flow")
+        direction = data.get("direction")
 
         if not route_name:
             return jsonify({"error": "route_name is required"}), 400
@@ -99,35 +99,17 @@ def create_route():
 
         vehicle_id = vehicle_row[0]
 
-        # Check route limits based on water flow
-        if water_flow in ['US', 'DS']:  # Water routes
-            cur.execute(
-                "SELECT COUNT(*) FROM Route WHERE Company_ID=%s AND Water_flow IN ('US', 'DS')",
-                (company_id,),
-            )
-            water_count = cur.fetchone()[0]
-            if water_count >= 2:
-                cur.close()
-                return jsonify({"error": "Maximum of 2 water routes allowed"}), 400
-        else:  # Land routes
-            cur.execute(
-                "SELECT COUNT(*) FROM Route WHERE Company_ID=%s AND (Water_flow IS NULL OR Water_flow = '')",
-                (company_id,),
-            )
-            land_count = cur.fetchone()[0]
-            if land_count >= 1:
-                cur.close()
-                return jsonify({"error": "Maximum of 1 land route allowed"}), 400
+        # REMOVED: Route limits - no longer restricting number of routes
 
         route_id = generate_route_id(company_id)
 
         # Insert route
         cur.execute(
             """
-            INSERT INTO Route (Route_ID, Company_ID, Route_name, Water_flow, Vehicle_ID)
+            INSERT INTO Route (Route_ID, Company_ID, Route_name, Direction, Vehicle_ID)
             VALUES (%s, %s, %s, %s, %s)
         """,
-            (route_id, company_id, route_name, water_flow, vehicle_id),
+            (route_id, company_id, route_name, direction, vehicle_id),
         )
         mysql.connection.commit()
         cur.close()
@@ -149,7 +131,7 @@ def update_route(route_id):
 
         data = request.get_json()
         route_name = data.get("route_name")
-        water_flow = data.get("water_flow")
+        direction = data.get("direction")
 
         if not route_name:
             return jsonify({"error": "route_name is required"}), 400
@@ -166,10 +148,10 @@ def update_route(route_id):
         cur.execute(
             """
             UPDATE Route 
-            SET Route_name=%s, Water_flow=%s 
+            SET Route_name=%s, Direction=%s 
             WHERE Route_ID=%s AND Company_ID=%s
         """,
-            (route_name, water_flow, route_id, company_id),
+            (route_name, direction, route_id, company_id),
         )
         mysql.connection.commit()
         cur.close()

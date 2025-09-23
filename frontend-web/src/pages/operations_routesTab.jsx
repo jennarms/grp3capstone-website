@@ -18,7 +18,7 @@ export function RoutesTab() {
   const [routeQuery, setRouteQuery] = useState("");
   const [stationQuery, setStationQuery] = useState("");
   const [route, setRoute] = useState("");
-  const [waterFlowFilter, setWaterFlowFilter] = useState("All");
+  const [directionFilter, setDirectionFilter] = useState("All");
 
   /* ===== ROUTE modals/state ===== */
   const [routeAddOpen, setRouteAddOpen] = useState(false);
@@ -28,13 +28,13 @@ export function RoutesTab() {
     routeId: "",
     companyId: "",
     routeName: "",
-    waterFlow: "DS",
+    direction: "FO",
   });
   const [routeEdit, setRouteEdit] = useState({
     routeId: "",
     companyId: "",
     routeName: "",
-    waterFlow: "DS",
+    direction: "FO",
     vehicleId: ""
   });
   const [routeToDelete, setRouteToDelete] = useState(null);
@@ -63,14 +63,14 @@ export function RoutesTab() {
   const filteredRoutes = useMemo(() => {
     let filtered = rows;
     
-    // Apply water flow filter first
-    if (waterFlowFilter !== "All") {
-      if (waterFlowFilter === "Upstream") {
-        filtered = filtered.filter(r => r.waterFlow === 'US');
-      } else if (waterFlowFilter === "Downstream") {
-        filtered = filtered.filter(r => r.waterFlow === 'DS');
-      } else if (waterFlowFilter === "N/A") {
-        filtered = filtered.filter(r => !r.waterFlow || r.waterFlow === null || r.waterFlow === '');
+    // Apply direction filter first
+    if (directionFilter !== "All") {
+      if (directionFilter === "Reverse") {
+        filtered = filtered.filter(r => r.direction === 'RE');
+      } else if (directionFilter === "Forward") {
+        filtered = filtered.filter(r => r.direction === 'FO');
+      } else if (directionFilter === "N/A") {
+        filtered = filtered.filter(r => !r.direction || r.direction === null || r.direction === '');
       }
     }
     
@@ -78,14 +78,14 @@ export function RoutesTab() {
     if (routeQuery.trim()) {
       const q = routeQuery.toLowerCase();
       filtered = filtered.filter((r) =>
-        (r.routeId + r.companyId + r.routeName + (r.waterFlowDisplay || ''))
+        (r.routeId + r.companyId + r.routeName + (r.directionDisplay || ''))
           .toLowerCase()
           .includes(q)
       );
     }
     
     return filtered;
-  }, [rows, routeQuery, waterFlowFilter]);
+  }, [rows, routeQuery, directionFilter]);
 
   const filteredStations = useMemo(() => {
     if (!stationQuery.trim()) return stationRows;
@@ -117,12 +117,12 @@ export function RoutesTab() {
     };
   };
 
-  // Helper function to format water flow display
-  const getWaterFlowDisplay = (waterFlow) => {
-    if (waterFlow === 'US') return 'Upstream';
-    if (waterFlow === 'DS') return 'Downstream';
-    if (waterFlow === null || waterFlow === '' || waterFlow === undefined) return 'N/A';
-    return waterFlow;
+  // Helper function to format direction display
+  const getDirectionDisplay = (direction) => {
+    if (direction === 'RE') return 'Reverse';
+    if (direction === 'FO') return 'Forward';
+    if (direction === null || direction === '' || direction === undefined) return 'N/A';
+    return direction;
   };
 
   // API Functions
@@ -146,8 +146,8 @@ export function RoutesTab() {
           routeId: routeItem.route_id,
           companyId: routeItem.company_id,
           routeName: routeItem.route_name,
-          waterFlow: routeItem.water_flow,
-          waterFlowDisplay: getWaterFlowDisplay(routeItem.water_flow),
+          direction: routeItem.direction,
+          directionDisplay: getDirectionDisplay(routeItem.direction),
           vehicleId: routeItem.vehicle_id || 'Not Assigned'
         }));
         setRows(mappedData);
@@ -234,7 +234,7 @@ export function RoutesTab() {
       setLoading(true);
       const payload = {
         route_name: routeData.routeName,
-        water_flow: routeData.waterFlow === 'Upstream' ? 'US' : routeData.waterFlow === 'Downstream' ? 'DS' : null
+        direction: routeData.direction === 'Reverse' ? 'RE' : routeData.direction === 'Forward' ? 'FO' : null
       };
 
       const response = await fetch(`${apiUrl}/api/routes/`, {
@@ -386,7 +386,7 @@ export function RoutesTab() {
       routeId: "", 
       companyId: "", 
       routeName: "", 
-      waterFlow: "Downstream"
+      direction: "Forward"
     });
     setRouteAddOpen(true);
     setError("");
@@ -413,7 +413,7 @@ export function RoutesTab() {
       routeId: r.routeId,
       companyId: r.companyId,
       routeName: r.routeName,
-      waterFlow: r.waterFlow === 'US' ? 'Upstream' : r.waterFlow === 'DS' ? 'Downstream' : 'Null',
+      direction: r.direction === 'RE' ? 'Reverse' : r.direction === 'FO' ? 'Forward' : 'Null',
       vehicleId: r.vehicleId
     });
     setRouteEditOpen(true);
@@ -430,7 +430,7 @@ export function RoutesTab() {
       setLoading(true);
       const payload = {
         route_name: routeEdit.routeName,
-        water_flow: routeEdit.waterFlow === 'Upstream' ? 'US' : routeEdit.waterFlow === 'Downstream' ? 'DS' : null
+        direction: routeEdit.direction === 'Reverse' ? 'RE' : routeEdit.direction === 'Forward' ? 'FO' : null
       };
 
       const response = await fetch(`${apiUrl}/api/routes/${routeEdit.routeId}`, {
@@ -552,16 +552,16 @@ export function RoutesTab() {
 
         <h3 className="ops-routes-table-title">Routes</h3>
 
-        <label className="ops-routes-water-flow">
-          Filter by Water Flow:
+        <label className="ops-routes-direction">
+          Filter by Direction:
           <select 
-            value={waterFlowFilter} 
-            onChange={(e) => setWaterFlowFilter(e.target.value)}
+            value={directionFilter} 
+            onChange={(e) => setDirectionFilter(e.target.value)}
           >
             <option value="All">All Routes</option>
-            <option value="Upstream">Upstream (Water)</option>
-            <option value="Downstream">Downstream (Water)</option>
-            <option value="N/A">N/A (Land)</option>
+            <option value="Reverse">Reverse</option>
+            <option value="Forward">Forward</option>
+            <option value="N/A">N/A</option>
           </select>
         </label>
 
@@ -593,7 +593,7 @@ export function RoutesTab() {
                 <th>Route_ID</th>
                 <th>Company_ID</th>
                 <th>Route Name</th>
-                <th>Water Flow</th>
+                <th>Direction</th>
                 <th>Vehicle_ID</th>
                 <th>Actions</th>
               </tr>
@@ -604,7 +604,7 @@ export function RoutesTab() {
                   <td>{r.routeId}</td>
                   <td>{r.companyId}</td>
                   <td>{r.routeName}</td>
-                  <td>{r.waterFlowDisplay}</td>
+                  <td>{r.directionDisplay}</td>
                   <td>{r.vehicleId}</td>
                   <td className="ops-routes-actions">
                     <button 
@@ -740,10 +740,10 @@ export function RoutesTab() {
                 onChange={(e) => setRouteDraft({ ...routeDraft, routeName: e.target.value })} 
                 placeholder="Enter route name"
               />
-              <label>Water Flow</label>
-              <select value={routeDraft.waterFlow} onChange={(e) => setRouteDraft({ ...routeDraft, waterFlow: e.target.value })}>
-                <option value="Upstream">Upstream</option>
-                <option value="Downstream">Downstream</option>
+              <label>Direction</label>
+              <select value={routeDraft.direction} onChange={(e) => setRouteDraft({ ...routeDraft, direction: e.target.value })}>
+                <option value="Reverse">Reverse</option>
+                <option value="Forward">Forward</option>
                 <option value="Null">Null</option>
               </select>
             </div>
@@ -771,10 +771,10 @@ export function RoutesTab() {
               <input value={routeEdit.vehicleId || 'Not assigned'} disabled />
               <label>Route Name</label>
               <input value={routeEdit.routeName} onChange={(e) => setRouteEdit({ ...routeEdit, routeName: e.target.value })} />
-              <label>Water Flow</label>
-              <select value={routeEdit.waterFlow} onChange={(e) => setRouteEdit({ ...routeEdit, waterFlow: e.target.value })}>
-                <option value="Upstream">Upstream</option>
-                <option value="Downstream">Downstream</option>
+              <label>Direction</label>
+              <select value={routeEdit.direction} onChange={(e) => setRouteEdit({ ...routeEdit, direction: e.target.value })}>
+                <option value="Reverse">Reverse</option>
+                <option value="Forward">Forward</option>
                 <option value="Null">Null</option>
               </select>
             </div>
