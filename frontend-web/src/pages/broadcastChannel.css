@@ -79,6 +79,10 @@
   text-align: left;
 }
 
+.bc-msg.other .bc-author {
+  text-align: left;
+}
+
 .bc-msg.other .bc-bubble {
   background: var(--bubble);
   border: 2px solid var(--bubble-border);
@@ -92,11 +96,21 @@
   text-align: right;
 }
 
+.bc-msg.mine .bc-author {
+  text-align: right;
+}
+
+.bc-msg.mine .bc-emoji-pop {
+  left: auto;
+  right: 0;
+}
+
 .bc-msg.mine .bc-bubble {
-  background: #d2e3ff;
+  background: var(--navy);
+  color: white;
   border: 2px solid var(--navy);
   border-radius: 16px 16px 0 16px;
-  color: #0c1730;
+  text-align: right;
 }
 
 /* Author label */
@@ -120,14 +134,15 @@
 /* Timestamp */
 .bc-timestamp {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
   margin-top: 6px;
 }
+
 .bc-msg.other .bc-timestamp {
   color: #666;
 }
+
 .bc-msg.mine .bc-timestamp {
-  color: #333;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Reactions */
