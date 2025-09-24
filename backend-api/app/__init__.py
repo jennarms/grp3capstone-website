@@ -86,5 +86,9 @@ def create_app():
 
     from app.routes.ui_customization import ui_bp
     app.register_blueprint(ui_bp, url_prefix="/api/ui")
+
+    from app.routes.landingboarding import landingboarding_bp
+    app.register_blueprint(landingboarding_bp, url_prefix="/api/landingboarding")
+
     
     return app
