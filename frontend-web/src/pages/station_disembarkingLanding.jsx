@@ -2,6 +2,8 @@ import { useState } from "react";
 import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_disembarkingLanding.css";
+// ⬇️ added
+import { useNavigate } from "react-router-dom";
 
 export function DisembarkingLandingPage() {
   const [fromKalawaan] = useState([
@@ -17,6 +19,22 @@ export function DisembarkingLandingPage() {
     { time: "8:58 AM", availableSeats: "2 / 30" },
     { time: "9:59 AM", availableSeats: "0 / 30" },
   ]);
+
+  // ⬇️ added
+  const navigate = useNavigate();
+  // ⬇️ helper so we keep your table structure untouched
+  const goToPassengerList = (origin, row) => {
+    // row.availableSeats is like "6 / 30"
+    const [bookedStr, capStr] = row.availableSeats.split("/").map((s) => s.trim());
+    const booked = parseInt(bookedStr || "0", 10);
+    const capacity = parseInt(capStr || "0", 10);
+
+    navigate(
+      `/disembarking/passengerlist?from=${encodeURIComponent(origin)}&time=${encodeURIComponent(
+        row.time
+      )}&booked=${booked}&capacity=${capacity}`
+    );
+  };
 
   return (
     <div className="disembark-container">
@@ -51,7 +69,13 @@ export function DisembarkingLandingPage() {
                       <td>{row.time}</td>
                       <td>{row.availableSeats}</td>
                       <td className="disembark-action-cell">
-                        <button className="disembark-view-btn">View</button>
+                        <button
+                          className="disembark-view-btn"
+                          // ⬇️ added
+                          onClick={() => goToPassengerList("kalawaan", row)}
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -82,7 +106,13 @@ export function DisembarkingLandingPage() {
                       <td>{row.time}</td>
                       <td>{row.availableSeats}</td>
                       <td className="disembark-action-cell">
-                        <button className="disembark-view-btn">View</button>
+                        <button
+                          className="disembark-view-btn"
+                          // ⬇️ added
+                          onClick={() => goToPassengerList("escolta", row)}
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))}
