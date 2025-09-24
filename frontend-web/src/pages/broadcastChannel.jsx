@@ -31,8 +31,6 @@ function Message({
       role === ROLES.STATION_ADMIN &&
       String(msg.Sender_Station_ID) === userId);
 
-  console.log("Reactions for message:", msg.id || msg.Message_ID, msg.reactions);
-
   const wrapperClass = isMine ? "bc-msg mine" : "bc-msg other";
 
   const getAuthorName = () => {
@@ -138,11 +136,8 @@ export function Broadcast() {
   useEffect(() => {
     if (!feedRef.current) return;
     const el = feedRef.current;
-    const isNearBottom =
-      el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
-    if (isNearBottom) {
-      el.scrollTop = el.scrollHeight;
-    }
+    const isNearBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
+    if (isNearBottom) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   const apiCall = useCallback(async (endpoint, options = {}) => {
@@ -188,8 +183,9 @@ export function Broadcast() {
     [tab, role]
   );
 
-  const loadMessages = useCallback(async () => {
-    setLoading(true);
+  // Updated loadMessages with a flag to control overlay
+  const loadMessages = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const endpoint = tab === "admins" ? "/admins" : "/everyone";
       const data = await apiCall(endpoint);
@@ -197,28 +193,27 @@ export function Broadcast() {
       setMessages(
         data.sort(
           (a, b) =>
-            new Date(a.sent_at || a.Sent_At) -
-            new Date(b.sent_at || b.Sent_At)
+            new Date(a.sent_at || a.Sent_At) - new Date(b.sent_at || b.Sent_At)
         )
       );
     } catch (err) {
       setError(`Failed to load messages: ${err.message}`);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [tab, apiCall]);
 
-  // Load on mount / tab change
+  // Initial load (shows loading)
   useEffect(() => {
     if (role && canViewChannel()) {
-      loadMessages();
+      loadMessages(true);
     }
   }, [tab, role, loadMessages, canViewChannel]);
 
-  // Optional polling (every 10s)
+  // Polling every 10s (silent)
   useEffect(() => {
     if (!role || !canViewChannel()) return;
-    const id = setInterval(loadMessages, 10000);
+    const id = setInterval(() => loadMessages(false), 10000);
     return () => clearInterval(id);
   }, [role, tab, loadMessages, canViewChannel]);
 
@@ -234,7 +229,7 @@ export function Broadcast() {
         body: JSON.stringify({ message_content: text }),
       });
       setDraft("");
-      await loadMessages();
+      await loadMessages(false); // update silently
     } catch (err) {
       setError(`Failed to send message: ${err.message}`);
     } finally {
@@ -252,24 +247,18 @@ export function Broadcast() {
     [sendMessage]
   );
 
-  // Fixed reaction function - no optimistic updates, just refresh data
   const react = useCallback(
     async (id, emoji) => {
       try {
         const endpoint = tab === "admins" ? "/admins/react" : "/everyone/react";
-        const response = await apiCall(endpoint, {
+        await apiCall(endpoint, {
           method: "POST",
           body: JSON.stringify({ message_id: id, reaction_type: emoji }),
         });
 
-        console.log("Reaction response:", response);
-
-        // Refresh messages to get accurate counts from database
-        await loadMessages();
-        
+        await loadMessages(false); // refresh silently
       } catch (err) {
         setError(`Failed to react: ${err.message}`);
-        console.error("Reaction error:", err);
       }
     },
     [tab, apiCall, loadMessages]
@@ -278,7 +267,7 @@ export function Broadcast() {
   const togglePicker = (id) => {
     setPickerForId((cur) => (cur === id ? null : id));
   };
-  
+
   const pickEmoji = (id, emoji) => {
     react(id, emoji);
     setPickerForId(null);
@@ -300,9 +289,7 @@ export function Broadcast() {
         <NavbarComponent />
         <div className="main-content">
           <HeaderButton />
-          <div className="bc-error">
-            You don't have permission to view this channel.
-          </div>
+          <div className="bc-error">You don't have permission to view this channel.</div>
         </div>
       </div>
     );
@@ -358,9 +345,7 @@ export function Broadcast() {
           <div className="bc-composer">
             <textarea
               className="bc-input"
-              placeholder={`Type a message${
-                tab === "admins" ? " to admins" : " to everyone"
-              }...`}
+              placeholder={`Type a message${tab === "admins" ? " to admins" : " to everyone"}...`}
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
