@@ -373,9 +373,80 @@ def send_broadcast_everyone():
         return jsonify({"error": str(e)}), 500
 
 # -----------------------------
-# Edit Own Message
+# Edit Own Message - Everyone
 # -----------------------------
+@broadcast_bp.route("/everyone/edit", methods=["POST"])
+@jwt_required()
+def edit_message_everyone():
+    try:
+        user_id, user_type = get_user_info()
+        # Only allow main-admin or station-admin to edit their own messages
+        if user_type not in ["main-admin", "station-admin"]:
+            return jsonify({"error": "You are not allowed to edit messages"}), 403
 
+        data = request.get_json()
+        message_id = data.get("message_id")
+        new_content = data.get("new_content")
+
+        if not message_id or not new_content:
+            return jsonify({"error": "message_id and new_content are required"}), 400
+
+        # Determine sender column based on user type
+        sender_column = "Sender_MainAdmin_ID" if user_type == "main-admin" else "Sender_Station_ID"
+
+        query = f"""
+            UPDATE BroadcastChannel_Message
+            SET Message_Content = %s
+            WHERE Message_ID = %s AND {sender_column} = %s
+        """
+        with mysql.connection.cursor() as cur:
+            cur.execute(query, (new_content, message_id, user_id))
+            mysql.connection.commit()
+
+        return jsonify({"status": "success", "action": "edited"}), 200
+
+    except Exception as e:
+        logger.error(f"edit_message_everyone error: {str(e)}")
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+# -----------------------------
+# Edit Own Message - Admin
+# -----------------------------
+@broadcast_bp.route("/admins/edit", methods=["POST"])
+@jwt_required()
+def edit_message_admins():
+    try:
+        user_id, user_type = get_user_info()
+        if not is_admin(user_type):
+            return jsonify({"error": "Only admins can edit their own messages"}), 403
+
+        data = request.get_json()
+        message_id = data.get("message_id")
+        new_content = data.get("new_content")
+
+        if not message_id or not new_content:
+            return jsonify({"error": "message_id and new_content are required"}), 400
+
+        # Determine sender column based on admin type
+        sender_column = "Sender_MainAdmin_ID" if user_type == "main-admin" else "Sender_Station_ID"
+
+        query = f"""
+            UPDATE BroadcastChannel_Message
+            SET Message_Content = %s
+            WHERE Message_ID = %s AND {sender_column} = %s
+        """
+        with mysql.connection.cursor() as cur:
+            cur.execute(query, (new_content, message_id, user_id))
+            mysql.connection.commit()
+
+        return jsonify({"status": "success", "action": "edited"}), 200
+
+    except Exception as e:
+        logger.error(f"edit_message_admins error: {str(e)}")
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    
 # -----------------------------
 # POST react (everyone) - store reaction with proper user identification
 # -----------------------------

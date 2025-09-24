@@ -14,7 +14,21 @@ const ROLES = {
 };
 
 // =================== MESSAGE COMPONENT ===================
-function Message({ msg, userId, onReact, onTogglePicker, isPickerOpen, onPickEmoji, canReact }) {
+function Message({ 
+  msg, 
+  userId, 
+  userRole,
+  onReact, 
+  onTogglePicker, 
+  isPickerOpen, 
+  onPickEmoji, 
+  canReact,
+  onEdit
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const textareaRef = useRef(null);
+
   const userIdStr = String(userId || "").trim();
 
   const isMine = useMemo(() => {
@@ -23,6 +37,10 @@ function Message({ msg, userId, onReact, onTogglePicker, isPickerOpen, onPickEmo
     if (msg.userId) return String(msg.userId).trim() === userIdStr;
     return false;
   }, [msg, userIdStr]);
+
+  const canEdit = useMemo(() => {
+    return isMine && (userRole === ROLES.MAIN_ADMIN || userRole === ROLES.STATION_ADMIN);
+  }, [isMine, userRole]);
 
   const wrapperClass = isMine ? "bc-msg mine" : "bc-msg other";
 
@@ -36,19 +54,107 @@ function Message({ msg, userId, onReact, onTogglePicker, isPickerOpen, onPickEmo
   const getMessageTime = () => new Date(msg.sent_at || msg.Sent_At).toLocaleString();
   const id = msg.id || msg.Message_ID;
 
+  const handleEditStart = () => {
+    setEditText(getMessageText());
+    setIsEditing(true);
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditText("");
+  };
+
+  const handleEditSave = async () => {
+    const trimmedText = editText.trim();
+    if (!trimmedText || trimmedText === getMessageText()) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      await onEdit(id, trimmedText);
+      setIsEditing(false);
+      setEditText("");
+    } catch (error) {
+      console.error("Failed to edit message:", error);
+      // You might want to show an error message here
+    }
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleEditSave();
+    } else if (e.key === "Escape") {
+      handleEditCancel();
+    }
+  };
+
+  // Auto-focus and resize textarea when editing starts
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [isEditing]);
+
   return (
     <div className={wrapperClass}>
       <div className="bc-author">{getAuthorName()}</div>
       <div className="bc-bubble">
-        {getMessageText()}
+        <div className="bc-message-content">
+          {isEditing ? (
+            <div className="bc-edit-container">
+              <textarea
+                ref={textareaRef}
+                className="bc-edit-textarea"
+                value={editText}
+                onChange={(e) => {
+                  setEditText(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = e.target.scrollHeight + "px";
+                }}
+                onKeyDown={handleEditKeyDown}
+                placeholder="Edit your message..."
+              />
+              <div className="bc-edit-buttons">
+                <button 
+                  className="bc-edit-save"
+                  onClick={handleEditSave}
+                  disabled={!editText.trim()}
+                >
+                  Save
+                </button>
+                <button 
+                  className="bc-edit-cancel"
+                  onClick={handleEditCancel}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bc-message-text">
+              {getMessageText()}
+              {canEdit && (
+                <button 
+                  className="bc-edit-button"
+                  onClick={handleEditStart}
+                  title="Edit message"
+                >
+                  ✏️
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <div className="bc-timestamp">{getMessageTime()}</div>
       </div>
 
       <div className="bc-reactions">
         {msg.reactions && Object.entries(msg.reactions).map(([emoji, count]) => {
           const userHasReacted = msg.userReactions?.includes(emoji) || false;
-
-          // Only allow deletion if current user reacted
           const canDelete = userHasReacted;
 
           return (
@@ -57,9 +163,9 @@ function Message({ msg, userId, onReact, onTogglePicker, isPickerOpen, onPickEmo
               className={`bc-reaction-chip ${userHasReacted ? "reacted" : ""}`}
               onClick={() => {
                 if (!userHasReacted) {
-                  onReact(id, emoji, false); // add reaction
+                  onReact(id, emoji, false);
                 } else if (canDelete) {
-                  onReact(id, emoji, true);  // delete reaction
+                  onReact(id, emoji, true);
                 }
               }}
               disabled={!canReact || (!userHasReacted && count === 0)}
@@ -70,7 +176,6 @@ function Message({ msg, userId, onReact, onTogglePicker, isPickerOpen, onPickEmo
         })}
         {canReact && <button className="bc-add-reaction" onClick={() => onTogglePicker(id)}>+</button>}
       </div>
-
 
       {isPickerOpen && (
         <div className="bc-emoji-pop">
@@ -118,10 +223,9 @@ export function Broadcast() {
   useEffect(() => {
     if (feedRef.current) {
       const el = feedRef.current;
-      el.scrollTop = el.scrollHeight; // always scroll to the bottom
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages]);
-
 
   // =================== API CALL ===================
   const apiCall = useCallback(async (endpoint, options = {}) => {
@@ -149,6 +253,26 @@ export function Broadcast() {
   const canSendMessage = useCallback(() => role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [role]);
   const canViewChannel = useCallback(() => tab === "everyone" || role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [tab, role]);
   const canReact = useCallback(() => tab === "everyone" || role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [tab, role]);
+
+  // =================== EDIT MESSAGE ===================
+  const editMessage = useCallback(async (messageId, newContent) => {
+    try {
+      const endpoint = tab === "admins" ? "/admins/edit" : "/everyone/edit";
+      await apiCall(endpoint, {
+        method: "POST",
+        body: JSON.stringify({
+          message_id: messageId,
+          new_content: newContent
+        })
+      });
+      
+      // Reload messages to show the updated content
+      await loadMessages(false);
+    } catch (err) {
+      setError(`Failed to edit message: ${err.message}`);
+      throw err;
+    }
+  }, [tab, apiCall]);
 
   // =================== LOAD MESSAGES ===================
   const loadMessages = useCallback(async (showLoading = true) => {
@@ -223,13 +347,11 @@ export function Broadcast() {
         const endpointBase = tab === "admins" ? "/admins" : "/everyone";
 
         if (userHasReacted) {
-          // Delete reaction (only allowed if current user reacted)
           await apiCall(`${endpointBase}/reaction/delete`, {
             method: "POST",
             body: JSON.stringify({ message_id: id, reaction_type: emoji }),
           });
         } else {
-          // Add reaction
           await apiCall(`${endpointBase}/react`, {
             method: "POST",
             body: JSON.stringify({ message_id: id, reaction_type: emoji }),
@@ -243,7 +365,6 @@ export function Broadcast() {
         setLoading(false);
       }
     }, [tab, apiCall, loadMessages]);
-
 
   const togglePicker = (id) => setPickerForId((cur) => (cur === id ? null : id));
 
@@ -286,11 +407,13 @@ export function Broadcast() {
               key={m.id || m.Message_ID}
               msg={m}
               userId={userId}
+              userRole={role}
               onReact={react}
               onTogglePicker={togglePicker}
               isPickerOpen={pickerForId === (m.id || m.Message_ID)}
               onPickEmoji={pickEmoji}
               canReact={canReact()}
+              onEdit={editMessage}
             />
           ))}
           {(loading || sendingMessage) && <div className="bc-loading-overlay">Loading…</div>}

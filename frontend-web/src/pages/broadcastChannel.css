@@ -7,6 +7,7 @@
   --bubble-border: #1f2b5a;
 }
 
+
 /* Main content */
 .broadcast-channel .main-content {
   margin-left: 40px;
@@ -177,7 +178,7 @@
 /* Emoji picker */
 .bc-emoji-pop {
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   left: 0;
   background: #fff;
   border: 1px solid #ddd;
@@ -253,4 +254,151 @@
   .bc-msg { max-width: 92%; }
   .page-title { font-size: 22px; }
   .broadcast-channel .main-content { margin-left: 0; }
+}
+
+/* Message content container */
+.bc-message-content {
+  position: relative;
+}
+
+.bc-message-text {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Edit button styling */
+.bc-edit-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(4px);
+  color: inherit;
+}
+
+.bc-message-text:hover .bc-edit-button {
+  opacity: 0.7;
+}
+
+.bc-edit-button:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Edit container styling */
+.bc-edit-container {
+  width: 100%;
+}
+
+.bc-edit-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  background: #fff;
+  color: #333;
+}
+
+.bc-edit-textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Edit buttons container */
+.bc-edit-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.bc-edit-save,
+.bc-edit-cancel {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.bc-edit-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.bc-edit-save:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.bc-edit-save:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bc-edit-cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.bc-edit-cancel:hover {
+  background-color: #5a6268;
+}
+
+/* Dark theme adjustments */
+.dark .bc-edit-textarea {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-color: #4a5568;
+}
+
+.dark .bc-edit-textarea:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.25);
+}
+
+.dark .bc-edit-button {
+  background: rgba(0, 0, 0, 0.2);
+  color: #e2e8f0;
+}
+
+.dark .bc-edit-button:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .bc-edit-button {
+    opacity: 0.5; /* Always visible on mobile for easier access */
+    position: static;
+    float: right;
+    margin-left: 8px;
+    margin-top: 4px;
+  }
+  
+  .bc-edit-buttons {
+    flex-direction: column;
+  }
+  
+  .bc-edit-save,
+  .bc-edit-cancel {
+    width: 100%;
+    padding: 8px 12px;
+  }
 }
