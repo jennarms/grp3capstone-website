@@ -1,28 +1,27 @@
 import { Route, HashRouter as Router, Routes } from 'react-router-dom'
 import './App.css'
+import { AccountSettings } from './pages/accountSettings'
 import { Broadcast } from './pages/broadcastChannel'
 import { Edit } from './pages/editAccount'
 import { FAQs } from './pages/faqsManagement'
 import { Feedback } from './pages/feedback'
+import { FeedbackSettings } from './pages/feedbackSettings'
 import { Announcement } from './pages/generalAnnouncement'
 import { Login } from './pages/login'
-import { Passenger } from './pages/passengerManagement'
-import { FeedbackSettings } from './pages/feedbackSettings'
-import { AccountSettings } from './pages/accountSettings'
-import { Report } from './pages/reportGeneration'
-import { UI } from './pages/uiCustomization'
-import VehicleTab from "./pages/operations_vehicleTab";
-import { StationsTab } from './pages/operations_stationsTab'
-import {RoutesTab} from './pages/operations_routesTab'
-import { SchedulesTab } from './pages/operations_schedulesTab'
 import FaresTab from './pages/operations_faresTab'
-import { StationDashboard } from './pages/station_dashboard'
-import { BoardingLandingPage } from './pages/station_boardingLanding'
+import { RoutesTab } from './pages/operations_routesTab'
+import { SchedulesTab } from './pages/operations_schedulesTab'
+import { StationsTab } from './pages/operations_stationsTab'
+import VehicleTab from "./pages/operations_vehicleTab"
+import { Passenger } from './pages/passengerManagement'
+import { Report } from './pages/reportGeneration'
 import { Boarding } from './pages/station_boarding'
-import { DisembarkingLandingPage } from './pages/station_disembarkingLanding'
+import { BoardingLandingPage } from './pages/station_boardingLanding'
+import { StationDashboard } from './pages/station_dashboard'
 import { Disembarking } from './pages/station_disembarking'
-import { StationBroadcast } from './pages/station_broadcast'
+import { DisembarkingLandingPage } from './pages/station_disembarkingLanding'
 import { StationSOS } from './pages/station_sos'
+import { UI } from './pages/uiCustomization'
 
 
 
@@ -51,7 +50,6 @@ function App() {
         <Route path="/boarding/passengerlist" element={<Boarding />} />
         <Route path="/disembarking" element={<DisembarkingLandingPage />} />
         <Route path="/disembarking/passengerlist" element={<Disembarking />} />
-        <Route path="/stationbroadcast" element={<StationBroadcast />} />
         <Route path="/stationsos" element={<StationSOS />} />
 
 

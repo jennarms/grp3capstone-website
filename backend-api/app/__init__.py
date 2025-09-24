@@ -31,6 +31,7 @@ def create_app():
     app.config['MYSQL_USER'] = os.getenv('DB_USER')
     app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD')
     app.config['MYSQL_DB'] = os.getenv('DB_NAME')
+    app.config['MYSQL_CHARSET'] = 'utf8mb4' 
 
     # Mail Config
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
@@ -86,5 +87,12 @@ def create_app():
 
     from app.routes.ui_customization import ui_bp
     app.register_blueprint(ui_bp, url_prefix="/api/ui")
+
+    from app.routes.landingboarding import landingboarding_bp
+    app.register_blueprint(landingboarding_bp, url_prefix="/api/landingboarding")
+
+    from app.routes.broadcastchannel import broadcast_bp
+    app.register_blueprint(broadcast_bp, url_prefix="/api/broadcast")
+
     
     return app
