@@ -62,10 +62,6 @@ def cache_table_columns(table_name):
         return None
 
 def get_user_info():
-    """
-    Returns (user_id, user_type).
-    user_type expected values: 'main-admin', 'station-admin', 'user' (or header fallback).
-    """
     try:
         role_from_header = request.headers.get('X-User-Role')
         identity = get_jwt_identity()
@@ -73,6 +69,10 @@ def get_user_info():
             user_id = identity.get("id") or identity.get("user_id") or str(identity)
         else:
             user_id = str(identity)
+        
+        # Ensure user_id is always a string and trimmed
+        user_id = str(user_id).strip()
+        
         user_type = role_from_header or "user"
         return user_id, user_type
     except Exception:
@@ -224,6 +224,7 @@ def get_broadcast_everyone():
             content_col = next((c for c in cols if "content" in c.lower()), None)
             if content_col:
                 select_cols.append(f"bm.{content_col} AS Message_Content")
+                
             else:
                 select_cols.append("bm.Message_Content")
 
@@ -287,6 +288,7 @@ def get_broadcast_everyone():
             messages.append(msg)
             if mid:
                 msg_ids.append(mid)
+            
 
         # aggregate reactions for these message ids using FIXED function
         reaction_map = aggregate_reactions_for_messages(msg_ids, BC_REACTION_TABLE)
@@ -303,6 +305,8 @@ def get_broadcast_everyone():
         logger.error(f"get_broadcast_everyone error: {e}")
         logger.error(traceback.format_exc())
         return jsonify([]), 200
+    
+    
 
 # -----------------------------
 # POST send broadcast (everyone)
@@ -369,27 +373,29 @@ def send_broadcast_everyone():
         return jsonify({"error": str(e)}), 500
 
 # -----------------------------
+# Edit Own Message
+# -----------------------------
+
+# -----------------------------
 # POST react (everyone) - store reaction with proper user identification
 # -----------------------------
 @broadcast_bp.route("/everyone/react", methods=["POST"])
 @jwt_required()
 def react_broadcast_everyone():
     try:
-        # Get current user info from JWT
         current_user_id, current_user_type = get_user_info()
-        
         data = request.get_json()
         message_id = data.get("message_id")
         reaction_type = data.get("reaction_type")
-        
+
         if not message_id or not reaction_type:
             return jsonify({"error": "Message ID and reaction type are required"}), 400
 
-        # Set reactor IDs based on current user type
+        # Determine which reactor column to use
         reactor_user = None
-        reactor_main = None  
+        reactor_main = None
         reactor_station = None
-        
+
         if current_user_type == "user":
             reactor_user = current_user_id
         elif current_user_type == "main-admin":
@@ -402,67 +408,33 @@ def react_broadcast_everyone():
         reacted_at = datetime.now()
         reaction_id = str(uuid.uuid4())
 
-        # Check if user already has a reaction on this message
-        check_query = f"""
-            SELECT Reaction_ID, Reaction_Type 
-            FROM {BC_REACTION_TABLE} 
-            WHERE Message_ID = %s 
-            AND Reactor_User_ID = %s 
-            AND Reactor_MainAdmin_ID = %s 
-            AND Reactor_Station_ID = %s
+        # ON DUPLICATE KEY logic
+        insert_query = f"""
+            INSERT INTO {BC_REACTION_TABLE}
+            (Reaction_ID, Message_ID, Reactor_User_ID, Reactor_MainAdmin_ID,
+             Reactor_Station_ID, Reaction_Type, Reacted_At)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                Reaction_Type = IF(Reaction_Type = VALUES(Reaction_Type), NULL, VALUES(Reaction_Type)),
+                Reacted_At = VALUES(Reacted_At)
         """
-        
+
+        values = (reaction_id, message_id, reactor_user, reactor_main, reactor_station, reaction_type, reacted_at)
+
         with mysql.connection.cursor() as cur:
             cur.execute("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci")
-            cur.execute(check_query, (message_id, reactor_user, reactor_main, reactor_station))
-            existing_reaction = cur.fetchone()
-            
-            if existing_reaction:
-                existing_reaction_id = existing_reaction[0]
-                existing_reaction_type = existing_reaction[1]
-                
-                if existing_reaction_type == reaction_type:
-                    # Same reaction - remove it (toggle off)
-                    delete_query = f"DELETE FROM {BC_REACTION_TABLE} WHERE Reaction_ID = %s"
-                    cur.execute(delete_query, (existing_reaction_id,))
-                    mysql.connection.commit()
-                    return jsonify({
-                        "status": "success", 
-                        "message": "Reaction removed",
-                        "action": "removed"
-                    }), 200
-                else:
-                    # Different reaction - update it
-                    update_query = f"""
-                        UPDATE {BC_REACTION_TABLE} 
-                        SET Reaction_Type = %s, Reacted_At = %s 
-                        WHERE Reaction_ID = %s
-                    """
-                    cur.execute(update_query, (reaction_type, reacted_at, existing_reaction_id))
-                    mysql.connection.commit()
-                    return jsonify({
-                        "status": "success", 
-                        "message": "Reaction updated",
-                        "action": "updated"
-                    }), 200
+            cur.execute(insert_query, values)
+            mysql.connection.commit()
+
+        # Determine action: added, updated, or removed (NULL toggle)
+        action = "added"
+        if cur.rowcount == 2:  # 1 insert + 1 update
+            if reaction_type == reaction_type:  # toggled off
+                action = "removed"
             else:
-                # No existing reaction - create new one
-                insert_query = f"""
-                    INSERT INTO {BC_REACTION_TABLE} 
-                    (Reaction_ID, Message_ID, Reactor_User_ID, Reactor_MainAdmin_ID, 
-                     Reactor_Station_ID, Reaction_Type, Reacted_At)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
-                values = (reaction_id, message_id, reactor_user, reactor_main, 
-                         reactor_station, reaction_type, reacted_at)
-                
-                cur.execute(insert_query, values)
-                mysql.connection.commit()
-                return jsonify({
-                    "status": "success", 
-                    "message": "Reaction added",
-                    "action": "added"
-                }), 200
+                action = "updated"
+
+        return jsonify({"status": "success", "action": action}), 200
 
     except Exception as e:
         logger.error(f"Error in react_broadcast_everyone: {str(e)}")
@@ -640,24 +612,20 @@ def send_broadcast_admins():
 @jwt_required()
 def react_broadcast_admins():
     try:
-        # Get current user info from JWT
         current_user_id, current_user_type = get_user_info()
-        
-        # Only admins can react to admin messages
         if not is_admin(current_user_type):
             return jsonify({"error": "Only administrators can react to admin messages"}), 403
-        
+
         data = request.get_json()
         message_id = data.get("message_id")
         reaction_type = data.get("reaction_type")
-        
+
         if not message_id or not reaction_type:
             return jsonify({"error": "Message ID and reaction type are required"}), 400
 
-        # Set reactor IDs based on current user type
         reactor_main = None
         reactor_station = None
-        
+
         if current_user_type == "main-admin":
             reactor_main = current_user_id
         elif current_user_type == "station-admin":
@@ -668,72 +636,34 @@ def react_broadcast_admins():
         reacted_at = datetime.now()
         reaction_id = str(uuid.uuid4())
 
-        # Check if user already has a reaction on this message
-        check_query = f"""
-            SELECT Reaction_ID, Reaction_Type 
-            FROM {ADMIN_REACTION_TABLE} 
-            WHERE Message_ID = %s 
-            AND Reactor_MainAdmin_ID = %s 
-            AND Reactor_Station_ID = %s
+        insert_query = f"""
+            INSERT INTO {ADMIN_REACTION_TABLE}
+            (Reaction_ID, Message_ID, Reactor_MainAdmin_ID, Reactor_Station_ID, Reaction_Type, Reacted_At)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                Reaction_Type = IF(Reaction_Type = VALUES(Reaction_Type), NULL, VALUES(Reaction_Type)),
+                Reacted_At = VALUES(Reacted_At)
         """
-        
+
+        values = (reaction_id, message_id, reactor_main, reactor_station, reaction_type, reacted_at)
+
         with mysql.connection.cursor() as cur:
             cur.execute("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci")
-            cur.execute(check_query, (message_id, reactor_main, reactor_station))
-            existing_reaction = cur.fetchone()
-            
-            if existing_reaction:
-                existing_reaction_id = existing_reaction[0]
-                existing_reaction_type = existing_reaction[1]
-                
-                if existing_reaction_type == reaction_type:
-                    # Same reaction - remove it (toggle off)
-                    delete_query = f"DELETE FROM {ADMIN_REACTION_TABLE} WHERE Reaction_ID = %s"
-                    cur.execute(delete_query, (existing_reaction_id,))
-                    mysql.connection.commit()
-                    return jsonify({
-                        "status": "success", 
-                        "message": "Reaction removed",
-                        "action": "removed"
-                    }), 200
-                else:
-                    # Different reaction - update it
-                    update_query = f"""
-                        UPDATE {ADMIN_REACTION_TABLE} 
-                        SET Reaction_Type = %s, Reacted_At = %s 
-                        WHERE Reaction_ID = %s
-                    """
-                    cur.execute(update_query, (reaction_type, reacted_at, existing_reaction_id))
-                    mysql.connection.commit()
-                    return jsonify({
-                        "status": "success", 
-                        "message": "Reaction updated", 
-                        "action": "updated"
-                    }), 200
-            else:
-                # No existing reaction - create new one
-                insert_query = f"""
-                    INSERT INTO {ADMIN_REACTION_TABLE} 
-                    (Reaction_ID, Message_ID, Reactor_MainAdmin_ID, 
-                     Reactor_Station_ID, Reaction_Type, Reacted_At)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """
-                values = (reaction_id, message_id, reactor_main, 
-                         reactor_station, reaction_type, reacted_at)
-                
-                cur.execute(insert_query, values)
-                mysql.connection.commit()
-                return jsonify({
-                    "status": "success", 
-                    "message": "Reaction added",
-                    "action": "added" 
-                }), 200
+            cur.execute(insert_query, values)
+            mysql.connection.commit()
+
+        action = "added"
+        if cur.rowcount == 2:
+            action = "removed" if reaction_type == reaction_type else "updated"
+
+        return jsonify({"status": "success", "action": action}), 200
 
     except Exception as e:
         logger.error(f"Error in react_broadcast_admins: {str(e)}")
         logger.error(traceback.format_exc())
         mysql.connection.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 # -----------------------------
 # GET user reactions for a specific message (optional helper endpoint)
@@ -807,3 +737,80 @@ def get_message_reactions_admins(message_id):
     except Exception as e:
         logger.error(f"Error getting admin message reactions: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+# -----------------------------
+# Delete Reaction
+# -----------------------------
+
+@broadcast_bp.route("/everyone/reaction/delete", methods=["POST"])
+@jwt_required()
+def delete_reaction_everyone():
+    try:
+        user_id, user_type = get_user_info()
+
+        # Only allow deletion if the person actually reacted
+        data = request.get_json()
+        message_id = data.get("message_id")
+        reaction_type = data.get("reaction_type")  # ensure front-end sends it
+        if not message_id or not reaction_type:
+            return jsonify({"error": "message_id and reaction_type are required"}), 400
+
+        # Determine the correct column based on role
+        if user_type == "user":
+            column = "Reactor_User_ID"
+        elif user_type == "main-admin":
+            column = "Reactor_MainAdmin_ID"
+        elif user_type == "station-admin":
+            column = "Reactor_Station_ID"
+        else:
+            return jsonify({"error": "Invalid user type"}), 403
+
+        query = f"""
+            DELETE FROM {BC_REACTION_TABLE}
+            WHERE Message_ID = %s AND {column} = %s AND Reaction_Type = %s
+        """
+        with mysql.connection.cursor() as cur:
+            cur.execute(query, (message_id, user_id, reaction_type))
+            mysql.connection.commit()
+
+        return jsonify({"status": "success", "action": "deleted"}), 200
+
+    except Exception as e:
+        logger.error(f"delete_reaction_everyone error: {str(e)}")
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@broadcast_bp.route("/admins/reaction/delete", methods=["POST"])
+@jwt_required()
+def delete_reaction_admins():
+    try:
+        user_id, user_type = get_user_info()
+        if not is_admin(user_type):
+            return jsonify({"error": "Only admins can delete their reactions"}), 403
+
+        data = request.get_json()
+        message_id = data.get("message_id")
+        reaction_type = data.get("reaction_type")  # make sure front-end sends it
+        if not message_id or not reaction_type:
+            return jsonify({"error": "message_id and reaction_type are required"}), 400
+
+        # Determine which column to delete based on admin type
+        column = "Reactor_MainAdmin_ID" if user_type == "main-admin" else "Reactor_Station_ID"
+
+        # Only delete if this admin reacted with that emoji
+        query = f"""
+            DELETE FROM {ADMIN_REACTION_TABLE}
+            WHERE Message_ID = %s AND {column} = %s AND Reaction_Type = %s
+        """
+        with mysql.connection.cursor() as cur:
+            cur.execute(query, (message_id, user_id, reaction_type))
+            mysql.connection.commit()
+
+        return jsonify({"status": "success", "action": "deleted"}), 200
+
+    except Exception as e:
+        logger.error(f"delete_reaction_admins error: {str(e)}")
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+
