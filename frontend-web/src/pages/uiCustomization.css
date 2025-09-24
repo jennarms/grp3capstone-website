@@ -16,10 +16,11 @@
   padding-right: 40px;
   z-index: 10;
   color: #000;
+
 }
 .ui-top-header h1 {
   font-size: 45px;
-  font-weight: 700;
+  font-weight:800;
   margin: 0;
   margin-top: 50px;
 }
@@ -46,8 +47,7 @@
 .ui-main{
   /* top | right | bottom | left */
   margin: 0 var(--gap) 120px calc(var(--sidebar) + var(--gap));
-  width: calc(100% - (var(--sidebar) + var(--gap) * 2));
-  max-width: none;
+  width: 1550px;
   box-sizing: border-box;
   position: relative;
 }
@@ -505,20 +505,23 @@
   color: #333;
 }
 
+/* ⬇️⬇️ UPDATED TO NAVY STYLE ⬇️⬇️ */
 .ui-btn.primary {
-  background: #3fe19b;
-  color: white;
-  border-color: #3fe19b;
+  background: var(--blue-ink);
+  color: #fff;
+  border-color: var(--blue-ink);
 }
-
 .ui-btn.primary:hover:not(:disabled) {
-  background: #2dd484;
-  border-color: #2dd484;
+  filter: brightness(1.05);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(63, 225, 155, 0.3);
+  box-shadow: 0 4px 12px rgba(11, 26, 120, 0.25);
 }
+.ui-btn.primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(11, 26, 120, 0.2);
+}
+/* ⬆️⬆️ UPDATED TO NAVY STYLE ⬆️⬆️ */
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .ui-swatches {
     grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));

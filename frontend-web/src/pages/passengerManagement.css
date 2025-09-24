@@ -10,7 +10,7 @@
 /* page scaffold (matches your layout) */
 .pmc-main{
   margin-left: -40px;
-  margin-top: 100px;              /* you had two margin-top declarations; keep the intended one */
+  margin-top: 80px;              /* you had two margin-top declarations; keep the intended one */
   margin-bottom: 100px;
   padding: 24px;
   box-sizing: border-box;
@@ -24,7 +24,7 @@
   justify-content: space-between;
 }
 .pmc-title{
-  font-weight: 750;
+  font-weight: 800;
   margin: 0 0 10px 30px;
   color: black;
 }
@@ -125,20 +125,43 @@ html { scrollbar-gutter: stable; }
 }
 
 /* table wrapper (the ONLY vertical scroller) */
+/* table wrapper (the ONLY vertical scroller) */
 .pmc-table-wrap{
   margin-left: 30px;
   background: #fff;
   border-radius: 8px;
   border: 1px solid var(--stroke);
   box-shadow: 0 6px 16px rgba(0,0,0,.06);
-  height: 600px;
+  height: 620px;
   overflow-y: auto;
   overflow-x: auto;
+
+  /* match previous pages' scrollbar style (scoped to this area only) */
+  scrollbar-gutter: stable;             /* prevents layout shift */
+  scrollbar-width: thin;                /* Firefox */
+  scrollbar-color: #b5c0ff #eef2ff;     /* thumb | track */
 }
+
+/* WebKit (Chrome/Edge/Safari) */
+.pmc-table-wrap::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+.pmc-table-wrap::-webkit-scrollbar-track{
+  background: #eef2ff;
+  border-radius: 8px;
+}
+.pmc-table-wrap::-webkit-scrollbar-thumb{
+  background: #b5c0ff;
+  border-radius: 8px;
+}
+.pmc-table-wrap::-webkit-scrollbar-thumb:hover{
+  background: #9eaefc;
+}
+
 
 /* table */
 .pmc-table{
-  width: 100%;
   border-collapse: collapse;
   min-width: 1100px;
 }

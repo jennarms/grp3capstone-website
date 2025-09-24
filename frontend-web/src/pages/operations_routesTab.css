@@ -23,7 +23,7 @@
 
 .ops-routes-table-title {
     font-size: 37px;
-    font-weight: 600;
+    font-weight: 700;
     color: black;
     margin-bottom: -2px;
     text-align: left;
@@ -497,3 +497,47 @@
 .modal-content {
     z-index: 1060; /* Keep the edit modal content's z-index lower */
 }
+
+/* Make "Filter by Direction" match the Route dropdown styling */
+.ops-routes-direction {
+    margin-left: -1100px;
+    position: relative;
+    display: inline-block;
+    font-size: 17px;
+    color: black;
+    font-weight: 650;
+    /* adjust if you need to nudge its horizontal position; otherwise leave it */
+    /* margin-left: -1200px; */
+  }
+  
+  .ops-routes-direction select {
+    padding: 5px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid var(--ops-stn-border);
+    border-radius: 99px;       /* pill */
+    background: #fff;
+    color: #111827;
+    appearance: none;          /* hide native arrow */
+    cursor: pointer;
+    width: 240px;              /* same width as Route dropdown */
+    text-align: center;
+  }
+  
+  .ops-routes-direction select:focus {
+    outline: none;
+    border-color: var(--ops-stn-blue); /* highlight on focus */
+  }
+  
+  /* same custom arrow as Route dropdown */
+  .ops-routes-direction::after {
+    content: "▼";
+    font-size: 12px;
+    color: #111827;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  

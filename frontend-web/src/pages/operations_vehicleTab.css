@@ -83,6 +83,7 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(11,26,120,.2);
 }
+
 /* ===== Standardized modal (matches previous pages) ===== */
 .ops-modalOverlay{
   position: fixed;
@@ -155,3 +156,7 @@
   color: #fff;
 }
 .ops-btnNavy:hover{ filter: brightness(1.05); }
+
+/* ✅ Keep layout stable & prevent scroll when any modal is open */
+html { scrollbar-gutter: stable; }
+body.ops-modalOpen { overflow: hidden; }
