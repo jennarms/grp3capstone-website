@@ -32,7 +32,7 @@ export function StationNavbar() {
         <Link to="/stationsos" className="station-admin-sidebar-link">
           SOS
         </Link>
-        <Link to="/stationbroadcast" className="station-admin-sidebar-link">
+        <Link to="/broadcast" className="station-admin-sidebar-link">
           Broadcast Channel
         </Link>
       </nav>
