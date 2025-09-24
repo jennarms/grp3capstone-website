@@ -100,7 +100,7 @@ export function Feedback() {
     setPendingDeleteId(null);
   };
 
-  // 🔹 Reply (left intact; button removed per your request)
+  // 🔹 Reply
   const onReply = (id) => {
     const text = window.prompt("Write admin reply:");
     if (!text) return;
@@ -163,7 +163,6 @@ export function Feedback() {
                     aria-label={`Delete feedback ${f.id}`}
                     onClick={() => onDelete(f.id)}
                   >
-                    {/* SVG trash icon */}
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M3 6h18" />
                       <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -173,7 +172,15 @@ export function Feedback() {
                     </svg>
                   </button>
 
-                  {/* Reply button removed per request */}
+                  {/* 🔹 Added Reply button */}
+                  <button
+                    className="icon-btn reply"
+                    title="Reply"
+                    aria-label={`Reply to feedback ${f.id}`}
+                    onClick={() => onReply(f.id)}
+                  >
+                    Reply
+                  </button>
                 </div>
 
                 <div className="fb-row">
