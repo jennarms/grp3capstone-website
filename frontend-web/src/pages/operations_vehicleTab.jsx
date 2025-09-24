@@ -9,18 +9,18 @@ export default function VehicleTab() {
   const [type, setType] = useState("Ferry");
   const [capacity, setCapacity] = useState("");
   const [originalType, setOriginalType] = useState("Ferry"); // Track original type
-  
+
   // Capacity save confirmation
   const [showCapacityConfirm, setShowCapacityConfirm] = useState(false);
-  
+
   // Vehicle type change - triple confirmation states
   const [typeChangeStep, setTypeChangeStep] = useState(0); // 0=none, 1=first confirm, 2=type confirm, 3=final confirm
   const [confirmationText, setConfirmationText] = useState("");
   const [finalConfirmationText, setFinalConfirmationText] = useState("");
-  
+
   // Success/Error notices
   const [notice, setNotice] = useState({ show: false, message: "", type: "success" });
-  
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
 
@@ -103,7 +103,7 @@ export default function VehicleTab() {
   // ===== VEHICLE TYPE CHANGE - TRIPLE CONFIRMATION =====
   const handleTypeChange = (newType) => {
     setType(newType);
-    
+
     // If type actually changed from original, start confirmation process
     if (newType !== originalType) {
       setTypeChangeStep(1);
@@ -114,12 +114,12 @@ export default function VehicleTab() {
 
   const handleTypeSave = (e) => {
     e.preventDefault();
-    
+
     if (type === originalType) {
       showNotice("No changes to vehicle type");
       return;
     }
-    
+
     // Start the confirmation process
     setTypeChangeStep(1);
   };
@@ -151,9 +151,9 @@ export default function VehicleTab() {
       setIsLoading(true);
       const response = await axios.put(
         `${apiUrl}/api/vehicle/type`,
-        { 
+        {
           vehicleType: type,
-          confirmationCode: finalConfirmationText 
+          confirmationCode: finalConfirmationText,
         },
         {
           headers: {
@@ -162,11 +162,11 @@ export default function VehicleTab() {
           },
         }
       );
-      
+
       console.log("✅ Vehicle type updated:", response.data);
       setOriginalType(type); // Update original type
       showNotice("Vehicle type updated successfully! Warning: This may have affected related data.");
-      
+
       // Reset confirmation process
       setTypeChangeStep(0);
       setConfirmationText("");
@@ -198,6 +198,56 @@ export default function VehicleTab() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [originalType]);
+
+  // 🔒 Prevent page scroll / movement while any modal is open (no layout jump)
+  const modalOpen = showCapacityConfirm || typeChangeStep > 0 || notice.show;
+  useEffect(() => {
+    const body = document.body;
+
+    if (modalOpen) {
+      const scrollY = window.scrollY || window.pageYOffset;
+      // Freeze the body at the current position
+      body.style.position = "fixed";
+      body.style.top = `-${scrollY}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.width = "100%";
+      body.style.overscrollBehavior = "contain";
+      body.classList.add("ops-modalOpen"); // cosmetic rules
+    } else {
+      // Restore scroll position exactly
+      const top = body.style.top;
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      body.style.overscrollBehavior = "";
+      body.classList.remove("ops-modalOpen");
+      if (top) {
+        const y = -parseInt(top, 10);
+        window.scrollTo(0, y);
+      }
+    }
+
+    return () => {
+      // Cleanup in case component unmounts while modal is open
+      if (document.body.style.position === "fixed") {
+        const top = document.body.style.top;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.width = "";
+        document.body.style.overscrollBehavior = "";
+        document.body.classList.remove("ops-modalOpen");
+        if (top) {
+          const y = -parseInt(top, 10);
+          window.scrollTo(0, y);
+        }
+      }
+    };
+  }, [modalOpen]);
 
   return (
     <>
@@ -235,12 +285,12 @@ export default function VehicleTab() {
             </div>
 
             <div className="form-actions">
-              <button 
-                className={`primary-btn ${type !== originalType ? 'btn-warning' : 'btn-disabled'}`}
+              <button
+                className={`primary-btn ${type !== originalType ? "btn-warning" : "btn-disabled"}`}
                 onClick={handleTypeSave}
                 disabled={type === originalType || isLoading}
               >
-                {type !== originalType ? '⚠️ Save Type Change (Dangerous)' : 'No Changes'}
+                {type !== originalType ? "⚠️ Save Type Change (Dangerous)" : "No Changes"}
               </button>
             </div>
           </div>
@@ -263,7 +313,7 @@ export default function VehicleTab() {
             </div>
 
             <div className="form-actions">
-              <button 
+              <button
                 className="primary-btn"
                 onClick={handleCapacitySave}
                 disabled={isLoading || !capacity.trim()}
@@ -286,19 +336,19 @@ export default function VehicleTab() {
               Are you sure you want to update the vehicle capacity to <strong>{capacity}</strong>?
             </div>
             <div className="ops-modalFooter">
-              <button 
-                className="ops-btn ops-btnOutline" 
+              <button
+                className="ops-btn ops-btnOutline"
                 onClick={() => setShowCapacityConfirm(false)}
                 disabled={isLoading}
               >
                 Cancel
               </button>
-              <button 
-                className="ops-btn ops-btnNavy" 
+              <button
+                className="ops-btn ops-btnNavy"
                 onClick={handleCapacityConfirmYes}
                 disabled={isLoading}
               >
-                {isLoading ? 'Saving...' : 'Save Capacity'}
+                {isLoading ? "Saving..." : "Save Capacity"}
               </button>
             </div>
           </div>
@@ -313,15 +363,21 @@ export default function VehicleTab() {
               <h3 className="ops-modalTitle">⚠️ Dangerous Operation</h3>
             </div>
             <div className="ops-modalBody">
-              <p><strong>WARNING:</strong> Changing the vehicle type is a sensitive operation that may delete or corrupt data connected to this vehicle.</p>
-              <p>You are about to change from <strong>"{originalType}"</strong> to <strong>"{type}"</strong>.</p>
+              <p>
+                <strong>WARNING:</strong> Changing the vehicle type is a sensitive operation that may
+                delete or corrupt data connected to this vehicle.
+              </p>
+              <p>
+                You are about to change from <strong>"{originalType}"</strong> to{" "}
+                <strong>"{type}"</strong>.
+              </p>
               <p>Are you absolutely sure you want to continue?</p>
             </div>
             <div className="ops-modalFooter">
               <button className="ops-btn ops-btnOutline" onClick={cancelAllConfirmations}>
                 Cancel
               </button>
-              <button className="ops-btn ops-btnDanger" onClick={handleFirstConfirm}>
+              <button className="ops-btn ops-btnNavy" onClick={handleFirstConfirm}>
                 Yes, I'm Sure
               </button>
             </div>
@@ -337,7 +393,10 @@ export default function VehicleTab() {
               <h3 className="ops-modalTitle">⚠️ Type Confirmation Required</h3>
             </div>
             <div className="ops-modalBody">
-              <p>To proceed with this dangerous operation, please type <strong>"CONFIRM"</strong> exactly:</p>
+              <p>
+                To proceed with this dangerous operation, please type <strong>"CONFIRM"</strong>{" "}
+                exactly:
+              </p>
               <input
                 type="text"
                 className="input confirmation-input"
@@ -351,8 +410,8 @@ export default function VehicleTab() {
               <button className="ops-btn ops-btnOutline" onClick={cancelAllConfirmations}>
                 Cancel
               </button>
-              <button 
-                className="ops-btn ops-btnDanger" 
+              <button
+                className="ops-btn ops-btnNavy"
                 onClick={handleSecondConfirm}
                 disabled={confirmationText !== "CONFIRM"}
               >
@@ -371,9 +430,16 @@ export default function VehicleTab() {
               <h3 className="ops-modalTitle">🚨 FINAL CONFIRMATION</h3>
             </div>
             <div className="ops-modalBody">
-              <p><strong>LAST CHANCE:</strong> This action cannot be undone!</p>
-              <p>Vehicle type will change from <strong>"{originalType}"</strong> to <strong>"{type}"</strong></p>
-              <p>Type <strong>"CONFIRM"</strong> one more time to proceed:</p>
+              <p>
+                <strong>LAST CHANCE:</strong> This action cannot be undone!
+              </p>
+              <p>
+                Vehicle type will change from <strong>"{originalType}"</strong> to{" "}
+                <strong>"{type}"</strong>
+              </p>
+              <p>
+                Type <strong>"CONFIRM"</strong> one more time to proceed:
+              </p>
               <input
                 type="text"
                 className="input confirmation-input"
@@ -387,12 +453,12 @@ export default function VehicleTab() {
               <button className="ops-btn ops-btnOutline" onClick={cancelAllConfirmations}>
                 Cancel
               </button>
-              <button 
-                className="ops-btn ops-btnDanger" 
+              <button
+                className="ops-btn ops-btnNavy"
                 onClick={handleFinalConfirm}
                 disabled={finalConfirmationText !== "CONFIRM" || isLoading}
               >
-                {isLoading ? 'Executing...' : 'Execute Change'}
+                {isLoading ? "Executing..." : "Execute Change"}
               </button>
             </div>
           </div>
@@ -401,19 +467,24 @@ export default function VehicleTab() {
 
       {/* Success/Error Notice */}
       {notice.show && (
-        <div className="ops-modalOverlay" onClick={() => setNotice({ show: false, message: "", type: "success" })}>
+        <div
+          className="ops-modalOverlay"
+          onClick={() => setNotice({ show: false, message: "", type: "success" })}
+        >
           <div className="ops-modal notice-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ops-modalHeader">
-              <h3 className={`ops-modalTitle ${notice.type === 'error' ? 'error-title' : 'success-title'}`}>
-                {notice.type === 'error' ? '❌ Error' : '✅ Success'}
+              <h3
+                className={`ops-modalTitle ${
+                  notice.type === "error" ? "error-title" : "success-title"
+                }`}
+              >
+                {notice.type === "error" ? "❌ Error" : "✅ Success"}
               </h3>
             </div>
-            <div className="ops-modalBody">
-              {notice.message}
-            </div>
+            <div className="ops-modalBody">{notice.message}</div>
             <div className="ops-modalFooter">
-              <button 
-                className="ops-btn ops-btnNavy" 
+              <button
+                className="ops-btn ops-btnNavy"
                 onClick={() => setNotice({ show: false, message: "", type: "success" })}
               >
                 OK

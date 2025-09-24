@@ -5,7 +5,6 @@ import { OperationsTab } from "../components/operationsTab";
 import "./operations_faresTab.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
-console.log("API URL from env:", apiUrl);
 
 export default function FareTab() {
   const [stations, setStations] = useState([]);
@@ -14,18 +13,15 @@ export default function FareTab() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingStations, setEditingStations] = useState([]);
-  const [viewMode, setViewMode] = useState('fare');
+  const [viewMode, setViewMode] = useState("fare");
   const [fareStats, setFareStats] = useState(null);
   const [pendingChanges, setPendingChanges] = useState({});
 
-  // Get auth token
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
+  const getAuthToken = () =>
+    localStorage.getItem("token") || sessionStorage.getItem("token");
 
-  // Show message helper
-  const showMessage = (message, type = 'success') => {
-    if (type === 'success') {
+  const showMessage = (message, type = "success") => {
+    if (type === "success") {
       setSuccess(message);
       setError(null);
       setTimeout(() => setSuccess(null), 3000);
@@ -36,66 +32,53 @@ export default function FareTab() {
     }
   };
 
-  // Sync stations from Station table to Station_Master
   const syncStations = async () => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${apiUrl}/api/fare/stations/sync`, {
-        method: 'POST',
+      const res = await fetch(`${apiUrl}/api/fare/stations/sync`, {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync stations');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to sync stations");
       }
-
-      const result = await response.json();
-      showMessage(result.message);
+      const data = await res.json();
+      showMessage(data.message);
       await fetchStations();
     } catch (err) {
-      showMessage('Error syncing stations: ' + err.message, 'error');
+      showMessage("Error syncing stations: " + err.message, "error");
     }
   };
 
-  // Fetch stations from API
   const fetchStations = async () => {
     try {
       const token = getAuthToken();
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      if (!token) throw new Error("No authentication token found");
 
-      const response = await fetch(`${apiUrl}/api/fare/stations`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await fetch(`${apiUrl}/api/fare/stations`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        }
-        throw new Error(`Failed to fetch stations: ${response.statusText}`);
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Authentication failed.");
+        throw new Error("Failed to fetch stations");
       }
+      const data = await res.json();
 
-      const data = await response.json();
-      
       if (data.stations) {
         setStations(data.stations);
         setEditingStations([...data.stations]);
-        
         if (data.stations.length === 0 && data.debug_info) {
-          console.log('Debug info:', data.debug_info);
           if (data.debug_info.main_station_count > 0) {
-            showMessage(`Found ${data.debug_info.main_station_count} stations in main table but Station_Master is empty. Click 'Sync Stations' to populate it.`, 'error');
+            showMessage(
+              `Found ${data.debug_info.main_station_count} stations in main table but Station_Master is empty. Click 'Sync Stations' to populate it.`,
+              "error"
+            );
           } else {
-            showMessage('No stations found in either table. Please add stations first.', 'error');
+            showMessage("No stations found. Please add stations first.", "error");
           }
         }
       } else {
@@ -103,343 +86,273 @@ export default function FareTab() {
         setEditingStations([...data]);
       }
     } catch (err) {
-      showMessage('Error fetching stations: ' + err.message, 'error');
-      console.error('Error fetching stations:', err);
+      showMessage("Error fetching stations: " + err.message, "error");
+      console.error(err);
     }
   };
 
-  // Fetch fare matrix from API
   const fetchFareMatrix = async () => {
     try {
       const token = getAuthToken();
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      if (!token) throw new Error("No authentication token found");
 
-      const response = await fetch(`${apiUrl}/api/fare/matrix`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await fetch(`${apiUrl}/api/fare/matrix`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        }
-        throw new Error(`Failed to fetch fare matrix: ${response.statusText}`);
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Authentication failed.");
+        throw new Error("Failed to fetch fare matrix");
       }
-
-      const data = await response.json();
+      const data = await res.json();
       setFareMatrix(data);
     } catch (err) {
-      showMessage('Error fetching fare matrix: ' + err.message, 'error');
-      console.error('Error fetching fare matrix:', err);
+      showMessage("Error fetching fare matrix: " + err.message, "error");
+      console.error(err);
     }
   };
 
-  // Fetch fare statistics
   const fetchFareStats = async () => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${apiUrl}/api/fare/stats`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await fetch(`${apiUrl}/api/fare/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFareStats(data);
-      }
+      if (res.ok) setFareStats(await res.json());
     } catch (err) {
-      console.error('Error fetching fare stats:', err);
+      console.error(err);
     }
   };
 
-  // Initialize data on component mount
   useEffect(() => {
-    const initializeData = async () => {
+    const init = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchStations(), 
-        fetchFareMatrix(),
-        fetchFareStats()
-      ]);
+      await Promise.all([fetchStations(), fetchFareMatrix(), fetchFareStats()]);
       setLoading(false);
     };
-    initializeData();
+    init();
   }, []);
 
-  // Handle station order update in editing mode
   const handleStationOrderUpdate = (stationId, newOrder) => {
-    const orderNum = parseInt(newOrder);
-    if (isNaN(orderNum) || orderNum < 1) return;
-
-    setEditingStations(prevStations => 
-      prevStations.map(station => 
-        station.Station_ID === stationId 
-          ? { ...station, StopOrder: orderNum }
-          : station
-      ).sort((a, b) => a.StopOrder - b.StopOrder)
+    const n = parseInt(newOrder, 10);
+    if (Number.isNaN(n) || n < 1) return;
+    setEditingStations((prev) =>
+      prev
+        .map((s) => (s.Station_ID === stationId ? { ...s, StopOrder: n } : s))
+        .sort((a, b) => a.StopOrder - b.StopOrder)
     );
   };
 
-  // Save station master order
   const saveStationOrder = async () => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${apiUrl}/api/fare/stations/order`, {
-        method: 'PUT',
+      const res = await fetch(`${apiUrl}/api/fare/stations/order`, {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ stations: editingStations })
+        body: JSON.stringify({ stations: editingStations }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update station order');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to update station order");
       }
-
-      showMessage('Station order updated successfully');
+      showMessage("Station order updated successfully");
       setStations([...editingStations]);
-      
       await regenerateFareMatrix();
-      setViewMode('fare');
-      
+      setViewMode("fare");
     } catch (err) {
-      showMessage('Error updating station order: ' + err.message, 'error');
+      showMessage("Error updating station order: " + err.message, "error");
     }
   };
 
-  // Regenerate fare matrix
   const regenerateFareMatrix = async () => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${apiUrl}/api/fare/regenerate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await fetch(`${apiUrl}/api/fare/regenerate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to regenerate fare matrix');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to regenerate fare matrix");
       }
-
-      const result = await response.json();
-      showMessage(`${result.message}. Created ${result.new_fares_created} new fare entries.`);
-      
+      const result = await res.json();
+      showMessage(
+        `${result.message}. Created ${result.new_fares_created} new fare entries.`
+      );
       await Promise.all([fetchFareMatrix(), fetchFareStats()]);
-      
     } catch (err) {
-      showMessage('Error regenerating fare matrix: ' + err.message, 'error');
+      showMessage("Error regenerating fare matrix: " + err.message, "error");
     }
   };
 
-  // Handle fare change
   const handleFareChange = (fareId, newFare) => {
-    setFareMatrix(prevMatrix => 
-      prevMatrix.map(fare => 
-        fare.Fare_ID === fareId 
-          ? { ...fare, Fare: parseFloat(newFare) || 0 }
-          : fare
+    setFareMatrix((prev) =>
+      prev.map((f) =>
+        f.Fare_ID === fareId ? { ...f, Fare: parseFloat(newFare) || 0 } : f
       )
     );
-
-    setPendingChanges(prev => ({
+    setPendingChanges((prev) => ({
       ...prev,
-      [fareId]: { Fare: parseFloat(newFare) || 0 }
+      [fareId]: { Fare: parseFloat(newFare) || 0 },
     }));
   };
 
-  // Save individual fare
   const saveFare = async (fareId, fareValue, isActive = null) => {
     try {
       const token = getAuthToken();
-      const updateData = { Fare: parseFloat(fareValue) || 0 };
-      if (isActive !== null) {
-        updateData.Active = isActive;
-      }
+      const payload = { Fare: parseFloat(fareValue) || 0 };
+      if (isActive !== null) payload.Active = isActive;
 
-      const response = await fetch(`${apiUrl}/api/fare/update/${fareId}`, {
-        method: 'PUT',
+      const res = await fetch(`${apiUrl}/api/fare/update/${fareId}`, {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update fare');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to update fare");
       }
-
-      setPendingChanges(prev => {
-        const newPending = { ...prev };
-        delete newPending[fareId];
-        return newPending;
+      setPendingChanges((prev) => {
+        const copy = { ...prev };
+        delete copy[fareId];
+        return copy;
       });
-
-      showMessage('Fare updated successfully');
+      showMessage("Fare updated successfully");
       await fetchFareStats();
-      
     } catch (err) {
-      showMessage('Error updating fare: ' + err.message, 'error');
+      showMessage("Error updating fare: " + err.message, "error");
       await fetchFareMatrix();
     }
   };
 
-  // Toggle fare active status
   const toggleFareStatus = async (fareId, currentStatus) => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${apiUrl}/api/fare/update/${fareId}`, {
-        method: 'PUT',
+      const res = await fetch(`${apiUrl}/api/fare/update/${fareId}`, {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ Active: !currentStatus })
+        body: JSON.stringify({ Active: !currentStatus }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update fare status');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to update fare status");
       }
-
-      setFareMatrix(prevMatrix => 
-        prevMatrix.map(fare => 
-          fare.Fare_ID === fareId 
-            ? { ...fare, Active: !currentStatus }
-            : fare
+      setFareMatrix((prev) =>
+        prev.map((f) =>
+          f.Fare_ID === fareId ? { ...f, Active: !currentStatus } : f
         )
       );
-
-      showMessage(`Fare ${!currentStatus ? 'enabled' : 'disabled'} successfully`);
+      showMessage(`Fare ${!currentStatus ? "enabled" : "disabled"} successfully`);
       await fetchFareStats();
-      
     } catch (err) {
-      showMessage('Error updating fare status: ' + err.message, 'error');
+      showMessage("Error updating fare status: " + err.message, "error");
     }
   };
 
-  // NEW: Bulk enable/disable all fares
   const bulkToggleAllFares = async (enableAll = true) => {
     try {
       const token = getAuthToken();
-      const activeFares = fareMatrix.filter(fare => fare.Fare_ID !== null);
-      
-      if (activeFares.length === 0) {
-        showMessage('No fares to update', 'error');
+      const activeFares = fareMatrix.filter((f) => f.Fare_ID !== null);
+      if (!activeFares.length) {
+        showMessage("No fares to update", "error");
         return;
       }
-
-      const fareUpdates = activeFares.map(fare => ({
-        Fare_ID: fare.Fare_ID,
-        Active: enableAll
-      }));
-
-      const response = await fetch(`${apiUrl}/api/fare/update/bulk`, {
-        method: 'PUT',
+      const res = await fetch(`${apiUrl}/api/fare/update/bulk`, {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fares: fareUpdates })
+        body: JSON.stringify({
+          fares: activeFares.map((f) => ({
+            Fare_ID: f.Fare_ID,
+            Active: enableAll,
+          })),
+        }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to bulk update fares');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to bulk update fares");
       }
-
-      // Update local state
-      setFareMatrix(prevMatrix => 
-        prevMatrix.map(fare => 
-          fare.Fare_ID !== null 
-            ? { ...fare, Active: enableAll }
-            : fare
-        )
+      setFareMatrix((prev) =>
+        prev.map((f) => (f.Fare_ID ? { ...f, Active: enableAll } : f))
       );
-
-      showMessage(`Successfully ${enableAll ? 'enabled' : 'disabled'} ${fareUpdates.length} fares`);
+      showMessage(
+        `Successfully ${enableAll ? "enabled" : "disabled"} ${activeFares.length} fares`
+      );
       await fetchFareStats();
-      
     } catch (err) {
-      showMessage(`Error ${enableAll ? 'enabling' : 'disabling'} all fares: ` + err.message, 'error');
+      showMessage(
+        `Error ${enableAll ? "enabling" : "disabling"} all fares: ` + err.message,
+        "error"
+      );
     }
   };
 
-  // Save all pending changes
   const saveAllPendingChanges = async () => {
-    if (Object.keys(pendingChanges).length === 0) {
-      showMessage('No changes to save', 'error');
+    const keys = Object.keys(pendingChanges);
+    if (!keys.length) {
+      showMessage("No changes to save", "error");
       return;
     }
-
-    const fareUpdates = Object.entries(pendingChanges).map(([fareId, changes]) => ({
-      Fare_ID: parseInt(fareId),
-      ...changes
+    const payload = keys.map((id) => ({
+      Fare_ID: parseInt(id, 10),
+      ...pendingChanges[id],
     }));
-
     try {
       const token = getAuthToken();
-      const response = await fetch(`${apiUrl}/api/fare/update/bulk`, {
-        method: 'PUT',
+      const res = await fetch(`${apiUrl}/api/fare/update/bulk`, {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fares: fareUpdates })
+        body: JSON.stringify({ fares: payload }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save changes');
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to save changes");
       }
-
       setPendingChanges({});
-      showMessage(`Successfully saved ${fareUpdates.length} fare changes`);
+      showMessage(`Successfully saved ${payload.length} fare changes`);
       await fetchFareStats();
-      
     } catch (err) {
-      showMessage('Error saving changes: ' + err.message, 'error');
+      showMessage("Error saving changes: " + err.message, "error");
     }
   };
 
-  // Create fare matrix for display
   const createFareMatrixDisplay = () => {
     if (!stations.length || !fareMatrix.length) return { matrix: [], activeStations: [] };
 
-    const activeStations = stations.filter(station => station.Active);
+    const activeStations = stations.filter((s) => s.Active);
     const matrix = [];
 
-    activeStations.forEach((fromStation) => {
+    activeStations.forEach((from) => {
       const row = [];
-      activeStations.forEach((toStation) => {
-        if (fromStation.Station_ID === toStation.Station_ID) {
+      activeStations.forEach((to) => {
+        if (from.Station_ID === to.Station_ID) {
           row.push({ fare: 0, isDisabled: true, fareId: null, active: false });
         } else {
-          const fareEntry = fareMatrix.find(f => 
-            f.From_Station_ID === fromStation.Station_ID && 
-            f.To_Station_ID === toStation.Station_ID
+          const entry = fareMatrix.find(
+            (f) =>
+              f.From_Station_ID === from.Station_ID &&
+              f.To_Station_ID === to.Station_ID
           );
           row.push({
-            fare: fareEntry ? fareEntry.Fare : 0,
-            fareId: fareEntry ? fareEntry.Fare_ID : null,
-            active: fareEntry ? fareEntry.Active : false,
+            fare: entry ? entry.Fare : 0,
+            fareId: entry ? entry.Fare_ID : null,
+            active: entry ? entry.Active : false,
             isDisabled: false,
-            fromName: fromStation.StationName,
-            toName: toStation.StationName
+            fromName: from.StationName,
+            toName: to.StationName,
           });
         }
       });
@@ -459,10 +372,8 @@ export default function FareTab() {
         <OperationsTab />
         <div className="fare-tab-page">
           <div className="fare-tab-main">
-            <h2 className="fare-tab-section">Fare</h2>
-            <div className="loading-container">
-              Loading fare data...
-            </div>
+            <div className="ops-page-title">Fare</div>
+            <div className="loading-container">Loading fare data...</div>
           </div>
         </div>
       </>
@@ -477,19 +388,10 @@ export default function FareTab() {
 
       <div className="fare-tab-page">
         <div className="fare-tab-main">
-          <h2 className="fare-tab-section">Fare Management</h2>
+          <div className="ops-page-title">Fare Management</div>
 
-          {error && (
-            <div className="message-box error-message">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="message-box success-message">
-              {success}
-            </div>
-          )}
+          {error && <div className="message-box error-message">{error}</div>}
+          {success && <div className="message-box success-message">{success}</div>}
 
           {fareStats && (
             <div className="stats-container">
@@ -502,45 +404,58 @@ export default function FareTab() {
             </div>
           )}
 
-          <div className="control-buttons">
-            <button
-              className={`tab-button ${viewMode === 'fare' ? 'active' : ''}`}
-              onClick={() => setViewMode('fare')}
-            >
-              Fare Matrix
-            </button>
-            <button
-              className={`tab-button ${viewMode === 'stationMaster' ? 'active' : ''}`}
-              onClick={() => {
-                setViewMode('stationMaster');
-                setEditingStations([...stations]);
-              }}
-            >
-              Station Master
-            </button>
-            {stations.length === 0 && (
-              <button className="sync-button" onClick={syncStations}>
-                Sync Stations
+          {/* Top pills and actions */}
+          <div className="fare-topbar">
+            <div className="fare-tabs">
+              <button
+                className={`fare-pill ${viewMode === "fare" ? "active" : ""}`}
+                onClick={() => setViewMode("fare")}
+              >
+                Fare Matrix
               </button>
-            )}
-            {Object.keys(pendingChanges).length > 0 && (
-              <button className="save-all-button" onClick={saveAllPendingChanges}>
-                Save All Changes ({Object.keys(pendingChanges).length})
+              <button
+                className={`fare-pill ${viewMode === "stationMaster" ? "active" : ""}`}
+                onClick={() => {
+                  setViewMode("stationMaster");
+                  setEditingStations([...stations]);
+                }}
+              >
+                Station Master
               </button>
-            )}
+            </div>
+
+            <div className="fare-actions">
+              {Object.keys(pendingChanges).length > 0 && (
+                <button className="btn navy" onClick={saveAllPendingChanges}>
+                  Save All Changes ({Object.keys(pendingChanges).length})
+                </button>
+              )}
+              {stations.length === 0 && (
+                <button className="btn outline" onClick={syncStations}>
+                  Sync Stations
+                </button>
+              )}
+            </div>
           </div>
 
-          {viewMode === 'stationMaster' && (
-            <div className="station-master-section">
-              <h3>Station Order Management</h3>
+          {/* Station Master */}
+          {viewMode === "stationMaster" && (
+            <div className="card section">
+              <div className="section-head">
+                <h3>Station Order Management</h3>
+                <div className="section-actions">
+                  <button className="btn outline" onClick={syncStations}>Sync</button>
+                  <button className="btn navy" onClick={saveStationOrder}>Save</button>
+                </div>
+              </div>
               <p className="description">
                 Set the order of stations for the fare matrix generation. Lower numbers appear first.
               </p>
-              
+
               {editingStations.length > 0 ? (
-                <div className="station-table-container">
-                  <div className="scrollable-table">
-                    <table className="station-master-table">
+                <div className="table-shell">
+                  <div className="table-scroll">
+                    <table className="ops-table">
                       <thead>
                         <tr>
                           <th>Station Name</th>
@@ -554,44 +469,40 @@ export default function FareTab() {
                         {editingStations
                           .sort((a, b) => a.StopOrder - b.StopOrder)
                           .map((station) => (
-                          <tr key={station.Station_ID}>
-                            <td className="station-name">
-                              {station.StationName}
-                            </td>
-                            <td>
-                              <input
-                                className="order-input"
-                                type="number"
-                                value={station.StopOrder}
-                                onChange={(e) => handleStationOrderUpdate(station.Station_ID, e.target.value)}
-                                min="1"
-                              />
-                            </td>
-                            <td>
-                              <span className={`status-badge ${station.Active ? 'active' : 'inactive'}`}>
-                                {station.Active ? 'Active' : 'Inactive'}
-                              </span>
-                            </td>
-                            <td className="station-id">
-                              {station.Station_ID}
-                            </td>
-                            <td>
-                              <button 
-                                className="edit-button"
-                                onClick={() => {
-                                  const hasChanges = JSON.stringify(editingStations) !== JSON.stringify(stations);
-                                  if (hasChanges) {
-                                    saveStationOrder();
-                                  } else {
-                                    showMessage('No changes to save', 'error');
+                            <tr key={station.Station_ID}>
+                              <td className="left">{station.StationName}</td>
+                              <td className="center">
+                                <input
+                                  className="order-input"
+                                  type="number"
+                                  min="1"
+                                  value={station.StopOrder}
+                                  onChange={(e) =>
+                                    handleStationOrderUpdate(
+                                      station.Station_ID,
+                                      e.target.value
+                                    )
                                   }
-                                }}
-                              >
-                                Save Changes
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                                />
+                              </td>
+                              <td className="center">
+                                <span
+                                  className={`badge ${station.Active ? "ok" : "bad"}`}
+                                >
+                                  {station.Active ? "Active" : "Inactive"}
+                                </span>
+                              </td>
+                              <td className="mono center">{station.Station_ID}</td>
+                              <td className="center">
+                                <button
+                                  className="btn navy sm"
+                                  onClick={saveStationOrder}
+                                >
+                                  Save
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -600,7 +511,7 @@ export default function FareTab() {
                 <div className="empty-state">
                   <h4>No stations found in Station_Master table</h4>
                   <p>You need to sync stations from your main Station table first.</p>
-                  <button className="sync-button" onClick={syncStations}>
+                  <button className="btn navy" onClick={syncStations}>
                     Sync Stations from Main Table
                   </button>
                 </div>
@@ -608,86 +519,97 @@ export default function FareTab() {
             </div>
           )}
 
-          {viewMode === 'fare' && (
-            <div className="fare-matrix-section">
-              <div className="matrix-controls">
-                <button className="regenerate-button" onClick={regenerateFareMatrix}>
-                  Regenerate Matrix
-                </button>
-                {/* NEW: Bulk toggle buttons */}
-                <button 
-                  className="regenerate-button" 
-                  style={{ backgroundColor: '#28a745' }}
-                  onClick={() => bulkToggleAllFares(true)}
-                  disabled={fareMatrix.length === 0}
-                >
-                  Enable All Fares
-                </button>
-                <button 
-                  className="regenerate-button" 
-                  style={{ backgroundColor: '#dc3545' }}
-                  onClick={() => bulkToggleAllFares(false)}
-                  disabled={fareMatrix.length === 0}
-                >
-                  Disable All Fares
-                </button>
-                <span className="help-text">
-                  Click to regenerate the fare matrix based on current active stations, or bulk enable/disable all fares
-                </span>
+          {/* Fare Matrix */}
+          {viewMode === "fare" && (
+            <div className="card section">
+              <div className="section-head">
+                <h3>Fare Matrix</h3>
+                <div className="section-actions">
+                  <button className="btn navy" onClick={regenerateFareMatrix}>
+                    Regenerate Matrix
+                  </button>
+                  <button
+                    className="btn green"
+                    onClick={() => bulkToggleAllFares(true)}
+                    disabled={fareMatrix.length === 0}
+                  >
+                    Enable All
+                  </button>
+                  <button
+                    className="btn red"
+                    onClick={() => bulkToggleAllFares(false)}
+                    disabled={fareMatrix.length === 0}
+                  >
+                    Disable All
+                  </button>
+                </div>
               </div>
 
               {activeStations.length > 0 && fareDisplayMatrix.length > 0 ? (
-                <div className="fare-matrix-container">
-                  <div className="fare-table-wrapper">
-                    <table className="fare-matrix-table">
+                <div className="matrix-shell">
+                  <div className="matrix-scroll">
+                    <table className="matrix-table">
                       <thead>
                         <tr>
-                          <th className="corner-header">FROM / TO</th>
-                          {activeStations.map((station, index) => (
-                            <th key={index} className="station-header">
-                              <div className="rotated-header">
-                                {station.StationName}
-                              </div>
+                          <th className="corner">FROM / TO</th>
+                          {activeStations.map((s) => (
+                            <th key={s.Station_ID} className="col-head">
+                              <span className="col-head-text">{s.StationName}</span>
                             </th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {fareDisplayMatrix.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            <td className="row-header">
-                              {activeStations[rowIndex]?.StationName}
+                        {fareDisplayMatrix.map((row, rIdx) => (
+                          <tr key={rIdx}>
+                            <td className="row-head">
+                              <span className="row-head-text">
+                                {activeStations[rIdx]?.StationName}
+                              </span>
                             </td>
-                            {row.map((cell, colIndex) => (
-                              <td 
-                                key={colIndex} 
-                                className={`fare-cell ${
-                                  cell.isDisabled ? 'disabled' : 
-                                  !cell.active ? 'inactive' :
-                                  pendingChanges[cell.fareId] ? 'pending' : 'active'
-                                }`}
+                            {row.map((cell, cIdx) => (
+                              <td
+                                key={cIdx}
+                                className={[
+                                  "cell",
+                                  cell.isDisabled
+                                    ? "disabled"
+                                    : !cell.active
+                                    ? "inactive"
+                                    : pendingChanges[cell.fareId]
+                                    ? "pending"
+                                    : "active",
+                                ].join(" ")}
                               >
                                 {cell.isDisabled ? (
-                                  <div className="disabled-cell">-</div>
+                                  <div className="dash">—</div>
                                 ) : (
-                                  <div className="cell-content">
+                                  <div className="cell-inner">
                                     <input
                                       className="fare-input"
                                       type="number"
                                       step="0.01"
                                       min="0"
                                       value={cell.fare}
-                                      onChange={(e) => cell.fareId && handleFareChange(cell.fareId, e.target.value)}
-                                      onBlur={(e) => cell.fareId && saveFare(cell.fareId, e.target.value)}
+                                      onChange={(e) =>
+                                        cell.fareId &&
+                                        handleFareChange(cell.fareId, e.target.value)
+                                      }
+                                      onBlur={(e) =>
+                                        cell.fareId &&
+                                        saveFare(cell.fareId, e.target.value)
+                                      }
                                       disabled={!cell.fareId}
                                       placeholder="0.00"
                                     />
                                     {cell.fareId && (
                                       <button
-                                        className={`status-toggle ${cell.active ? 'active' : 'inactive'}`}
-                                        onClick={() => toggleFareStatus(cell.fareId, cell.active)}
+                                        className={`status ${cell.active ? "on" : "off"}`}
+                                        onClick={() =>
+                                          toggleFareStatus(cell.fareId, cell.active)
+                                        }
                                       >
-                                        {cell.active ? 'Active' : 'Disabled'}
+                                        {cell.active ? "Active" : "Disabled"}
                                       </button>
                                     )}
                                   </div>
@@ -703,7 +625,7 @@ export default function FareTab() {
               ) : (
                 <div className="empty-state">
                   <p>No fare data available. Please ensure stations are configured and regenerate the matrix.</p>
-                  <button className="regenerate-button" onClick={regenerateFareMatrix}>
+                  <button className="btn navy" onClick={regenerateFareMatrix}>
                     Generate Fare Matrix
                   </button>
                 </div>
@@ -712,12 +634,10 @@ export default function FareTab() {
               <div className="instructions">
                 <p><strong>Instructions:</strong></p>
                 <ul>
-                  <li>Edit fares directly in the matrix cells - changes save automatically when you click outside the field</li>
-                  <li>Click the status button below each fare to enable/disable specific routes</li>
-                  <li>Use "Enable All Fares" or "Disable All Fares" buttons to bulk toggle all fare statuses</li>
-                  <li>Yellow highlighting indicates unsaved changes</li>
-                  <li>Use "Station Master" to reorder stations before generating the matrix</li>
-                  <li>Disabled routes will appear with a red background</li>
+                  <li>Edit fares directly in the cells — values save on blur</li>
+                  <li>Use the status chip to enable/disable a route pair</li>
+                  <li>Yellow rows indicate unsaved changes</li>
+                  <li>Use Station Master to reorder stations before regenerating</li>
                 </ul>
               </div>
             </div>

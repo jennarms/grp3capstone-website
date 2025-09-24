@@ -20,7 +20,7 @@
   /* Title — force left alignment and shared style */
   .ops-title{
     font-size: 48px !important;
-    font-weight: 700;
+    font-weight: 800;
     margin: 0;
     margin-bottom: 10px;
     text-align: left !important;  /* override any global centering */

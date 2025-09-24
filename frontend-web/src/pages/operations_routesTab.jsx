@@ -35,7 +35,7 @@ export function RoutesTab() {
     companyId: "",
     routeName: "",
     direction: "FO",
-    vehicleId: ""
+    vehicleId: "",
   });
   const [routeToDelete, setRouteToDelete] = useState(null);
 
@@ -62,26 +62,26 @@ export function RoutesTab() {
   /* ===== Derived helpers ===== */
   const filteredRoutes = useMemo(() => {
     let filtered = rows;
-    
-    // Apply direction filter first
-      if (directionFilter !== "All") {
-        if (directionFilter === "Reverse") {
-          filtered = filtered.filter(r => r.direction === 'RE');
-        } else if (directionFilter === "Forward") {
-          filtered = filtered.filter(r => r.direction === 'FO');
+
+    // direction filter
+    if (directionFilter !== "All") {
+      if (directionFilter === "Reverse") {
+        filtered = filtered.filter((r) => r.direction === "RE");
+      } else if (directionFilter === "Forward") {
+        filtered = filtered.filter((r) => r.direction === "FO");
       }
     }
-    
-    // Apply text search filter
+
+    // text search
     if (routeQuery.trim()) {
       const q = routeQuery.toLowerCase();
       filtered = filtered.filter((r) =>
-        (r.routeId + r.companyId + r.routeName + (r.directionDisplay || ''))
+        (r.routeId + r.companyId + r.routeName + (r.directionDisplay || ""))
           .toLowerCase()
           .includes(q)
       );
     }
-    
+
     return filtered;
   }, [rows, routeQuery, directionFilter]);
 
@@ -106,138 +106,126 @@ export function RoutesTab() {
     return max + 1;
   }, [stationRows, selectedRouteId]);
 
-  // Helper function to get auth token
+  // auth headers
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     };
   };
 
-  // Helper function to format direction display
   const getDirectionDisplay = (direction) => {
-    if (direction === 'RE') return 'Reverse';
-    if (direction === 'FO') return 'Forward';
+    if (direction === "RE") return "Reverse";
+    if (direction === "FO") return "Forward";
     return direction;
   };
 
-  // API Functions
+  // API
   const fetchRoutes = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       console.log("Fetching routes from:", `${apiUrl}/api/routes/`);
-      
+
       const response = await fetch(`${apiUrl}/api/routes/`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
-      
-      console.log("Routes response status:", response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log("Routes data:", data);
-        
-        const mappedData = data.map(routeItem => ({
+
+        const mappedData = data.map((routeItem) => ({
           routeId: routeItem.route_id,
           companyId: routeItem.company_id,
           routeName: routeItem.route_name,
           direction: routeItem.direction,
           directionDisplay: getDirectionDisplay(routeItem.direction),
-          vehicleId: routeItem.vehicle_id || 'Not Assigned'
+          vehicleId: routeItem.vehicle_id || "Not Assigned",
         }));
         setRows(mappedData);
-        
-        // Set first route as selected if none selected and routes exist
+
         if (mappedData.length > 0 && route === "") {
           setRoute(mappedData[0].routeName);
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        console.error("Routes fetch error:", response.status, errorData);
-        setError(`Failed to fetch routes: ${errorData.error || response.statusText}`);
+        setError(
+          `Failed to fetch routes: ${errorData.error || response.statusText}`
+        );
       }
     } catch (err) {
-      console.error("Routes fetch exception:", err);
-      setError('Error fetching routes: ' + err.message);
+      setError("Error fetching routes: " + err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAvailableStations = useCallback(async () => {
     try {
-      console.log("Fetching available stations from:", `${apiUrl}/api/routes/available-stations`);
-      
       const response = await fetch(`${apiUrl}/api/routes/available-stations`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
-      
-      console.log("Stations response status:", response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log("Available stations data:", data);
-        
-        const mappedData = data.map(station => ({
+        const mappedData = data.map((station) => ({
           id: station.station_id,
-          name: station.station_name
+          name: station.station_name,
         }));
         setAvailableStations(mappedData);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Available stations fetch error:", response.status, errorData);
       }
     } catch (err) {
-      console.error('Error fetching available stations:', err);
+      console.error("Error fetching available stations:", err);
     }
-  }, []);
+  }, [apiUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchRouteStations = useCallback(async (routeId) => {
-    if (!routeId) return;
-    try {
-      console.log("Fetching route stations for:", routeId);
-      
-      const response = await fetch(`${apiUrl}/api/routes/stations/${routeId}`, {
-        headers: getAuthHeaders()
-      });
-      
-      console.log("Route stations response status:", response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Route stations data:", data);
-        
-        const mappedData = data.map(station => ({
-          routeStationId: station.route_station_id,
-          routeId: station.route_id,
-          stationId: station.station_id,
-          stationName: station.station_name,
-          stopOrder: station.stop_order
-        }));
-        setStationRows(mappedData);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Route stations fetch error:", response.status, errorData);
+  const fetchRouteStations = useCallback(
+    async (routeId) => {
+      if (!routeId) return;
+      try {
+        const response = await fetch(
+          `${apiUrl}/api/routes/stations/${routeId}`,
+          {
+            headers: getAuthHeaders(),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const mappedData = data.map((station) => ({
+            routeStationId: station.route_station_id,
+            routeId: station.route_id,
+            stationId: station.station_id,
+            stationName: station.station_name,
+            stopOrder: station.stop_order,
+          }));
+          setStationRows(mappedData);
+        }
+      } catch (err) {
+        console.error("Error fetching route stations:", err);
       }
-    } catch (err) {
-      console.error('Error fetching route stations:', err);
-    }
-  }, []);
+    },
+    [apiUrl] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const createRoute = async (routeData) => {
     try {
       setLoading(true);
       const payload = {
         route_name: routeData.routeName,
-        direction: routeData.direction === 'Reverse' ? 'RE' : routeData.direction === 'Forward' ? 'FO' : null
+        direction:
+          routeData.direction === "Reverse"
+            ? "RE"
+            : routeData.direction === "Forward"
+            ? "FO"
+            : null,
       };
 
       const response = await fetch(`${apiUrl}/api/routes/`, {
-        method: 'POST',
+        method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -245,11 +233,11 @@ export function RoutesTab() {
         return true;
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create route');
+        setError(errorData.error || "Failed to create route");
         return false;
       }
     } catch (err) {
-      setError('Error creating route: ' + err.message);
+      setError("Error creating route: " + err.message);
       return false;
     } finally {
       setLoading(false);
@@ -260,8 +248,8 @@ export function RoutesTab() {
     try {
       setLoading(true);
       const response = await fetch(`${apiUrl}/api/routes/${routeId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
+        method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -269,11 +257,11 @@ export function RoutesTab() {
         return true;
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to delete route');
+        setError(errorData.error || "Failed to delete route");
         return false;
       }
     } catch (err) {
-      setError('Error deleting route: ' + err.message);
+      setError("Error deleting route: " + err.message);
       return false;
     } finally {
       setLoading(false);
@@ -286,13 +274,13 @@ export function RoutesTab() {
       const payload = {
         route_id: stationData.routeId,
         station_id: stationData.stationId,
-        stop_order: parseInt(stationData.stopOrder)
+        stop_order: parseInt(stationData.stopOrder, 10),
       };
 
       const response = await fetch(`${apiUrl}/api/routes/stations`, {
-        method: 'POST',
+        method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -300,11 +288,11 @@ export function RoutesTab() {
         return true;
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to add station to route');
+        setError(errorData.error || "Failed to add station to route");
         return false;
       }
     } catch (err) {
-      setError('Error adding station: ' + err.message);
+      setError("Error adding station: " + err.message);
       return false;
     } finally {
       setLoading(false);
@@ -314,26 +302,27 @@ export function RoutesTab() {
   const updateRouteStation = async (routeStationId, stopOrder) => {
     try {
       setLoading(true);
-      const payload = {
-        stop_order: parseInt(stopOrder)
-      };
+      const payload = { stop_order: parseInt(stopOrder, 10) };
 
-      const response = await fetch(`${apiUrl}/api/routes/stations/${routeStationId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-      });
+      const response = await fetch(
+        `${apiUrl}/api/routes/stations/${routeStationId}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (response.ok) {
         await fetchRouteStations(selectedRouteId);
         return true;
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to update route station');
+        setError(errorData.error || "Failed to update route station");
         return false;
       }
     } catch (err) {
-      setError('Error updating station: ' + err.message);
+      setError("Error updating station: " + err.message);
       return false;
     } finally {
       setLoading(false);
@@ -343,34 +332,37 @@ export function RoutesTab() {
   const deleteRouteStation = async (routeStationId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${apiUrl}/api/routes/stations/${routeStationId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
+      const response = await fetch(
+        `${apiUrl}/api/routes/stations/${routeStationId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (response.ok) {
         await fetchRouteStations(selectedRouteId);
         return true;
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to delete route station');
+        setError(errorData.error || "Failed to delete route station");
         return false;
       }
     } catch (err) {
-      setError('Error deleting station: ' + err.message);
+      setError("Error deleting station: " + err.message);
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  // Load data on component mount
+  // mount
   useEffect(() => {
     fetchRoutes();
     fetchAvailableStations();
   }, [fetchRoutes, fetchAvailableStations]);
 
-  // Load route stations when selected route changes
+  // when route changes
   useEffect(() => {
     if (selectedRouteId) {
       fetchRouteStations(selectedRouteId);
@@ -379,22 +371,22 @@ export function RoutesTab() {
 
   /* ===== ROUTES handlers ===== */
   const openRouteAdd = () => {
-    setRouteDraft({ 
-      routeId: "", 
-      companyId: "", 
-      routeName: "", 
-      direction: "Forward"
+    setRouteDraft({
+      routeId: "",
+      companyId: "",
+      routeName: "",
+      direction: "Forward",
     });
     setRouteAddOpen(true);
     setError("");
   };
 
-  const saveRouteAdd = () => { 
-    setRouteAddOpen(false); 
-    setRouteConfirm({ kind: "add", open: true }); 
+  const saveRouteAdd = () => {
+    setRouteAddOpen(false);
+    setRouteConfirm({ kind: "add", open: true });
   };
 
-  const confirmRouteAdd = async () => { 
+  const confirmRouteAdd = async () => {
     const success = await createRoute(routeDraft);
     if (success) {
       setRouteConfirm({ kind: null, open: false });
@@ -404,22 +396,21 @@ export function RoutesTab() {
   const openRouteEdit = (id) => {
     const r = rows.find((x) => x.routeId === id);
     if (!r) return;
-    
-    // Map the backend data to display values for the form
+
     setRouteEdit({
       routeId: r.routeId,
       companyId: r.companyId,
       routeName: r.routeName,
-      direction: r.direction === 'RE' ? 'Reverse' : r.direction === 'FO' ? 'Forward' : 'Null',
-      vehicleId: r.vehicleId
+      direction: r.direction === "RE" ? "Reverse" : r.direction === "FO" ? "Forward" : "Null",
+      vehicleId: r.vehicleId,
     });
     setRouteEditOpen(true);
     setError("");
   };
 
-  const saveRouteEdit = () => { 
-    setRouteEditOpen(false); 
-    setRouteConfirm({ kind: "edit", open: true }); 
+  const saveRouteEdit = () => {
+    setRouteEditOpen(false);
+    setRouteConfirm({ kind: "edit", open: true });
   };
 
   const confirmRouteEdit = async () => {
@@ -427,34 +418,39 @@ export function RoutesTab() {
       setLoading(true);
       const payload = {
         route_name: routeEdit.routeName,
-        direction: routeEdit.direction === 'Reverse' ? 'RE' : routeEdit.direction === 'Forward' ? 'FO' : null
+        direction:
+          routeEdit.direction === "Reverse"
+            ? "RE"
+            : routeEdit.direction === "Forward"
+            ? "FO"
+            : null,
       };
 
       const response = await fetch(`${apiUrl}/api/routes/${routeEdit.routeId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
-        await fetchRoutes(); // Refresh the routes from database
+        await fetchRoutes();
         setRouteConfirm({ kind: null, open: false });
         setSuccessMessage("Route updated successfully!");
         setTimeout(() => setSuccessMessage(""), 3000);
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to update route');
+        setError(errorData.error || "Failed to update route");
       }
     } catch (err) {
-      setError('Error updating route: ' + err.message);
+      setError("Error updating route: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const openRouteDelete = (id) => { 
-    setRouteToDelete(id); 
-    setRouteConfirm({ kind: "delete", open: true }); 
+  const openRouteDelete = (id) => {
+    setRouteToDelete(id);
+    setRouteConfirm({ kind: "delete", open: true });
     setError("");
   };
 
@@ -482,9 +478,9 @@ export function RoutesTab() {
     setError("");
   };
 
-  const saveStationAdd = () => { 
-    setStAddOpen(false); 
-    setStConfirm({ kind: "add", open: true }); 
+  const saveStationAdd = () => {
+    setStAddOpen(false);
+    setStConfirm({ kind: "add", open: true });
   };
 
   const confirmStationAdd = async () => {
@@ -502,21 +498,24 @@ export function RoutesTab() {
     setError("");
   };
 
-  const saveStationEdit = () => { 
-    setStEditOpen(false); 
-    setStConfirm({ kind: "edit", open: true }); 
+  const saveStationEdit = () => {
+    setStEditOpen(false);
+    setStConfirm({ kind: "edit", open: true });
   };
 
   const confirmStationEdit = async () => {
-    const success = await updateRouteStation(stEdit.routeStationId, stEdit.stopOrder);
+    const success = await updateRouteStation(
+      stEdit.routeStationId,
+      stEdit.stopOrder
+    );
     if (success) {
       setStConfirm({ kind: null, open: false });
     }
   };
 
-  const openStationDelete = (routeStationId) => { 
-    setStToDelete(routeStationId); 
-    setStConfirm({ kind: "delete", open: true }); 
+  const openStationDelete = (routeStationId) => {
+    setStToDelete(routeStationId);
+    setStConfirm({ kind: "delete", open: true });
     setError("");
   };
 
@@ -536,13 +535,31 @@ export function RoutesTab() {
 
       <main className="ops-routes-main">
         {error && (
-          <div className="error-message" style={{ color: 'red', margin: '10px 0', padding: '10px', backgroundColor: '#ffe6e6', borderRadius: '4px' }}>
+          <div
+            className="error-message"
+            style={{
+              color: "red",
+              margin: "10px 0",
+              padding: "10px",
+              backgroundColor: "#ffe6e6",
+              borderRadius: "4px",
+            }}
+          >
             {error}
           </div>
         )}
 
         {successMessage && (
-          <div className="success-message" style={{ color: 'green', margin: '10px 0', padding: '10px', backgroundColor: '#e6ffe6', borderRadius: '4px' }}>
+          <div
+            className="success-message"
+            style={{
+              color: "green",
+              margin: "10px 0",
+              padding: "10px",
+              backgroundColor: "#e6ffe6",
+              borderRadius: "4px",
+            }}
+          >
             {successMessage}
           </div>
         )}
@@ -551,8 +568,8 @@ export function RoutesTab() {
 
         <label className="ops-routes-direction">
           Filter by Direction:
-          <select 
-            value={directionFilter} 
+          <select
+            value={directionFilter}
             onChange={(e) => setDirectionFilter(e.target.value)}
           >
             <option value="All">All Routes</option>
@@ -563,6 +580,15 @@ export function RoutesTab() {
 
         <div className="ops-routes-toolbar">
           <label className="ops-routes-search">
+            {/* magnifying icon */}
+            <span className="ops-routes-search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path
+                  d="M11 4a7 7 0 015.292 11.708l3.5 3.5a1 1 0 01-1.414 1.414l-3.5-3.5A7 7 0 1111 4zm0 2a5 5 0 100 10 5 5 0 000-10z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
             <input
               className="ops-routes-search-input"
               type="text"
@@ -572,13 +598,13 @@ export function RoutesTab() {
             />
           </label>
 
-          <button 
-            type="button" 
-            className="ops-routes-add-btn" 
+          <button
+            type="button"
+            className="ops-routes-add-btn"
             onClick={openRouteAdd}
             disabled={loading}
           >
-            {loading ? 'Loading...' : 'Add'}
+            {loading ? "Loading..." : "Add"}
           </button>
         </div>
 
@@ -603,15 +629,15 @@ export function RoutesTab() {
                   <td>{r.directionDisplay}</td>
                   <td>{r.vehicleId}</td>
                   <td className="ops-routes-actions">
-                    <button 
-                      className="ops-routes-action ops-routes-edit" 
+                    <button
+                      className="ops-routes-action ops-routes-edit"
                       onClick={() => openRouteEdit(r.routeId)}
                       disabled={loading}
                     >
                       Edit
                     </button>
-                    <button 
-                      className="ops-routes-action ops-routes-delete" 
+                    <button
+                      className="ops-routes-action ops-routes-delete"
                       onClick={() => openRouteDelete(r.routeId)}
                       disabled={loading}
                     >
@@ -622,7 +648,7 @@ export function RoutesTab() {
               ))}
               {filteredRoutes.length === 0 && !loading && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>
                     No routes found
                   </td>
                 </tr>
@@ -634,8 +660,8 @@ export function RoutesTab() {
         <h3 className="ops-routes-table-title">Station and Route</h3>
         <label className="ops-routes-station-route">
           Route:
-          <select 
-            value={route} 
+          <select
+            value={route}
             onChange={(e) => setRoute(e.target.value)}
             disabled={rows.length === 0}
           >
@@ -653,6 +679,15 @@ export function RoutesTab() {
 
         <div className="ops-routes-toolbar">
           <label className="ops-routes-search">
+            {/* magnifying icon */}
+            <span className="ops-routes-search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path
+                  d="M11 4a7 7 0 015.292 11.708l3.5 3.5a1 1 0 01-1.414 1.414l-3.5-3.5A7 7 0 1111 4zm0 2a5 5 0 100 10 5 5 0 000-10z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
             <input
               className="ops-routes-search-input"
               type="text"
@@ -661,13 +696,13 @@ export function RoutesTab() {
               onChange={(e) => setStationQuery(e.target.value)}
             />
           </label>
-          <button 
-            type="button" 
-            className="ops-routes-add-btn" 
+          <button
+            type="button"
+            className="ops-routes-add-btn"
             onClick={openStationAdd}
             disabled={loading || !selectedRouteId}
           >
-            {loading ? 'Loading...' : 'Add'}
+            {loading ? "Loading..." : "Add"}
           </button>
         </div>
 
@@ -692,15 +727,15 @@ export function RoutesTab() {
                   <td>{s.stationName}</td>
                   <td>{s.stopOrder}</td>
                   <td className="ops-routes-actions">
-                    <button 
-                      className="ops-routes-action ops-routes-edit" 
+                    <button
+                      className="ops-routes-action ops-routes-edit"
                       onClick={() => openStationEdit(s.routeStationId)}
                       disabled={loading}
                     >
                       Edit
                     </button>
-                    <button 
-                      className="ops-routes-action ops-routes-delete" 
+                    <button
+                      className="ops-routes-action ops-routes-delete"
                       onClick={() => openStationDelete(s.routeStationId)}
                       disabled={loading}
                     >
@@ -711,7 +746,7 @@ export function RoutesTab() {
               ))}
               {filteredStations.length === 0 && !loading && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>
                     No stations found for this route
                   </td>
                 </tr>
@@ -727,24 +762,41 @@ export function RoutesTab() {
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Add Route</h3>
-              <button className="rt-close" onClick={() => setRouteAddOpen(false)}>×</button>
+              <button className="rt-close" onClick={() => setRouteAddOpen(false)}>
+                ×
+              </button>
             </div>
             <div className="rt-modalBody">
               <label>Route Name</label>
-              <input 
-                value={routeDraft.routeName} 
-                onChange={(e) => setRouteDraft({ ...routeDraft, routeName: e.target.value })} 
+              <input
+                value={routeDraft.routeName}
+                onChange={(e) =>
+                  setRouteDraft({ ...routeDraft, routeName: e.target.value })
+                }
                 placeholder="Enter route name"
               />
               <label>Direction</label>
-              <select value={routeDraft.direction} onChange={(e) => setRouteDraft({ ...routeDraft, direction: e.target.value })}>
+              <select
+                value={routeDraft.direction}
+                onChange={(e) =>
+                  setRouteDraft({ ...routeDraft, direction: e.target.value })
+                }
+              >
                 <option value="Reverse">Reverse</option>
                 <option value="Forward">Forward</option>
               </select>
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setRouteAddOpen(false)}>Cancel</button>
-              <button className="rt-btn rt-btnNavy" onClick={saveRouteAdd} disabled={!routeDraft.routeName}>Save</button>
+              <button className="rt-btn rt-btnOutline" onClick={() => setRouteAddOpen(false)}>
+                Cancel
+              </button>
+              <button
+                className="rt-btn rt-btnNavy"
+                onClick={saveRouteAdd}
+                disabled={!routeDraft.routeName}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
@@ -755,7 +807,9 @@ export function RoutesTab() {
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Edit Route</h3>
-              <button className="rt-close" onClick={() => setRouteEditOpen(false)}>×</button>
+              <button className="rt-close" onClick={() => setRouteEditOpen(false)}>
+                ×
+              </button>
             </div>
             <div className="rt-modalBody">
               <label>Route ID</label>
@@ -763,25 +817,42 @@ export function RoutesTab() {
               <label>Company ID</label>
               <input value={routeEdit.companyId} disabled />
               <label>Vehicle ID</label>
-              <input value={routeEdit.vehicleId || 'Not assigned'} disabled />
+              <input value={routeEdit.vehicleId || "Not assigned"} disabled />
               <label>Route Name</label>
-              <input value={routeEdit.routeName} onChange={(e) => setRouteEdit({ ...routeEdit, routeName: e.target.value })} />
+              <input
+                value={routeEdit.routeName}
+                onChange={(e) =>
+                  setRouteEdit({ ...routeEdit, routeName: e.target.value })
+                }
+              />
               <label>Direction</label>
-              <select value={routeEdit.direction} onChange={(e) => setRouteEdit({ ...routeEdit, direction: e.target.value })}>
+              <select
+                value={routeEdit.direction}
+                onChange={(e) =>
+                  setRouteEdit({ ...routeEdit, direction: e.target.value })
+                }
+              >
                 <option value="Reverse">Reverse</option>
                 <option value="Forward">Forward</option>
               </select>
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setRouteEditOpen(false)}>Cancel</button>
-              <button className="rt-btn rt-btnNavy" onClick={saveRouteEdit}>Save</button>
+              <button className="rt-btn rt-btnOutline" onClick={() => setRouteEditOpen(false)}>
+                Cancel
+              </button>
+              <button className="rt-btn rt-btnNavy" onClick={saveRouteEdit}>
+                Save
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {routeConfirm.open && (
-        <div className="rt-modalOverlay" onClick={() => setRouteConfirm({ kind: null, open: false })}>
+        <div
+          className="rt-modalOverlay"
+          onClick={() => setRouteConfirm({ kind: null, open: false })}
+        >
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">
@@ -796,10 +867,27 @@ export function RoutesTab() {
                 : "Are you sure you want to proceed?"}
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setRouteConfirm({ kind: null, open: false })}>Cancel</button>
-              {routeConfirm.kind === "add" && <button className="rt-btn rt-btnNavy" onClick={confirmRouteAdd} disabled={loading}>Add</button>}
-              {routeConfirm.kind === "edit" && <button className="rt-btn rt-btnNavy" onClick={confirmRouteEdit} disabled={loading}>Save</button>}
-              {routeConfirm.kind === "delete" && <button className="rt-btn rt-btnNavy" onClick={confirmRouteDelete} disabled={loading}>Delete</button>}
+              <button
+                className="rt-btn rt-btnOutline"
+                onClick={() => setRouteConfirm({ kind: null, open: false })}
+              >
+                Cancel
+              </button>
+              {routeConfirm.kind === "add" && (
+                <button className="rt-btn rt-btnNavy" onClick={confirmRouteAdd} disabled={loading}>
+                  Add
+                </button>
+              )}
+              {routeConfirm.kind === "edit" && (
+                <button className="rt-btn rt-btnNavy" onClick={confirmRouteEdit} disabled={loading}>
+                  Save
+                </button>
+              )}
+              {routeConfirm.kind === "delete" && (
+                <button className="rt-btn rt-btnNavy" onClick={confirmRouteDelete} disabled={loading}>
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -811,7 +899,9 @@ export function RoutesTab() {
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Add Station for Route</h3>
-              <button className="rt-close" onClick={() => setStAddOpen(false)}>×</button>
+              <button className="rt-close" onClick={() => setStAddOpen(false)}>
+                ×
+              </button>
             </div>
 
             <div className="rt-modalBody rt-stAddBody">
@@ -838,7 +928,9 @@ export function RoutesTab() {
                 }}
               >
                 {availableStations.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
 
@@ -853,20 +945,29 @@ export function RoutesTab() {
             </div>
 
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setStAddOpen(false)}>Cancel</button>
-              <button className="rt-btn rt-btnNavy" onClick={saveStationAdd} disabled={!stDraft.stationId}>Save</button>
+              <button className="rt-btn rt-btnOutline" onClick={() => setStAddOpen(false)}>
+                Cancel
+              </button>
+              <button
+                className="rt-btn rt-btnNavy"
+                onClick={saveStationAdd}
+                disabled={!stDraft.stationId}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* STATION: Edit & Confirm */}
       {stEditOpen && (
         <div className="rt-modalOverlay" onClick={() => setStEditOpen(false)}>
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Edit Station Route</h3>
-              <button className="rt-close" onClick={() => setStEditOpen(false)}>×</button>
+              <button className="rt-close" onClick={() => setStEditOpen(false)}>
+                ×
+              </button>
             </div>
             <div className="rt-modalBody">
               <label>RouteStation ID</label>
@@ -878,23 +979,30 @@ export function RoutesTab() {
               <label>Station Name</label>
               <input value={stEdit.stationName} disabled />
               <label>Stop Order</label>
-              <input 
-                type="number" 
-                min="1" 
-                value={stEdit.stopOrder} 
-                onChange={(e) => setStEdit({ ...stEdit, stopOrder: e.target.value })} 
+              <input
+                type="number"
+                min="1"
+                value={stEdit.stopOrder}
+                onChange={(e) => setStEdit({ ...stEdit, stopOrder: e.target.value })}
               />
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setStEditOpen(false)}>Cancel</button>
-              <button className="rt-btn rt-btnNavy" onClick={saveStationEdit}>Save</button>
+              <button className="rt-btn rt-btnOutline" onClick={() => setStEditOpen(false)}>
+                Cancel
+              </button>
+              <button className="rt-btn rt-btnNavy" onClick={saveStationEdit}>
+                Save
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {stConfirm.open && (
-        <div className="rt-modalOverlay" onClick={() => setStConfirm({ kind: null, open: false })}>
+        <div
+          className="rt-modalOverlay"
+          onClick={() => setStConfirm({ kind: null, open: false })}
+        >
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">
@@ -909,10 +1017,27 @@ export function RoutesTab() {
                 : "Are you sure you want to proceed?"}
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setStConfirm({ kind: null, open: false })}>Cancel</button>
-              {stConfirm.kind === "add" && <button className="rt-btn rt-btnNavy" onClick={confirmStationAdd} disabled={loading}>Add</button>}
-              {stConfirm.kind === "edit" && <button className="rt-btn rt-btnNavy" onClick={confirmStationEdit} disabled={loading}>Save</button>}
-              {stConfirm.kind === "delete" && <button className="rt-btn rt-btnNavy" onClick={confirmStationDelete} disabled={loading}>Delete</button>}
+              <button
+                className="rt-btn rt-btnOutline"
+                onClick={() => setStConfirm({ kind: null, open: false })}
+              >
+                Cancel
+              </button>
+              {stConfirm.kind === "add" && (
+                <button className="rt-btn rt-btnNavy" onClick={confirmStationAdd} disabled={loading}>
+                  Add
+                </button>
+              )}
+              {stConfirm.kind === "edit" && (
+                <button className="rt-btn rt-btnNavy" onClick={confirmStationEdit} disabled={loading}>
+                  Save
+                </button>
+              )}
+              {stConfirm.kind === "delete" && (
+                <button className="rt-btn rt-btnNavy" onClick={confirmStationDelete} disabled={loading}>
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>
