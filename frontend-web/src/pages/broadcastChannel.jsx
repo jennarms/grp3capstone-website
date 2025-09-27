@@ -1,212 +1,440 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
+import { StationNavbar } from "../components/station_navbar";
 import "./broadcastChannel.css";
 
+const EMOJI_PALETTE = ["👍", "🥰", "😮", "😢", "👎", "😡", "🙂"];
+const apiUrl = import.meta.env.VITE_API_URL;
 
-const EMOJI_PALETTE = [
-  "👍","🥰","😮","😢","👎",
-  "😡", "🙂"
-];
+const ROLES = {
+  MAIN_ADMIN: "main-admin",
+  STATION_ADMIN: "station-admin",
+  USER: "user",
+};
 
-/** Single message bubble with dynamic reactions + emoji picker */
-function Message({ msg, onReact, onTogglePicker, isPickerOpen, onPickEmoji }) {
-  const reactions = Object.entries(msg.reactions || {}); // [[emoji, count], ...]
-  const roleClass =
-    msg.author === "Admin" || msg.author === "Main Administrator"
-      ? "admin"
-      : "other";
+// =================== MESSAGE COMPONENT ===================
+function Message({ 
+  msg, 
+  userId, 
+  userRole,
+  onReact, 
+  onTogglePicker, 
+  isPickerOpen, 
+  onPickEmoji, 
+  canReact,
+  onEdit
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const textareaRef = useRef(null);
+
+  const userIdStr = String(userId || "").trim();
+
+  const isMine = useMemo(() => {
+    if (msg.Sender_MainAdmin_ID) return String(msg.Sender_MainAdmin_ID).trim() === userIdStr;
+    if (msg.Sender_Station_ID) return String(msg.Sender_Station_ID).trim() === userIdStr;
+    if (msg.userId) return String(msg.userId).trim() === userIdStr;
+    return false;
+  }, [msg, userIdStr]);
+
+  const canEdit = useMemo(() => {
+    return isMine && (userRole === ROLES.MAIN_ADMIN || userRole === ROLES.STATION_ADMIN);
+  }, [isMine, userRole]);
+
+  const wrapperClass = isMine ? "bc-msg mine" : "bc-msg other";
+
+  const getAuthorName = () => {
+    if (msg.Sender_MainAdmin_ID) return msg.Sender_MainAdmin_Username ? `Main Admin (${msg.Sender_MainAdmin_Username})` : "Main Admin";
+    if (msg.Sender_Station_ID) return msg.Station_Name ? `Station Admin (${msg.Station_Name})` : "Station Admin";
+    return msg.author || "Unknown";
+  };
+
+  const getMessageText = () => msg.text || msg.Message_Content;
+  const getMessageTime = () => new Date(msg.sent_at || msg.Sent_At).toLocaleString();
+  const id = msg.id || msg.Message_ID;
+
+  const handleEditStart = () => {
+    setEditText(getMessageText());
+    setIsEditing(true);
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditText("");
+  };
+
+  const handleEditSave = async () => {
+    const trimmedText = editText.trim();
+    if (!trimmedText || trimmedText === getMessageText()) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      await onEdit(id, trimmedText);
+      setIsEditing(false);
+      setEditText("");
+    } catch (error) {
+      console.error("Failed to edit message:", error);
+      // You might want to show an error message here
+    }
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleEditSave();
+    } else if (e.key === "Escape") {
+      handleEditCancel();
+    }
+  };
+
+  // Auto-focus and resize textarea when editing starts
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [isEditing]);
 
   return (
-    <div className={`bc-msg ${roleClass}`}>
-      <div className="bc-author">{msg.author}</div>
+    <div className={wrapperClass}>
+      <div className="bc-author">{getAuthorName()}</div>
       <div className="bc-bubble">
-        <p>{msg.text}</p>
+        <div className="bc-message-content">
+          {isEditing ? (
+            <div className="bc-edit-container">
+              <textarea
+                ref={textareaRef}
+                className="bc-edit-textarea"
+                value={editText}
+                onChange={(e) => {
+                  setEditText(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = e.target.scrollHeight + "px";
+                }}
+                onKeyDown={handleEditKeyDown}
+                placeholder="Edit your message..."
+              />
+              <div className="bc-edit-buttons">
+                <button 
+                  className="bc-edit-save"
+                  onClick={handleEditSave}
+                  disabled={!editText.trim()}
+                >
+                  Save
+                </button>
+                <button 
+                  className="bc-edit-cancel"
+                  onClick={handleEditCancel}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bc-message-text">
+              {getMessageText()}
+              {canEdit && (
+                <button 
+                  className="bc-edit-button"
+                  onClick={handleEditStart}
+                  title="Edit message"
+                >
+                  ✏️
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="bc-timestamp">{getMessageTime()}</div>
       </div>
 
       <div className="bc-reactions">
-        {reactions.map(([emoji, count]) => (
-          <button
-            key={emoji}
-            className="bc-chip"
-            type="button"
-            onClick={() => onReact(msg.id, emoji)}
-            aria-label={`React ${emoji}`}
-          >
-            <span className="bc-chip-emoji">{emoji}</span>
-            <span className="bc-chip-count">{count}</span>
-          </button>
-        ))}
+        {msg.reactions && Object.entries(msg.reactions).map(([emoji, count]) => {
+          const userHasReacted = msg.userReactions?.includes(emoji) || false;
+          const canDelete = userHasReacted;
 
-        {/* Add reaction opens the emoji-only picker */}
-        <button
-          className="bc-chip bc-chip-add"
-          type="button"
-          title="Add reaction"
-          onClick={() => onTogglePicker(msg.id)}
-          aria-expanded={isPickerOpen ? "true" : "false"}
-          aria-controls={`picker-${msg.id}`}
-        >
-          ＋
-        </button>
-
-        {/* Inline emoji picker (emojis only) */}
-        {isPickerOpen && (
-          <div className="bc-emoji-pop" id={`picker-${msg.id}`} role="menu">
-            {EMOJI_PALETTE.map((e) => (
-              <button
-                key={e}
-                className="bc-emoji-btn"
-                type="button"
-                role="menuitem"
-                onClick={() => onPickEmoji(msg.id, e)}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
+          return (
+            <button
+              key={emoji}
+              className={`bc-reaction-chip ${userHasReacted ? "reacted" : ""}`}
+              onClick={() => {
+                if (!userHasReacted) {
+                  onReact(id, emoji, false);
+                } else if (canDelete) {
+                  onReact(id, emoji, true);
+                }
+              }}
+              disabled={!canReact || (!userHasReacted && count === 0)}
+            >
+              {emoji} {count}
+            </button>
+          );
+        })}
+        {canReact && <button className="bc-add-reaction" onClick={() => onTogglePicker(id)}>+</button>}
       </div>
+
+      {isPickerOpen && (
+        <div className="bc-emoji-pop">
+          {EMOJI_PALETTE.map((emoji) => (
+            <button key={emoji} className="bc-emoji-btn" onClick={() => onPickEmoji(id, emoji)}>
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
+// =================== CUSTOM HOOK ===================
+function useRole() {
+  const [role, setRole] = useState("");
+  useEffect(() => {
+    setRole(localStorage.getItem("role") || "");
+  }, []);
+  return role;
+}
+
+// =================== BROADCAST COMPONENT ===================
 export function Broadcast() {
   const [tab, setTab] = useState("everyone");
   const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [pickerForId, setPickerForId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
   const feedRef = useRef(null);
 
-  // start empty
-  const [messages, setMessages] = useState([]);
+  const role = useRole();
+  const userId = localStorage.getItem("admin_id");
 
-  // which message has the emoji picker open
-  const [pickerForId, setPickerForId] = useState(null);
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(""), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
-  const filtered = messages.filter((m) =>
-    tab === "admins" ? m.audience === "admins" : m.audience === "everyone"
-  );
-
-  // keep feed scrolled to bottom when list grows
   useEffect(() => {
     if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+      const el = feedRef.current;
+      el.scrollTop = el.scrollHeight;
     }
-  }, [filtered.length]);
+  }, [messages]);
 
-  const sendMessage = () => {
+  // =================== API CALL ===================
+  const apiCall = useCallback(async (endpoint, options = {}) => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+    const fullUrl = `${apiUrl}/api/broadcast${endpoint}`;
+
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "X-User-Role": role,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+    return await response.json();
+  }, []);
+
+  const canSendMessage = useCallback(() => role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [role]);
+  const canViewChannel = useCallback(() => tab === "everyone" || role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [tab, role]);
+  const canReact = useCallback(() => tab === "everyone" || role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [tab, role]);
+
+  // =================== EDIT MESSAGE ===================
+  const editMessage = useCallback(async (messageId, newContent) => {
+    try {
+      const endpoint = tab === "admins" ? "/admins/edit" : "/everyone/edit";
+      await apiCall(endpoint, {
+        method: "POST",
+        body: JSON.stringify({
+          message_id: messageId,
+          new_content: newContent
+        })
+      });
+      
+      // Reload messages to show the updated content
+      await loadMessages(false);
+    } catch (err) {
+      setError(`Failed to edit message: ${err.message}`);
+      throw err;
+    }
+  }, [tab, apiCall]);
+
+  // =================== LOAD MESSAGES ===================
+  const loadMessages = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const endpoint = tab === "admins" ? "/admins" : "/everyone";
+      const data = await apiCall(endpoint);
+
+      const processedMessages = await Promise.all(data.map(async (msg) => {
+        try {
+          const reactionEndpoint = tab === "admins" ? `/admins/reactions/${msg.id || msg.Message_ID}` : `/everyone/reactions/${msg.id || msg.Message_ID}`;
+          const reactionData = await apiCall(reactionEndpoint);
+          const userReactions = reactionData.reactions?.filter(r => {
+            if (role === ROLES.USER) return r.reactor_user_id === userId;
+            if (role === ROLES.MAIN_ADMIN) return r.reactor_mainadmin_id === userId;
+            if (role === ROLES.STATION_ADMIN) return r.reactor_station_id === userId;
+            return false;
+          })?.map(r => r.reaction_type) || [];
+          return { ...msg, userReactions };
+        } catch {
+          return { ...msg, userReactions: [] };
+        }
+      }));
+
+      setMessages(processedMessages.sort((a, b) => new Date(a.sent_at || a.Sent_At) - new Date(b.sent_at || b.Sent_At)));
+    } catch (err) {
+      setError(`Failed to load messages: ${err.message}`);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }, [tab, apiCall, role, userId]);
+
+  useEffect(() => {
+    if (role && canViewChannel()) loadMessages(true);
+  }, [tab, role, loadMessages, canViewChannel]);
+
+  useEffect(() => {
+    if (!role || !canViewChannel()) return;
+    const id = setInterval(() => loadMessages(false), 10000);
+    return () => clearInterval(id);
+  }, [role, tab, loadMessages, canViewChannel]);
+
+  // =================== SEND MESSAGE ===================
+  const sendMessage = useCallback(async () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || !canSendMessage()) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        audience: tab,
-        author: tab === "admins" ? "Admin" : "Main Administrator",
-        text,
-        reactions: {}
-      }
-    ]);
+    setSendingMessage(true);
+    try {
+      const endpoint = tab === "admins" ? "/admins/send" : "/everyone/send";
+      await apiCall(endpoint, { method: "POST", body: JSON.stringify({ message_content: text }) });
+      setDraft("");
+      await loadMessages(false);
+    } catch (err) {
+      setError(`Failed to send message: ${err.message}`);
+    } finally {
+      setSendingMessage(false);
+    }
+  }, [draft, tab, apiCall, loadMessages, canSendMessage]);
 
-    setDraft("");
-  };
-
-  const handleEnter = (e) => {
+  const handleEnter = useCallback((e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  };
+  }, [sendMessage]);
 
-  const react = (id, emoji) => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? {
-              ...m,
-              reactions: { ...m.reactions, [emoji]: (m.reactions[emoji] || 0) + 1 }
-            }
-          : m
-      )
-    );
-  };
+  // =================== REACTIONS ===================
+  const react = useCallback(async (id, emoji, userHasReacted = false) => {
+      try {
+        setLoading(true);
+        const endpointBase = tab === "admins" ? "/admins" : "/everyone";
 
-  /** Open/close the emoji-only picker for a specific message */
-  const togglePicker = (id) => {
-    setPickerForId((cur) => (cur === id ? null : id));
-  };
+        if (userHasReacted) {
+          await apiCall(`${endpointBase}/reaction/delete`, {
+            method: "POST",
+            body: JSON.stringify({ message_id: id, reaction_type: emoji }),
+          });
+        } else {
+          await apiCall(`${endpointBase}/react`, {
+            method: "POST",
+            body: JSON.stringify({ message_id: id, reaction_type: emoji }),
+          });
+        }
 
-  /** When an emoji is chosen from the palette */
+        await loadMessages(false);
+      } catch (err) {
+        setError(`Failed to react: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }, [tab, apiCall, loadMessages]);
+
+  const togglePicker = (id) => setPickerForId((cur) => (cur === id ? null : id));
+
   const pickEmoji = (id, emoji) => {
-    react(id, emoji);
+    const msg = messages.find((m) => m.id === id || m.Message_ID === id);
+    const userHasReacted = msg?.userReactions?.includes(emoji) || false;
+    react(id, emoji, userHasReacted);
     setPickerForId(null);
   };
 
+  const NavbarComponent = role === ROLES.STATION_ADMIN ? StationNavbar : Navbar;
+
+  const filtered = useMemo(() => messages.filter((m) => (tab === "admins" ? m.audience === "admins" : m.audience === "everyone")), [messages, tab]);
+
+  if (!canViewChannel())
+    return (
+      <div className="broadcast-channel">
+        <NavbarComponent />
+        <div className="main-content">
+          <HeaderButton />
+          <div className="bc-error">You don't have permission to view this channel.</div>
+        </div>
+      </div>
+    );
+
   return (
     <div className="broadcast-channel">
-      <Navbar />
+      <NavbarComponent />
       <div className="main-content">
         <HeaderButton />
-
-        {/* Tabs */}
         <div className="bc-tabs center-row">
-          <button
-            className={`bc-tab ${tab === "everyone" ? "active" : ""}`}
-            onClick={() => setTab("everyone")}
-          >
-            For Everyone
-          </button>
-          <button
-            className={`bc-tab ${tab === "admins" ? "active" : ""}`}
-            onClick={() => setTab("admins")}
-          >
-            Admins
-          </button>
+          <button className={`bc-tab ${tab === "everyone" ? "active" : ""}`} onClick={() => setTab("everyone")}>For Everyone</button>
+          {(role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN) && <button className={`bc-tab ${tab === "admins" ? "active" : ""}`} onClick={() => setTab("admins")}>Admins Only</button>}
         </div>
-
-        <div className="header-row">
-          <h1 className="page-title">Broadcast Channel</h1>
-          <HeaderButton />
-        </div>
-
-        <hr className="bc-title-rule" />
-
-        {/* Feed */}
+        <h1 className="page-title">Broadcast Channel {tab === "admins" ? "(Admin)" : ""}</h1>
+        {error && <div className="bc-error">{error}</div>}
         <div className="bc-feed" ref={feedRef}>
-          {filtered.length === 0 ? (
-            <div className="bc-empty">No messages yet.</div>
-          ) : (
-            filtered.map((m) => (
-              <Message
-                key={m.id}
-                msg={m}
-                onReact={react}
-                onTogglePicker={togglePicker}
-                isPickerOpen={pickerForId === m.id}
-                onPickEmoji={pickEmoji}
-              />
-            ))
-          )}
-        </div>
-
-        {/* Composer with icon INSIDE the field */}
-        <div className="bc-composer" style={{ position: "relative" }}>
-          <textarea
-            className="bc-input"
-            placeholder="Type a message..."
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleEnter}
-            style={{ paddingRight: 48 }}        // room for the icon
-          />
-          <button className="bc-send" onClick={sendMessage} aria-label="Send">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/126/126475.png"
-              alt="Send"
-              className="bc-send-icon"
+          {filtered.map((m) => (
+            <Message
+              key={m.id || m.Message_ID}
+              msg={m}
+              userId={userId}
+              userRole={role}
+              onReact={react}
+              onTogglePicker={togglePicker}
+              isPickerOpen={pickerForId === (m.id || m.Message_ID)}
+              onPickEmoji={pickEmoji}
+              canReact={canReact()}
+              onEdit={editMessage}
             />
-          </button>
+          ))}
+          {(loading || sendingMessage) && <div className="bc-loading-overlay">Loading…</div>}
         </div>
+        {canSendMessage() && (
+          <div className="bc-composer">
+            <textarea
+              className="bc-input"
+              placeholder={`Type a message${tab === "admins" ? " to admins" : " to everyone"}...`}
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
+              onKeyDown={handleEnter}
+              disabled={sendingMessage || loading}
+            />
+            <button className="bc-send" onClick={sendMessage} disabled={sendingMessage || loading || !draft.trim()}>{sendingMessage ? "…" : "➤"}</button>
+          </div>
+        )}
       </div>
     </div>
   );
