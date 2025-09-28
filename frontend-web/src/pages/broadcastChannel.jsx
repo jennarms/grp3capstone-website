@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
+import { LogoutButton } from "../components/logout_button";
 import { Navbar } from "../components/navBar";
 import { StationNavbar } from "../components/station_navbar";
 import "./broadcastChannel.css";
@@ -12,6 +13,43 @@ const ROLES = {
   STATION_ADMIN: "station-admin",
   USER: "user",
 };
+
+// =================== CUSTOM HOOK FOR ROLE ===================
+function useRole() {
+  const [role, setRole] = useState("");
+  
+  useEffect(() => {
+    const storedRole = localStorage.getItem("role") || "";
+    setRole(storedRole);
+    
+    // Listen for role changes (if user logs out/in during session)
+    const handleStorageChange = () => {
+      setRole(localStorage.getItem("role") || "");
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+  
+  return role;
+}
+
+// =================== NAVBAR AND BUTTON SELECTOR ===================
+function NavbarSelector({ role }) {
+  if (role === ROLES.STATION_ADMIN) {
+    return <StationNavbar />;
+  } else {
+    return <Navbar />;
+  }
+}
+
+function ButtonSelector({ role }) {
+  if (role === ROLES.STATION_ADMIN) {
+    return <LogoutButton />;
+  } else {
+    return <HeaderButton />;
+  }
+}
 
 // =================== MESSAGE COMPONENT ===================
 function Message({ 
@@ -27,6 +65,7 @@ function Message({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const [editError, setEditError] = useState("");
   const textareaRef = useRef(null);
 
   const userIdStr = String(userId || "").trim();
@@ -57,11 +96,13 @@ function Message({
   const handleEditStart = () => {
     setEditText(getMessageText());
     setIsEditing(true);
+    setEditError("");
   };
 
   const handleEditCancel = () => {
     setIsEditing(false);
     setEditText("");
+    setEditError("");
   };
 
   const handleEditSave = async () => {
@@ -72,12 +113,13 @@ function Message({
     }
 
     try {
+      setEditError("");
       await onEdit(id, trimmedText);
       setIsEditing(false);
       setEditText("");
     } catch (error) {
-      console.error("Failed to edit message:", error);
-      // You might want to show an error message here
+      console.error("Edit error:", error);
+      setEditError("Failed to edit message. Please try again.");
     }
   };
 
@@ -98,6 +140,14 @@ function Message({
       textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
     }
   }, [isEditing]);
+
+  // Clear edit error after 5 seconds
+  useEffect(() => {
+    if (editError) {
+      const timer = setTimeout(() => setEditError(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [editError]);
 
   return (
     <div className={wrapperClass}>
@@ -133,6 +183,7 @@ function Message({
                   Cancel
                 </button>
               </div>
+              {editError && <div className="bc-edit-error">{editError}</div>}
             </div>
           ) : (
             <div className="bc-message-text">
@@ -155,32 +206,36 @@ function Message({
       <div className="bc-reactions">
         {msg.reactions && Object.entries(msg.reactions).map(([emoji, count]) => {
           const userHasReacted = msg.userReactions?.includes(emoji) || false;
-          const canDelete = userHasReacted;
 
           return (
             <button
               key={emoji}
               className={`bc-reaction-chip ${userHasReacted ? "reacted" : ""}`}
-              onClick={() => {
-                if (!userHasReacted) {
-                  onReact(id, emoji, false);
-                } else if (canDelete) {
-                  onReact(id, emoji, true);
-                }
-              }}
-              disabled={!canReact || (!userHasReacted && count === 0)}
+              onClick={() => onReact(id, emoji)}
+              disabled={!canReact}
             >
               {emoji} {count}
             </button>
           );
         })}
-        {canReact && <button className="bc-add-reaction" onClick={() => onTogglePicker(id)}>+</button>}
+        {canReact && (
+          <button 
+            className="bc-add-reaction" 
+            onClick={() => onTogglePicker(id)}
+          >
+            +
+          </button>
+        )}
       </div>
 
       {isPickerOpen && (
         <div className="bc-emoji-pop">
           {EMOJI_PALETTE.map((emoji) => (
-            <button key={emoji} className="bc-emoji-btn" onClick={() => onPickEmoji(id, emoji)}>
+            <button 
+              key={emoji} 
+              className="bc-emoji-btn" 
+              onClick={() => onPickEmoji(id, emoji)}
+            >
               {emoji}
             </button>
           ))}
@@ -188,15 +243,6 @@ function Message({
       )}
     </div>
   );
-}
-
-// =================== CUSTOM HOOK ===================
-function useRole() {
-  const [role, setRole] = useState("");
-  useEffect(() => {
-    setRole(localStorage.getItem("role") || "");
-  }, []);
-  return role;
 }
 
 // =================== BROADCAST COMPONENT ===================
@@ -254,36 +300,16 @@ export function Broadcast() {
   const canViewChannel = useCallback(() => tab === "everyone" || role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [tab, role]);
   const canReact = useCallback(() => tab === "everyone" || role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN, [tab, role]);
 
-  // =================== EDIT MESSAGE ===================
-  const editMessage = useCallback(async (messageId, newContent) => {
-    try {
-      const endpoint = tab === "admins" ? "/admins/edit" : "/everyone/edit";
-      await apiCall(endpoint, {
-        method: "POST",
-        body: JSON.stringify({
-          message_id: messageId,
-          new_content: newContent
-        })
-      });
-      
-      // Reload messages to show the updated content
-      await loadMessages(false);
-    } catch (err) {
-      setError(`Failed to edit message: ${err.message}`);
-      throw err;
-    }
-  }, [tab, apiCall]);
-
   // =================== LOAD MESSAGES ===================
   const loadMessages = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const endpoint = tab === "admins" ? "/admins" : "/everyone";
+      const endpoint = `/${tab}`;
       const data = await apiCall(endpoint);
 
       const processedMessages = await Promise.all(data.map(async (msg) => {
         try {
-          const reactionEndpoint = tab === "admins" ? `/admins/reactions/${msg.id || msg.Message_ID}` : `/everyone/reactions/${msg.id || msg.Message_ID}`;
+          const reactionEndpoint = `/${tab}/reactions/${msg.id || msg.Message_ID}`;
           const reactionData = await apiCall(reactionEndpoint);
           const userReactions = reactionData.reactions?.filter(r => {
             if (role === ROLES.USER) return r.reactor_user_id === userId;
@@ -305,6 +331,27 @@ export function Broadcast() {
     }
   }, [tab, apiCall, role, userId]);
 
+  // =================== EDIT MESSAGE ===================
+  const editMessage = useCallback(async (messageId, newContent) => {
+    try {
+      const endpoint = `/${tab}/edit`;
+      await apiCall(endpoint, {
+        method: "POST",
+        body: JSON.stringify({
+          message_id: messageId,
+          new_content: newContent
+        })
+      });
+      
+      // Reload messages after successful edit
+      await loadMessages(false);
+    } catch (err) {
+      // Still reload messages to check current state
+      await loadMessages(false);
+      throw err;
+    }
+  }, [tab, apiCall, loadMessages]);
+
   useEffect(() => {
     if (role && canViewChannel()) loadMessages(true);
   }, [tab, role, loadMessages, canViewChannel]);
@@ -322,7 +369,7 @@ export function Broadcast() {
 
     setSendingMessage(true);
     try {
-      const endpoint = tab === "admins" ? "/admins/send" : "/everyone/send";
+      const endpoint = `/${tab}/send`;
       await apiCall(endpoint, { method: "POST", body: JSON.stringify({ message_content: text }) });
       setDraft("");
       await loadMessages(false);
@@ -340,51 +387,74 @@ export function Broadcast() {
     }
   }, [sendMessage]);
 
-  // =================== REACTIONS ===================
-  const react = useCallback(async (id, emoji, userHasReacted = false) => {
-      try {
-        setLoading(true);
-        const endpointBase = tab === "admins" ? "/admins" : "/everyone";
+  // =================== REACTIONS - FIXED ===================
+  const react = useCallback(async (id, emoji) => {
+    try {
+      const endpoint = `/${tab}/react`;
+      const body = JSON.stringify({ message_id: id, reaction_type: emoji });
 
-        if (userHasReacted) {
-          await apiCall(`${endpointBase}/reaction/delete`, {
+      await apiCall(endpoint, {
+        method: "POST",
+        body: body,
+      });
+
+      // Reload messages to get updated reaction counts
+      await loadMessages(false);
+    } catch (err) {
+      setError(`Failed to react: ${err.message}`);
+    }
+  }, [tab, apiCall, loadMessages]);
+
+  // =================== EMOJI PICKER - FIXED FOR EDITING ===================
+  const togglePicker = useCallback((id) => {
+    setPickerForId((current) => (current === id ? null : id));
+  }, []);
+
+  const pickEmoji = useCallback(async (id, emoji) => {
+    // Close picker first
+    setPickerForId(null);
+    
+    try {
+      const msg = messages.find((m) => (m.id || m.Message_ID) === id);
+      const userReactions = msg?.userReactions || [];
+      
+      // Check if user already has this specific reaction
+      if (userReactions.includes(emoji)) {
+        // User already has this reaction, don't do anything
+        return;
+      }
+      
+      // If user has any existing reactions, remove them first (edit behavior)
+      if (userReactions.length > 0) {
+        for (const existingEmoji of userReactions) {
+          await apiCall(`/${tab}/react`, {
             method: "POST",
-            body: JSON.stringify({ message_id: id, reaction_type: emoji }),
-          });
-        } else {
-          await apiCall(`${endpointBase}/react`, {
-            method: "POST",
-            body: JSON.stringify({ message_id: id, reaction_type: emoji }),
+            body: JSON.stringify({ message_id: id, reaction_type: existingEmoji }),
           });
         }
-
-        await loadMessages(false);
-      } catch (err) {
-        setError(`Failed to react: ${err.message}`);
-      } finally {
-        setLoading(false);
       }
-    }, [tab, apiCall, loadMessages]);
-
-  const togglePicker = (id) => setPickerForId((cur) => (cur === id ? null : id));
-
-  const pickEmoji = (id, emoji) => {
-    const msg = messages.find((m) => m.id === id || m.Message_ID === id);
-    const userHasReacted = msg?.userReactions?.includes(emoji) || false;
-    react(id, emoji, userHasReacted);
-    setPickerForId(null);
-  };
-
-  const NavbarComponent = role === ROLES.STATION_ADMIN ? StationNavbar : Navbar;
+      
+      // Add the new reaction
+      await apiCall(`/${tab}/react`, {
+        method: "POST",
+        body: JSON.stringify({ message_id: id, reaction_type: emoji }),
+      });
+      
+      // Reload messages to get updated reaction counts
+      await loadMessages(false);
+    } catch (err) {
+      setError(`Failed to change reaction: ${err.message}`);
+    }
+  }, [messages, tab, apiCall, loadMessages]);
 
   const filtered = useMemo(() => messages.filter((m) => (tab === "admins" ? m.audience === "admins" : m.audience === "everyone")), [messages, tab]);
 
   if (!canViewChannel())
     return (
       <div className="broadcast-channel">
-        <NavbarComponent />
+        <NavbarSelector role={role} />
         <div className="main-content">
-          <HeaderButton />
+          <ButtonSelector role={role} />
           <div className="bc-error">You don't have permission to view this channel.</div>
         </div>
       </div>
@@ -392,14 +462,28 @@ export function Broadcast() {
 
   return (
     <div className="broadcast-channel">
-      <NavbarComponent />
+      <NavbarSelector role={role} />
       <div className="main-content">
-        <HeaderButton />
+        <ButtonSelector role={role} />
         <div className="bc-tabs center-row">
-          <button className={`bc-tab ${tab === "everyone" ? "active" : ""}`} onClick={() => setTab("everyone")}>For Everyone</button>
-          {(role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN) && <button className={`bc-tab ${tab === "admins" ? "active" : ""}`} onClick={() => setTab("admins")}>Admins Only</button>}
+          <button 
+            className={`bc-tab ${tab === "everyone" ? "active" : ""}`} 
+            onClick={() => setTab("everyone")}
+          >
+            For Everyone
+          </button>
+          {(role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN) && (
+            <button 
+              className={`bc-tab ${tab === "admins" ? "active" : ""}`} 
+              onClick={() => setTab("admins")}
+            >
+              Admins Only
+            </button>
+          )}
         </div>
-        <h1 className="page-title">Broadcast Channel {tab === "admins" ? "(Admin)" : ""}</h1>
+        <h1 className="page-title">
+          Broadcast Channel {tab === "admins" ? "(Admin)" : ""}
+        </h1>
         {error && <div className="bc-error">{error}</div>}
         <div className="bc-feed" ref={feedRef}>
           {filtered.map((m) => (
@@ -416,7 +500,9 @@ export function Broadcast() {
               onEdit={editMessage}
             />
           ))}
-          {(loading || sendingMessage) && <div className="bc-loading-overlay">Loading…</div>}
+          {(loading || sendingMessage) && (
+            <div className="bc-loading-overlay">Loading…</div>
+          )}
         </div>
         {canSendMessage() && (
           <div className="bc-composer">
@@ -432,7 +518,13 @@ export function Broadcast() {
               onKeyDown={handleEnter}
               disabled={sendingMessage || loading}
             />
-            <button className="bc-send" onClick={sendMessage} disabled={sendingMessage || loading || !draft.trim()}>{sendingMessage ? "…" : "➤"}</button>
+            <button 
+              className="bc-send" 
+              onClick={sendMessage} 
+              disabled={sendingMessage || loading || !draft.trim()}
+            >
+              {sendingMessage ? "…" : "➤"}
+            </button>
           </div>
         )}
       </div>
