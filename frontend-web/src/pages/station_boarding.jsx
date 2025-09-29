@@ -3,6 +3,20 @@ import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_boarding.css";
 
+/* Read query params from URL (time/seat counts/station/direction/date) */
+const getParams = () => {
+  const sp = new URLSearchParams(window.location.search);
+  return {
+    time: sp.get("time") || "8:40 AM",
+    total: parseInt(sp.get("total") || "30", 10),
+    avail: parseInt(sp.get("avail") || "26", 10), // default so Booked 4/30 matches your UI
+    booked: parseInt(sp.get("booked") || "4", 10),
+    dir: (sp.get("dir") || "forward").toLowerCase(), // "forward" | "reverse"
+    station: sp.get("station") || "PUP → Kalawaan",
+    date: sp.get("date") || "",
+  };
+};
+
 /* All stations for the dropdowns */
 const STATIONS = [
   "Pinagbuhatan",
@@ -100,6 +114,8 @@ const getNearestSchedule = (now = new Date()) => {
 };
 
 export function Boarding() {
+  const qp = getParams();
+
   const [tableQuery, setTableQuery] = useState("");
 
   // ===== Modals / prompts =====
@@ -121,8 +137,8 @@ export function Boarding() {
   const [showManualSuccess, setShowManualSuccess] = useState(false);
   const [addedManual, setAddedManual] = useState(null); // { userID, qrCodeID, origin, destination }
 
-  // ----- Route / schedule data -----
-  const routeTime = "8:40 AM";
+  // ----- Route / schedule data (now driven by URL params) -----
+  const routeTime = qp.time;
   const stops = [
     { name: "Quinta", time: "8:22 AM", status: "Departed" },
     { name: "PUP", time: "8:40 AM", status: "Arrived" },
@@ -135,7 +151,7 @@ export function Boarding() {
     return match ? match.name : "PUP";
   }, [stops, routeTime]);
 
-  // ----- Passenger list -----
+  // ----- Passenger list (demo data preserved) -----
   const [passengerList, setPassengerList] = useState([
     {
       bookingID: "BID009212", userID: "UID002489", qrCodeID: "TC00203",
@@ -200,10 +216,10 @@ export function Boarding() {
     bookingID: "", userID: "", qrCodeID: "",
     origin: "", destination: "",
     departureDate: "", departureTime: "",
-    paymentStatus: "PG", /* default: pending payment */
+    paymentStatus: "PG",
     paidAmount: "", paidAt: "",
-    bookingStatus: "PE", /* prefilled & read-only (Pending) */
-    bookingSource: "MB" /* prefilled & read-only (Manual Booking) */
+    bookingStatus: "PE",
+    bookingSource: "MB"
   };
   const [manualData, setManualData] = useState(emptyManual);
 
@@ -211,7 +227,7 @@ export function Boarding() {
   const emptyPassenger = {
     firstName: "", lastName: "", address: "",
     profession: "", contactNumber: "",
-    age: "", gender: "", platformSource: "MB" // auto MB
+    age: "", gender: "", platformSource: "MB"
   };
   const [passengerInfo, setPassengerInfo] = useState(emptyPassenger);
 
@@ -328,7 +344,6 @@ export function Boarding() {
   // Print: only QR ticket area
   const qrPrintRef = useRef(null);
   const printQR = () => {
-    // Just trigger the browser print dialog; CSS @media print hides everything except #qr-print
     window.print();
   };
 
@@ -395,28 +410,30 @@ export function Boarding() {
   // ---- Actions for PE rows ----
   const handleAccept = (bookingID) => {
     setPassengerList((prev) =>
-      prev.map((p) =>
-        p.bookingID === bookingID ? { ...p, bookingStatus: "OB" } : p
-      )
+      prev.map((p) => (p.bookingID === bookingID ? { ...p, bookingStatus: "OB" } : p))
     );
   };
   const handleCancel = (bookingID) => {
     setPassengerList((prev) =>
-      prev.map((p) =>
-        p.bookingID === bookingID ? { ...p, bookingStatus: "CA" } : p
-      )
+      prev.map((p) => (p.bookingID === bookingID ? { ...p, bookingStatus: "CA" } : p))
     );
   };
 
   // status → class for coloring
   const bookingStatusClass = (s) => {
     switch (s) {
-      case "OB": return "status-badge status-ob";
-      case "CO": return "status-badge status-co";
-      case "PE": return "status-badge status-pe";
-      case "CA": return "status-badge status-ca";
-      case "DI": return "status-badge status-di";
-      default: return "status-badge";
+      case "OB":
+        return "status-badge status-ob";
+      case "CO":
+        return "status-badge status-co";
+      case "PE":
+        return "status-badge status-pe";
+      case "CA":
+        return "status-badge status-ca";
+      case "DI":
+        return "status-badge status-di";
+      default:
+        return "status-badge";
     }
   };
 
@@ -464,6 +481,10 @@ export function Boarding() {
     }
   }, [showScan, scanState, passengerList]);
 
+  // Header values from query params
+  const bookedCount = Number.isFinite(qp.booked) ? qp.booked : Math.max(0, qp.total - qp.avail);
+  const routePath = `${qp.station} — ${qp.dir.toUpperCase()} DIRECTION`;
+
   return (
     <div className="boarding-landing-container">
       <StationNavbar />
@@ -477,10 +498,10 @@ export function Boarding() {
             {/* ROUTE CARD */}
             <div className="route-card">
               <div className="route-card__top">
-                <div className="route-card__path">PUP → Kalawaan</div>
+                <div className="route-card__path">{routePath}</div>
                 <div className="route-card__time">{routeTime}</div>
                 <div className="route-card__booked">
-                  Booked: <strong>4/30</strong>
+                  Booked: <strong>{bookedCount}/{qp.total}</strong>
                 </div>
               </div>
 
@@ -492,8 +513,14 @@ export function Boarding() {
                       <span className="stop-pin-slot" aria-hidden="true">
                         {isCurrent ? (
                           <span className="pin" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
-                              <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              width="18"
+                              height="18"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
                             </svg>
                           </span>
                         ) : null}
@@ -530,19 +557,32 @@ export function Boarding() {
             className="manual-booking-btn"
             onClick={() => {
               setManualStep(1);
-              setPassengerInfo((v) => ({ ...v, firstName: "", lastName: "", address: "", profession: "", contactNumber: "", age: "", gender: "", platformSource: "MB" }));
+              setPassengerInfo((v) => ({
+                ...v,
+                firstName: "",
+                lastName: "",
+                address: "",
+                profession: "",
+                contactNumber: "",
+                age: "",
+                gender: "",
+                platformSource: "MB",
+              }));
               const now = new Date();
               const nearest = getNearestSchedule(now);
               setManualData({
-                bookingID: "", userID: "", qrCodeID: "",
-                origin: "", destination: "",
+                bookingID: "",
+                userID: "",
+                qrCodeID: "",
+                origin: "",
+                destination: "",
                 departureDate: toYYYYMMDD(now),
                 departureTime: nearest,
                 paymentStatus: "PG",
                 paidAmount: "",
                 paidAt: toHmma(now),
                 bookingStatus: "PE",
-                bookingSource: "MB"
+                bookingSource: "MB",
               });
               setManualErrors({});
               setShowManualForm(true);
@@ -565,7 +605,15 @@ export function Boarding() {
                 focusable="false"
               >
                 <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
-                <line x1="16.65" y1="16.65" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <line
+                  x1="16.65"
+                  y1="16.65"
+                  x2="20"
+                  y2="20"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
               </svg>
               <input
                 className="table-search-input"
@@ -610,7 +658,11 @@ export function Boarding() {
                     <td>{p.departureDate}</td>
                     <td>{p.departureTime}</td>
                     <td>{p.paymentStatus}</td>
-                    <td>{p.paidAmount.toFixed ? p.paidAmount.toFixed(2) : Number(p.paidAmount || 0).toFixed(2)}</td>
+                    <td>
+                      {p.paidAmount.toFixed
+                        ? p.paidAmount.toFixed(2)
+                        : Number(p.paidAmount || 0).toFixed(2)}
+                    </td>
                     <td>{p.paidAt}</td>
                     <td>
                       <span className={bookingStatusClass(p.bookingStatus)}>
@@ -799,7 +851,7 @@ export function Boarding() {
                   </p>
 
                   <div className="boarding-manual-grid">
-                    {/* ... (unchanged fields) ... */}
+                    {/* fields unchanged from your version */}
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">First Name</label>
@@ -807,10 +859,14 @@ export function Boarding() {
                           className={"boarding-manual-input " + (manualErrors.firstName ? "boarding-field-error" : "")}
                           placeholder="First Name"
                           value={passengerInfo.firstName}
-                          onChange={(e) => setPassengerInfo((v) => ({ ...v, firstName: e.target.value }))}
+                          onChange={(e) =>
+                            setPassengerInfo((v) => ({ ...v, firstName: e.target.value }))
+                          }
                         />
                       </div>
-                      {manualErrors.firstName && <div className="boarding-error-text">{manualErrors.firstName}</div>}
+                      {manualErrors.firstName && (
+                        <div className="boarding-error-text">{manualErrors.firstName}</div>
+                      )}
                     </div>
 
                     <div>
@@ -820,10 +876,14 @@ export function Boarding() {
                           className={"boarding-manual-input " + (manualErrors.lastName ? "boarding-field-error" : "")}
                           placeholder="Last Name"
                           value={passengerInfo.lastName}
-                          onChange={(e) => setPassengerInfo((v) => ({ ...v, lastName: e.target.value }))}
+                          onChange={(e) =>
+                            setPassengerInfo((v) => ({ ...v, lastName: e.target.value }))
+                          }
                         />
                       </div>
-                      {manualErrors.lastName && <div className="boarding-error-text">{manualErrors.lastName}</div>}
+                      {manualErrors.lastName && (
+                        <div className="boarding-error-text">{manualErrors.lastName}</div>
+                      )}
                     </div>
 
                     <div>
@@ -833,10 +893,14 @@ export function Boarding() {
                           className={"boarding-manual-input " + (manualErrors.profession ? "boarding-field-error" : "")}
                           placeholder="Profession"
                           value={passengerInfo.profession}
-                          onChange={(e) => setPassengerInfo((v) => ({ ...v, profession: e.target.value }))}
+                          onChange={(e) =>
+                            setPassengerInfo((v) => ({ ...v, profession: e.target.value }))
+                          }
                         />
                       </div>
-                      {manualErrors.profession && <div className="boarding-error-text">{manualErrors.profession}</div>}
+                      {manualErrors.profession && (
+                        <div className="boarding-error-text">{manualErrors.profession}</div>
+                      )}
                     </div>
 
                     <div className="boarding-manual-span2">
@@ -846,10 +910,14 @@ export function Boarding() {
                           className={"boarding-manual-input " + (manualErrors.address ? "boarding-field-error" : "")}
                           placeholder="Address"
                           value={passengerInfo.address}
-                          onChange={(e) => setPassengerInfo((v) => ({ ...v, address: e.target.value }))}
+                          onChange={(e) =>
+                            setPassengerInfo((v) => ({ ...v, address: e.target.value }))
+                          }
                         />
                       </div>
-                      {manualErrors.address && <div className="boarding-error-text">{manualErrors.address}</div>}
+                      {manualErrors.address && (
+                        <div className="boarding-error-text">{manualErrors.address}</div>
+                      )}
                     </div>
 
                     <div>
@@ -859,10 +927,14 @@ export function Boarding() {
                           className={"boarding-manual-input " + (manualErrors.contactNumber ? "boarding-field-error" : "")}
                           placeholder="Contact Number"
                           value={passengerInfo.contactNumber}
-                          onChange={(e) => setPassengerInfo((v) => ({ ...v, contactNumber: e.target.value }))}
+                          onChange={(e) =>
+                            setPassengerInfo((v) => ({ ...v, contactNumber: e.target.value }))
+                          }
                         />
                       </div>
-                      {manualErrors.contactNumber && <div className="boarding-error-text">{manualErrors.contactNumber}</div>}
+                      {manualErrors.contactNumber && (
+                        <div className="boarding-error-text">{manualErrors.contactNumber}</div>
+                      )}
                     </div>
 
                     <div>
@@ -875,42 +947,60 @@ export function Boarding() {
                           onChange={(e) => setPassengerInfo((v) => ({ ...v, age: e.target.value }))}
                         />
                       </div>
-                      {manualErrors.age && <div className="boarding-error-text">{manualErrors.age}</div>}
+                      {manualErrors.age && (
+                        <div className="boarding-error-text">{manualErrors.age}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">Gender</label>
                         <select
-                          className={"boarding-manual-input boarding-manual-select " + (manualErrors.gender ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input boarding-manual-select " +
+                            (manualErrors.gender ? "boarding-field-error" : "")
+                          }
                           value={passengerInfo.gender}
-                          onChange={(e) => setPassengerInfo((v) => ({ ...v, gender: e.target.value }))}
+                          onChange={(e) =>
+                            setPassengerInfo((v) => ({ ...v, gender: e.target.value }))
+                          }
                         >
-                          <option value="" disabled>Select Gender</option>
+                          <option value="" disabled>
+                            Select Gender
+                          </option>
                           <option>Male</option>
                           <option>Female</option>
                           <option>Other</option>
                         </select>
                       </div>
-                      {manualErrors.gender && <div className="boarding-error-text">{manualErrors.gender}</div>}
+                      {manualErrors.gender && (
+                        <div className="boarding-error-text">{manualErrors.gender}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">Platform Source</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.platformSource ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " +
+                            (manualErrors.platformSource ? "boarding-field-error" : "")
+                          }
                           placeholder="Platform Source"
                           value={passengerInfo.platformSource}
                           readOnly
                         />
                       </div>
-                      {manualErrors.platformSource && <div className="boarding-error-text">{manualErrors.platformSource}</div>}
+                      {manualErrors.platformSource && (
+                        <div className="boarding-error-text">{manualErrors.platformSource}</div>
+                      )}
                     </div>
                   </div>
 
                   <div className="boarding-manual-actions">
-                    <button className="boarding-manual-next" onClick={onManualNext} title="Next">Next</button>
+                    <button className="boarding-manual-next" onClick={onManualNext} title="Next">
+                      Next
+                    </button>
                   </div>
                 </div>
               )}
@@ -929,82 +1019,123 @@ export function Boarding() {
                       <div className="boarding-field">
                         <label className="boarding-field-label">Booking ID</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.bookingID ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " + (manualErrors.bookingID ? "boarding-field-error" : "")
+                          }
                           placeholder="Booking ID"
                           value={manualData.bookingID}
                           onChange={(e) => setManualData((v) => ({ ...v, bookingID: e.target.value }))}
                         />
                       </div>
-                      {manualErrors.bookingID && <div className="boarding-error-text">{manualErrors.bookingID}</div>}
+                      {manualErrors.bookingID && (
+                        <div className="boarding-error-text">{manualErrors.bookingID}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">User ID</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.userID ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " + (manualErrors.userID ? "boarding-field-error" : "")
+                          }
                           placeholder="User ID"
                           value={manualData.userID}
                           onChange={(e) => setManualData((v) => ({ ...v, userID: e.target.value }))}
                         />
                       </div>
-                      {manualErrors.userID && <div className="boarding-error-text">{manualErrors.userID}</div>}
+                      {manualErrors.userID && (
+                        <div className="boarding-error-text">{manualErrors.userID}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">QR Code ID (optional)</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.qrCodeID ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " + (manualErrors.qrCodeID ? "boarding-field-error" : "")
+                          }
                           placeholder="Qr Code ID (optional)"
                           value={manualData.qrCodeID}
                           onChange={(e) => setManualData((v) => ({ ...v, qrCodeID: e.target.value }))}
                         />
                       </div>
-                      {manualErrors.qrCodeID && <div className="boarding-error-text">{manualErrors.qrCodeID}</div>}
+                      {manualErrors.qrCodeID && (
+                        <div className="boarding-error-text">{manualErrors.qrCodeID}</div>
+                      )}
                     </div>
 
                     <div className="boarding-manual-span2">
                       <div className="boarding-field">
                         <label className="boarding-field-label">Origin</label>
                         <select
-                          className={"boarding-manual-input boarding-manual-select " + (manualErrors.origin ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input boarding-manual-select " +
+                            (manualErrors.origin ? "boarding-field-error" : "")
+                          }
                           value={manualData.origin}
                           onChange={(e) => {
                             const origin = e.target.value;
-                            const next = { ...manualData, origin, destination: manualData.destination === origin ? "" : manualData.destination };
+                            const next = {
+                              ...manualData,
+                              origin,
+                              destination: manualData.destination === origin ? "" : manualData.destination,
+                            };
                             const fare = getFare(origin, next.destination);
-                            setManualData({ ...next, paidAmount: fare === "" ? "" : Number(fare).toFixed(2) });
+                            setManualData({
+                              ...next,
+                              paidAmount: fare === "" ? "" : Number(fare).toFixed(2),
+                            });
                           }}
                         >
-                          <option value="" disabled>Select Origin</option>
+                          <option value="" disabled>
+                            Select Origin
+                          </option>
                           {STATIONS.map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
                           ))}
                         </select>
                       </div>
-                      {manualErrors.origin && <div className="boarding-error-text">{manualErrors.origin}</div>}
+                      {manualErrors.origin && (
+                        <div className="boarding-error-text">{manualErrors.origin}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">Destination</label>
                         <select
-                          className={"boarding-manual-input boarding-manual-select " + (manualErrors.destination ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input boarding-manual-select " +
+                            (manualErrors.destination ? "boarding-field-error" : "")
+                          }
                           value={manualData.destination}
                           onChange={(e) => {
                             const destination = e.target.value;
                             const fare = getFare(manualData.origin, destination);
-                            setManualData((v) => ({ ...v, destination, paidAmount: fare === "" ? "" : Number(fare).toFixed(2) }));
+                            setManualData((v) => ({
+                              ...v,
+                              destination,
+                              paidAmount: fare === "" ? "" : Number(fare).toFixed(2),
+                            }));
                           }}
                         >
-                          <option value="" disabled>Select Destination</option>
+                          <option value="" disabled>
+                            Select Destination
+                          </option>
                           {STATIONS.filter((s) => s !== manualData.origin).map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
                           ))}
                         </select>
                       </div>
-                      {manualErrors.destination && <div className="boarding-error-text">{manualErrors.destination}</div>}
+                      {manualErrors.destination && (
+                        <div className="boarding-error-text">{manualErrors.destination}</div>
+                      )}
                     </div>
 
                     <div className="boarding-manual-span2">
@@ -1012,73 +1143,104 @@ export function Boarding() {
                         <label className="boarding-field-label">Departure Date</label>
                         <input
                           type="date"
-                          className={"boarding-manual-input boarding-manual-date " + (manualErrors.departureDate ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input boarding-manual-date " +
+                            (manualErrors.departureDate ? "boarding-field-error" : "")
+                          }
                           value={manualData.departureDate}
                           onChange={(e) => setManualData((v) => ({ ...v, departureDate: e.target.value }))}
                         />
                       </div>
-                      {manualErrors.departureDate && <div className="boarding-error-text">{manualErrors.departureDate}</div>}
+                      {manualErrors.departureDate && (
+                        <div className="boarding-error-text">{manualErrors.departureDate}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">Departure Time</label>
                         <select
-                          className={"boarding-manual-input boarding-manual-select " + (manualErrors.departureTime ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input boarding-manual-select " +
+                            (manualErrors.departureTime ? "boarding-field-error" : "")
+                          }
                           value={manualData.departureTime}
                           onChange={(e) => setManualData((v) => ({ ...v, departureTime: e.target.value }))}
                         >
-                          <option value="" disabled>Select Departure Time</option>
+                          <option value="" disabled>
+                            Select Departure Time
+                          </option>
                           {DEPARTURE_SCHEDULES.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
                           ))}
                         </select>
                       </div>
-                      {manualErrors.departureTime && <div className="boarding-error-text">{manualErrors.departureTime}</div>}
+                      {manualErrors.departureTime && (
+                        <div className="boarding-error-text">{manualErrors.departureTime}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">Paid At</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.paidAt ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " + (manualErrors.paidAt ? "boarding-field-error" : "")
+                          }
                           placeholder="Paid At (e.g., 8:10 am)"
                           value={manualData.paidAt}
                           onChange={(e) => setManualData((v) => ({ ...v, paidAt: e.target.value }))}
                         />
                       </div>
-                      {manualErrors.paidAt && <div className="boarding-error-text">{manualErrors.paidAt}</div>}
+                      {manualErrors.paidAt && (
+                        <div className="boarding-error-text">{manualErrors.paidAt}</div>
+                      )}
                     </div>
 
                     <div className="boarding-manual-span2">
                       <div className="boarding-field">
                         <label className="boarding-field-label">Booking Status</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.bookingStatus ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " +
+                            (manualErrors.bookingStatus ? "boarding-field-error" : "")
+                          }
                           placeholder="Booking Status"
                           value={manualData.bookingStatus}
                           readOnly
                         />
                       </div>
-                      {manualErrors.bookingStatus && <div className="boarding-error-text">{manualErrors.bookingStatus}</div>}
+                      {manualErrors.bookingStatus && (
+                        <div className="boarding-error-text">{manualErrors.bookingStatus}</div>
+                      )}
                     </div>
 
                     <div>
                       <div className="boarding-field">
                         <label className="boarding-field-label">Booking Source</label>
                         <input
-                          className={"boarding-manual-input " + (manualErrors.bookingSource ? "boarding-field-error" : "")}
+                          className={
+                            "boarding-manual-input " +
+                            (manualErrors.bookingSource ? "boarding-field-error" : "")
+                          }
                           placeholder="Booking Source"
                           value={manualData.bookingSource}
                           readOnly
                         />
                       </div>
-                      {manualErrors.bookingSource && <div className="boarding-error-text">{manualErrors.bookingSource}</div>}
+                      {manualErrors.bookingSource && (
+                        <div className="boarding-error-text">{manualErrors.bookingSource}</div>
+                      )}
                     </div>
                   </div>
 
                   <div className="wizard-actions-split">
-                    <button className="boarding-modal-btn boarding-modal-cancel" onClick={() => setManualStep(1)}>
+                    <button
+                      className="boarding-modal-btn boarding-modal-cancel"
+                      onClick={() => setManualStep(1)}
+                    >
                       Back
                     </button>
                     <button
@@ -1101,7 +1263,6 @@ export function Boarding() {
                     The fare is automatically calculated from origin/destination.
                   </p>
 
-                  {/* Big total amount display */}
                   <div
                     style={{
                       border: "2px solid #111",
@@ -1110,7 +1271,7 @@ export function Boarding() {
                       background: "#fff",
                       textAlign: "center",
                       marginTop: 8,
-                      marginBottom: 8
+                      marginBottom: 8,
                     }}
                   >
                     <div style={{ fontSize: 16, color: "#374151", fontWeight: 700 }}>
@@ -1176,23 +1337,43 @@ export function Boarding() {
 
                     <div className="qr-ticket__body">
                       <div className="qr-faux">
-                        {/* Bigger square; replace with real QR later */}
-                        <div className="qr-square qr-square--lg" aria-hidden="true">QR</div>
+                        <div className="qr-square qr-square--lg" aria-hidden="true">
+                          QR
+                        </div>
                       </div>
 
                       <div className="qr-lines qr-lines--lg">
-                        <div>Passenger: <strong>{passengerInfo.firstName} {passengerInfo.lastName}</strong></div>
-                        <div>Ticket Code: <strong>{manualData.qrCodeID}</strong></div>
-                        <div>From: <strong>{manualData.origin || "—"}</strong></div>
-                        <div>Destination: <strong>{manualData.destination || "—"}</strong></div>
-                        <div>Paid Amount: <strong>₱ {manualData.paidAmount || "0.00"}</strong></div>
-                        <div>Payment Status: <strong>{manualData.paymentStatus}</strong></div>
-                        <div>Source: <strong>{passengerInfo.platformSource}</strong></div>
+                        <div>
+                          Passenger:{" "}
+                          <strong>
+                            {passengerInfo.firstName} {passengerInfo.lastName}
+                          </strong>
+                        </div>
+                        <div>
+                          Ticket Code: <strong>{manualData.qrCodeID}</strong>
+                        </div>
+                        <div>
+                          From: <strong>{manualData.origin || "—"}</strong>
+                        </div>
+                        <div>
+                          Destination: <strong>{manualData.destination || "—"}</strong>
+                        </div>
+                        <div>
+                          Paid Amount: <strong>₱ {manualData.paidAmount || "0.00"}</strong>
+                        </div>
+                        <div>
+                          Payment Status: <strong>{manualData.paymentStatus}</strong>
+                        </div>
+                        <div>
+                          Source: <strong>{passengerInfo.platformSource}</strong>
+                        </div>
                       </div>
                     </div>
 
                     <div className="qr-ticket__footer">
-                      <div className="qr-ticket__note">Please present this ticket upon boarding.</div>
+                      <div className="qr-ticket__note">
+                        Please present this ticket upon boarding.
+                      </div>
                     </div>
                   </div>
 
@@ -1204,18 +1385,10 @@ export function Boarding() {
                       Back
                     </button>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        className="boarding-modal-btn"
-                        onClick={printQR}
-                        title="Print or save as PDF"
-                      >
+                      <button className="boarding-modal-btn" onClick={printQR} title="Print or save as PDF">
                         Print Ticket (PDF)
                       </button>
-                      <button
-                        className="boarding-manual-next"
-                        onClick={onManualNext}
-                        title="Finish"
-                      >
+                      <button className="boarding-manual-next" onClick={onManualNext} title="Finish">
                         Finish
                       </button>
                     </div>
@@ -1244,8 +1417,12 @@ export function Boarding() {
               <h4 className="manual-success-sub">Passenger Added Successfully 🎉</h4>
 
               <div className="manual-success-lines">
-                <div>User ID: <strong>{addedManual && addedManual.userID}</strong></div>
-                <div>Ticket Code: <strong>{addedManual && addedManual.qrCodeID}</strong></div>
+                <div>
+                  User ID: <strong>{addedManual && addedManual.userID}</strong>
+                </div>
+                <div>
+                  Ticket Code: <strong>{addedManual && addedManual.qrCodeID}</strong>
+                </div>
                 <div>From: {addedManual && addedManual.origin}</div>
                 <div>Destination: {addedManual && addedManual.destination}</div>
               </div>
@@ -1295,7 +1472,13 @@ export function Boarding() {
                   <p className="boarding-scan-hint">Currently scanning…</p>
                   <p className="boarding-scan-hint">If scanning doesn't work, use manual.</p>
                   <div className="boarding-scan-actions">
-                    <button className="boarding-scan-close" onClick={() => { setShowScan(false); setScanState(null); }}>
+                    <button
+                      className="boarding-scan-close"
+                      onClick={() => {
+                        setShowScan(false);
+                        setScanState(null);
+                      }}
+                    >
                       Close
                     </button>
                   </div>
@@ -1307,14 +1490,29 @@ export function Boarding() {
                   <h4 className="boarding-scan-confirm">Passenger Confirmed 🎉</h4>
                   <div className="boarding-scan-details">
                     {scanResult && scanResult.name ? (
-                      <div className="boarding-scan-line"><strong>{scanResult.name}</strong></div>
+                      <div className="boarding-scan-line">
+                        <strong>{scanResult.name}</strong>
+                      </div>
                     ) : null}
-                    <div className="boarding-scan-line">Ticket Code: <strong>{(scanResult && scanResult.code) || "—"}</strong></div>
-                    <div className="boarding-scan-line">From: {(scanResult && scanResult.from) || "—"}</div>
-                    <div className="boarding-scan-line">Destination: {(scanResult && scanResult.to) || "—"}</div>
+                    <div className="boarding-scan-line">
+                      Ticket Code: <strong>{(scanResult && scanResult.code) || "—"}</strong>
+                    </div>
+                    <div className="boarding-scan-line">
+                      From: {(scanResult && scanResult.from) || "—"}
+                    </div>
+                    <div className="boarding-scan-line">
+                      Destination: {(scanResult && scanResult.to) || "—"}
+                    </div>
                   </div>
                   <div className="boarding-scan-actions">
-                    <button className="boarding-scan-close" onClick={() => { setShowScan(false); setScanState(null); setScanResult(null); }}>
+                    <button
+                      className="boarding-scan-close"
+                      onClick={() => {
+                        setShowScan(false);
+                        setScanState(null);
+                        setScanResult(null);
+                      }}
+                    >
                       Close
                     </button>
                   </div>

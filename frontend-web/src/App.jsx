@@ -47,7 +47,7 @@ function App() {
         <Route path="/operations/fares" element={<FaresTab />} /> 
         <Route path="/dashboard" element={<StationDashboard />} />
         <Route path="/boarding" element={<BoardingLandingPage />} />
-        <Route path="/boarding/passengerlist" element={<Boarding />} />
+        <Route path="/station-boarding/:scheduleId" element={<Boarding />} />
         <Route path="/disembarkingL" element={<DisembarkingLandingPage />} />
         <Route path="/disembarking" element={<Disembarking />} />
         <Route path="/stationsos" element={<StationSOS />} />
