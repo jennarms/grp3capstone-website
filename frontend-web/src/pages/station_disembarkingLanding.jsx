@@ -2,8 +2,11 @@ import { useState } from "react";
 import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_disembarkingLanding.css";
-// ⬇️ added
 import { useNavigate } from "react-router-dom";
+
+// ⬇️ ADD THESE
+import useSOS from "../hooks/useSOS";
+import SOSBanner from "../components/SOSBanner";
 
 export function DisembarkingLandingPage() {
   const [fromKalawaan] = useState([
@@ -20,15 +23,18 @@ export function DisembarkingLandingPage() {
     { time: "9:59 AM", availableSeats: "0 / 30" },
   ]);
 
-  // ⬇️ added
   const navigate = useNavigate();
-  // ⬇️ helper so we keep your table structure untouched
+
+  // ⬇️ SOS: banner + open count (badge). `latest` available if you want to react to each new alert.
+  const { banner, setBanner, openCount, latest } = useSOS({
+    sseUrl: "/api/realtime/sos",
+    pollUrl: "/api/sos?status=OPEN",
+  });
+
   const goToPassengerList = (origin, row) => {
-    // row.availableSeats is like "6 / 30"
     const [bookedStr, capStr] = row.availableSeats.split("/").map((s) => s.trim());
     const booked = parseInt(bookedStr || "0", 10);
     const capacity = parseInt(capStr || "0", 10);
-
     navigate(
       `/disembarking/passengerlist?from=${encodeURIComponent(origin)}&time=${encodeURIComponent(
         row.time
@@ -36,14 +42,32 @@ export function DisembarkingLandingPage() {
     );
   };
 
+  // Optional: quick jump to your SOS screen (change the route if needed)
+  const goToSOS = () => navigate("/broadcast"); // or "/sos" depending on your routes
+
   return (
     <div className="disembark-container">
       <StationNavbar />
 
+      {/* ⬇️ SOS banner at top */}
+      <SOSBanner banner={banner} onClose={() => setBanner(null)} />
+
       <div className="disembark-main">
         <header className="disembark-header">
-          <h1>Disembarking Management</h1>
-          <LogoutButton />
+          <h1>
+            Disembarking Management{" "}
+            {openCount > 0 && (
+              <span className="station-sos-badge">{openCount} SOS</span>
+            )}
+          </h1>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Optional: a quick action to open your SOS page */}
+            <button className="disembark-view-btn" onClick={goToSOS}>
+              View SOS
+            </button>
+            <LogoutButton />
+          </div>
         </header>
 
         <section className="disembark-table-section">
@@ -71,7 +95,6 @@ export function DisembarkingLandingPage() {
                       <td className="disembark-action-cell">
                         <button
                           className="disembark-view-btn"
-                          // ⬇️ added
                           onClick={() => goToPassengerList("kalawaan", row)}
                         >
                           View
@@ -108,7 +131,6 @@ export function DisembarkingLandingPage() {
                       <td className="disembark-action-cell">
                         <button
                           className="disembark-view-btn"
-                          // ⬇️ added
                           onClick={() => goToPassengerList("escolta", row)}
                         >
                           View

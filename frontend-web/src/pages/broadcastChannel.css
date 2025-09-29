@@ -10,18 +10,24 @@
 
 /* Main content */
 .broadcast-channel .main-content {
-  margin-left: 40px;
+  margin-left: -40px;
   margin-top: var(--nav-h);
   height: calc(100vh - var(--nav-h));
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   padding: 0;
+  width: 1600px;
 }
 
 .page-title {
   font-size: 28px;
-  margin: 12px 24px;
+  /* make sure it’s left-aligned and not centered by a flex parent */
+  align-self: flex-start;
+  text-align: left;
+
+  /* optional: match the 24px horizontal rhythm used by tabs/feed */
+  margin: 0 24px 10px 24px;
 }
 
 /* Tabs */
@@ -233,6 +239,7 @@
   padding: 10px 16px;
   border-radius: 12px;
   cursor: pointer;
+  height: 65px;
 }
 .bc-send:disabled {
   background: #aaa;
@@ -382,23 +389,61 @@
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* Mobile responsive adjustments */
+/* =========================
+   Scrollbar (feed + edit textarea)
+   ========================= */
+
+/* Firefox */
+.bc-feed,
+.bc-edit-textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bubble-border) transparent; /* thumb, track */
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+.bc-feed::-webkit-scrollbar,
+.bc-edit-textarea::-webkit-scrollbar {
+  width: 10px;
+}
+
+.bc-feed::-webkit-scrollbar-track,
+.bc-edit-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bc-feed::-webkit-scrollbar-thumb,
+.bc-edit-textarea::-webkit-scrollbar-thumb {
+  background: var(--bubble-border);
+  border-radius: 999px;
+  border: 2px solid transparent; /* inset look */
+  background-clip: padding-box;
+}
+
+.bc-feed:hover::-webkit-scrollbar-thumb,
+.bc-edit-textarea:hover::-webkit-scrollbar-thumb {
+  background: #182252; /* slightly darker than --navy */
+}
+
+/* Dark theme tweak */
+.dark .bc-feed,
+.dark .bc-edit-textarea {
+  scrollbar-color: #8aa0ff transparent;
+}
+
+.dark .bc-feed::-webkit-scrollbar-thumb,
+.dark .bc-edit-textarea::-webkit-scrollbar-thumb {
+  background: #8aa0ff;
+}
+
+.dark .bc-feed:hover::-webkit-scrollbar-thumb,
+.dark .bc-edit-textarea:hover::-webkit-scrollbar-thumb {
+  background: #aebcff;
+}
+
+/* Optional: thinner scrollbars on small screens */
 @media (max-width: 768px) {
-  .bc-edit-button {
-    opacity: 0.5; /* Always visible on mobile for easier access */
-    position: static;
-    float: right;
-    margin-left: 8px;
-    margin-top: 4px;
-  }
-  
-  .bc-edit-buttons {
-    flex-direction: column;
-  }
-  
-  .bc-edit-save,
-  .bc-edit-cancel {
-    width: 100%;
-    padding: 8px 12px;
+  .bc-feed::-webkit-scrollbar,
+  .bc-edit-textarea::-webkit-scrollbar {
+    width: 6px;
   }
 }
