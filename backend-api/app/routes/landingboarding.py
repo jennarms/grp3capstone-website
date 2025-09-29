@@ -52,21 +52,20 @@ def calculate_available_seats(schedule_id, vehicle_capacity, departure_date):
 @jwt_required()
 def get_boarding_schedules():
     try:
-        station_id = get_jwt_identity()  # Station admin's station ID from JWT
+        station_id = get_jwt_identity()
         target_date = request.args.get('date', date.today().isoformat())
-        
-        # Get station info
+
         station_info = get_station_info(station_id)
         if not station_info:
             return jsonify({"error": "Station not found"}), 404
-        
+
         station_id, company_id, station_name = station_info
-        
         cursor = mysql.connection.cursor()
+
         try:
-            # Fixed query - properly join all tables to get direction and schedules
+            # ✅ Pre-aggregate bookings by schedule + date
             cursor.execute("""
-                SELECT DISTINCT
+                SELECT 
                     r.Route_ID,
                     r.Route_name,
                     r.Direction,
@@ -76,29 +75,39 @@ def get_boarding_schedules():
                     s.Ride_ID,
                     s.departureTime,
                     s.ETA,
-                    v.Capacity as vehicle_capacity
+                    v.Capacity AS vehicle_capacity,
+                    IFNULL(b.booked_seats, 0) AS booked_seats
                 FROM Schedule s
                 JOIN RouteStations rs ON s.RouteStation_ID = rs.RouteStation_ID
                 JOIN Route r ON s.Route_ID = r.Route_ID
                 JOIN Vehicle v ON r.Vehicle_ID = v.Vehicle_ID
+                LEFT JOIN (
+                    SELECT 
+                        b.departure_time,
+                        COUNT(*) AS booked_seats
+                    FROM Booking b
+                    WHERE b.departure_date = %s
+                    AND b.booking_status IN ('P','C')
+                    GROUP BY b.departure_time
+                ) b ON b.departure_time = s.departureTime
                 WHERE rs.Station_ID = %s
                 AND r.Company_ID = %s
                 AND s.departureTime IS NOT NULL
                 ORDER BY r.Direction, s.departureTime ASC
-            """, (station_id, company_id))
-            
+            """, (target_date, station_id, company_id))
+
             schedules_data = cursor.fetchall()
-            
-            # Group schedules by direction (Forward/Reverse)
+
             forward_schedules = []
             reverse_schedules = []
-            
+
             for row in schedules_data:
-                route_id, route_name, direction, route_station_id, stop_order, schedule_id, ride_id, departure_time, eta, vehicle_capacity = row
-                
-                # Calculate available seats for this schedule
-                seat_info = calculate_available_seats(schedule_id, vehicle_capacity, target_date)
-                
+                (route_id, route_name, direction, route_station_id, stop_order,
+                 schedule_id, ride_id, departure_time, eta,
+                 vehicle_capacity, booked_seats) = row
+
+                available_seats = max(0, vehicle_capacity - booked_seats)
+
                 schedule_item = {
                     "schedule_id": schedule_id,
                     "ride_id": ride_id,
@@ -107,33 +116,29 @@ def get_boarding_schedules():
                     "route_station_id": route_station_id,
                     "departure_time": str(departure_time),
                     "eta": eta,
-                    "available_seats": seat_info["available"],
-                    "total_seats": seat_info["total"],
-                    "booked_seats": seat_info["booked"]
+                    "available_seats": available_seats,
+                    "total_seats": vehicle_capacity,
+                    "booked_seats": booked_seats
                 }
-                
-                # Handle your specific direction values: FO = Forward, RE = Reverse
-                if direction == 'FO':  # Forward
+
+                if direction == 'FO':
                     forward_schedules.append(schedule_item)
-                elif direction == 'RE':  # Reverse
+                elif direction == 'RE':
                     reverse_schedules.append(schedule_item)
-                else:
-                    # Log unexpected direction values for debugging
-                    print(f"Unexpected direction value: '{direction}' for schedule {schedule_id}")
-                    # You can decide how to handle unexpected values
-            
+
             return jsonify({
                 "station_name": station_name,
                 "date": target_date,
                 "forward_schedules": forward_schedules,
                 "reverse_schedules": reverse_schedules
             }), 200
-            
+
         finally:
             cursor.close()
-            
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # Debug endpoint to check what data exists
 @landingboarding_bp.route('/debug-routes', methods=['GET'])
