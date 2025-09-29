@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { StationNavbar } from "../components/station_navbar";
 import { LogoutButton } from "../components/logout_button";
 import "./station_disembarking.css";
+// ⬇️ added
+import { useSearchParams } from "react-router-dom";
 
 function MagnifierSVG() {
   return (
@@ -22,13 +24,20 @@ function LocationPinSVG() {
 }
 
 export function Disembarking() {
+  // ⬇️ added: read params from the clicked "View" button
+  const [sp] = useSearchParams();
+  const fromParam = (sp.get("from") || "").toLowerCase();        // "kalawaan" | "escolta"
+  const timeParam = sp.get("time") || "8:40 AM";
+  const bookedParam = parseInt(sp.get("booked") || "6", 10);
+  const capacityParam = parseInt(sp.get("capacity") || "30", 10);
+
   const [tripInfo] = useState({
-    route: "PUP → Kalawaan",
-    departTime: "8:40 AM",
-    booked: { count: 6, capacity: 30 },
+    route: fromParam === "escolta" ? "Escolta → PUP" : "PUP → Kalawaan",
+    departTime: timeParam,
+    booked: { count: bookedParam, capacity: capacityParam },
     stops: [
       { name: "Quinta", time: "8:22 AM", status: "Departed" },
-      { name: "PUP", time: "8:40 AM", status: "Arrived", pin: true },
+      { name: "PUP", time: timeParam, status: "Arrived", pin: true },
       { name: "Sta - Ana", time: "8:55 AM", status: "Approaching" },
       { name: "Lambingan", time: "9:00 AM", status: "Approaching" },
     ],

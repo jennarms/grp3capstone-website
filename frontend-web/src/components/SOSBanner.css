@@ -1,0 +1,4 @@
+.station-sos-banner { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50; }
+.station-sos-banner-box { background: #fee2e2; color: #991b1b; border-radius: 16px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.15); display: flex; align-items: center; gap: 8px; }
+.station-sos-banner-close { background: transparent; border: 0; cursor: pointer; font-size: 14px; color: inherit; }
+.station-sos-badge { background: #fee2e2; color: #991b1b; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 600; margin-left: 8px; }
