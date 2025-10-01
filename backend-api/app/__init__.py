@@ -94,5 +94,13 @@ def create_app():
     from app.routes.broadcastchannel import broadcast_bp
     app.register_blueprint(broadcast_bp, url_prefix="/api/broadcast")
 
+    from app.routes.boarding_routecard import boarding_routecard_bp
+    app.register_blueprint(boarding_routecard_bp, url_prefix="/api")
+
+    from app.routes.scanqr import scanqr_bp
+    app.register_blueprint(scanqr_bp, url_prefix="/api/scan")
+
+    from app.routes.boarding_passengertable import boarding_passengertable_bp
+    app.register_blueprint(boarding_passengertable_bp, url_prefix="/api/passengertable")
     
     return app

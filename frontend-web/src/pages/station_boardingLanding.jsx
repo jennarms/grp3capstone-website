@@ -1,116 +1,85 @@
-// src/pages/station_boardingLanding.jsx
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ SPA navigation (works with BrowserRouter & HashRouter)
+import { useNavigate } from "react-router-dom";
 import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_boardingLanding.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
-console.log("API URL from env:", apiUrl);
 
 export function BoardingLandingPage() {
-  const navigate = useNavigate(); // ✅
+  const navigate = useNavigate();
 
   const [forwardSchedules, setForwardSchedules] = useState([]);
   const [reverseSchedules, setReverseSchedules] = useState([]);
   const [stationName, setStationName] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Get auth token
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     return {
-      Authorization: `Bearer ${token}`,
+      Authorization: token ? `Bearer ${token}` : "",
       "Content-Type": "application/json",
     };
   };
 
-  // Fetch boarding schedules
   const fetchBoardingSchedules = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      setError("");
-
-      console.log("Fetching schedules for date:", selectedDate);
-
-      const response = await fetch(
-        `${apiUrl}/api/landingboarding/boarding-schedules?date=${selectedDate}`,
+      const res = await fetch(
+        `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(selectedDate)}`,
         { headers: getAuthHeaders() }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-
-        // Debug logging
-        console.log("Raw response data:", data);
-        console.log("Forward schedules:", data.forward_schedules);
-        console.log("Reverse schedules:", data.reverse_schedules);
-
-        setStationName(data.station_name || "Unknown Station");
-        setForwardSchedules(data.forward_schedules || []);
-        setReverseSchedules(data.reverse_schedules || []);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.error || `HTTP ${response.status}: Failed to fetch schedules`;
-        console.error("API Error:", errorMessage);
-        setError(errorMessage);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
+        setError(msg);
+        setForwardSchedules([]);
+        setReverseSchedules([]);
+        return;
       }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Network error: " + err.message);
+
+      const data = await res.json();
+      setStationName(data.station_name || "Unknown Station");
+      setForwardSchedules(Array.isArray(data.forward_schedules) ? data.forward_schedules : []);
+      setReverseSchedules(Array.isArray(data.reverse_schedules) ? data.reverse_schedules : []);
+    } catch (e) {
+      setError(`Network error: ${e.message}`);
+      setForwardSchedules([]);
+      setReverseSchedules([]);
     } finally {
       setLoading(false);
     }
   }, [selectedDate]);
 
-  // Load schedules on component mount and date change
   useEffect(() => {
     fetchBoardingSchedules();
   }, [fetchBoardingSchedules]);
 
-  // Debug effect to log state changes
-  useEffect(() => {
-    console.log("State updated - Forward schedules:", forwardSchedules);
-    console.log("State updated - Reverse schedules:", reverseSchedules);
-  }, [forwardSchedules, reverseSchedules]);
-
-  // Format time for display (24h → 12h)
-  const formatTime = (timeStr) => {
-    if (!timeStr) return "";
-    try {
-      const [hRaw, mRaw] = String(timeStr).split(":");
-      const hours = parseInt(hRaw, 10);
-      const minutes = (mRaw ?? "00").padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const displayHour = (hours % 12) || 12;
-      return `${displayHour}:${minutes} ${ampm}`;
-    } catch (error) {
-      console.error("Time formatting error:", error, "for time:", timeStr);
-      return timeStr;
-    }
+  // "HH:MM:SS" -> "h:mm AM/PM"
+  const formatTime = (hhmmss) => {
+    if (!hhmmss) return "";
+    const [hStr = "0", mStr = "00"] = String(hhmmss).split(":");
+    const h = parseInt(hStr, 10) || 0;
+    const m = (mStr ?? "00").padStart(2, "0");
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = (h % 12) || 12;
+    return `${h12}:${m} ${ampm}`;
   };
 
-  // ✅ Single helper to navigate to the Boarding page — works for both HashRouter & BrowserRouter
-  const goToBoarding = ({
-    scheduleId,
-    departureTime24,
-    availableSeats,
-    totalSeats,
-    direction,
-  }) => {
-    const formattedTime = formatTime(departureTime24);
+  // Navigate to station boarding page for a schedule instance
+  const goToBoarding = ({ scheduleId, departureTimeHHMMSS, availableSeats, totalSeats, direction }) => {
+    const formattedTime = formatTime(departureTimeHHMMSS);
     const availNum = Number(availableSeats || 0);
     const totalNum = Number(totalSeats || 0);
     const booked = Math.max(0, totalNum - availNum);
 
     const params = new URLSearchParams({
       date: selectedDate,
-      time: formattedTime,
+      time: formattedTime,             // UI display only
       avail: String(availNum),
       total: String(totalNum),
       booked: String(booked),
@@ -121,19 +90,11 @@ export function BoardingLandingPage() {
     const path = `/station-boarding/${encodeURIComponent(String(scheduleId))}`;
     const search = `?${params.toString()}`;
 
-    // If using HashRouter, put the whole SPA path into the hash to avoid duplicate paths
     if (window.location.hash) {
       window.location.hash = "#" + (path + search).replace(/^\//, "");
     } else {
-      // BrowserRouter path navigation
       navigate({ pathname: path, search });
     }
-  };
-
-  // Handle refresh button
-  const handleRefresh = () => {
-    console.log("Manual refresh triggered");
-    fetchBoardingSchedules();
   };
 
   return (
@@ -149,15 +110,12 @@ export function BoardingLandingPage() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => {
-                  console.log("Date changed to:", e.target.value);
-                  setSelectedDate(e.target.value);
-                }}
+                onChange={(e) => setSelectedDate(e.target.value)}
                 style={{ marginLeft: "0.5rem", padding: "0.25rem" }}
               />
             </label>
             <button
-              onClick={handleRefresh}
+              onClick={fetchBoardingSchedules}
               style={{
                 padding: "0.5rem 1rem",
                 backgroundColor: "#007bff",
@@ -194,7 +152,6 @@ export function BoardingLandingPage() {
           </div>
         )}
 
-        {/* Debug info */}
         {!loading && (
           <div
             style={{
@@ -212,7 +169,7 @@ export function BoardingLandingPage() {
         )}
 
         <section className="blp-table-section">
-          {/* FORWARD DIRECTION TABLE */}
+          {/* FORWARD */}
           <div className="blp-card">
             <div className="blp-table-wrapper">
               <table className="blp-data-table">
@@ -236,22 +193,20 @@ export function BoardingLandingPage() {
                       </td>
                     </tr>
                   ) : (
-                    forwardSchedules.map((schedule, i) => (
-                      <tr key={`f-${schedule.schedule_id}-${i}`}>
-                        <td>{formatTime(schedule.departure_time)}</td>
-                        <td>
-                          {schedule.available_seats} / {schedule.total_seats}
-                        </td>
+                    forwardSchedules.map((s, i) => (
+                      <tr key={`f-${s.schedule_id}-${i}`}>
+                        <td>{formatTime(s.departure_time)}</td>
+                        <td>{s.available_seats} / {s.total_seats}</td>
                         <td className="blp-action-cell">
                           <button
                             className="blp-view-btn"
                             onClick={() =>
                               goToBoarding({
-                                scheduleId: schedule.schedule_id,
-                                departureTime24: schedule.departure_time,
-                                availableSeats: schedule.available_seats,
-                                totalSeats: schedule.total_seats,
-                                direction: "forward",
+                                scheduleId: s.schedule_id,
+                                departureTimeHHMMSS: s.departure_time,
+                                availableSeats: s.available_seats,
+                                totalSeats: s.total_seats,
+                                direction: s.direction || "forward",
                               })
                             }
                             disabled={loading}
@@ -267,7 +222,7 @@ export function BoardingLandingPage() {
             </div>
           </div>
 
-          {/* REVERSE DIRECTION TABLE */}
+          {/* REVERSE */}
           <div className="blp-card">
             <div className="blp-table-wrapper">
               <table className="blp-data-table">
@@ -291,22 +246,20 @@ export function BoardingLandingPage() {
                       </td>
                     </tr>
                   ) : (
-                    reverseSchedules.map((schedule, i) => (
-                      <tr key={`r-${schedule.schedule_id}-${i}`}>
-                        <td>{formatTime(schedule.departure_time)}</td>
-                        <td>
-                          {schedule.available_seats} / {schedule.total_seats}
-                        </td>
+                    reverseSchedules.map((s, i) => (
+                      <tr key={`r-${s.schedule_id}-${i}`}>
+                        <td>{formatTime(s.departure_time)}</td>
+                        <td>{s.available_seats} / {s.total_seats}</td>
                         <td className="blp-action-cell">
                           <button
                             className="blp-view-btn"
                             onClick={() =>
                               goToBoarding({
-                                scheduleId: schedule.schedule_id,
-                                departureTime24: schedule.departure_time,
-                                availableSeats: schedule.available_seats,
-                                totalSeats: schedule.total_seats,
-                                direction: "reverse",
+                                scheduleId: s.schedule_id,
+                                departureTimeHHMMSS: s.departure_time,
+                                availableSeats: s.available_seats,
+                                totalSeats: s.total_seats,
+                                direction: s.direction || "reverse",
                               })
                             }
                             disabled={loading}
