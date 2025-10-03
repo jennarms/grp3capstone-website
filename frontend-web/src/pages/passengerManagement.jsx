@@ -1,3 +1,4 @@
+// passengerManagement.jsx
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
@@ -6,11 +7,10 @@ import "./passengerManagement.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// Define columns outside the component for stability
+// Columns to render (no passwordHash). Includes platform_name (derived on backend)
 const columns = [
   "User_ID",
   "username",
-  "passwordHash",
   "first_name",
   "last_name",
   "address",
@@ -21,7 +21,8 @@ const columns = [
   "gender",
   "profile",
   "created_at",
-  "platform_source",
+  "platform_source", // code: MB/CB/EM/MA
+  "platform_name",   // label: Mobile App / Chatbot / Email / Manual
   "messenger_psid",
 ];
 
@@ -31,9 +32,13 @@ const idOf = (v) => String(v ?? "");
 export function Passenger() {
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState("");
-  const [platform, setPlatform] = useState("all");
+  const [platform, setPlatform] = useState("all"); // 'all' | 'MB' | 'CB' | 'EM' | 'MA'
   const [checked, setChecked] = useState(new Set()); // Set<string>
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+  // Optional: hooks for date range UI if you add date inputs later
+  // const [dateFrom, setDateFrom] = useState("");
+  // const [dateTo, setDateTo] = useState("");
 
   // Prevent body scroll when modal is open + close on Esc
   useEffect(() => {
@@ -55,9 +60,13 @@ export function Passenger() {
   // Fetch passengers
   const fetchPassengers = useCallback(async () => {
     try {
-      const res = await axios.get(`${apiUrl}/api/users`, { params: { platform } });
+      const params = { platform }; // add date_from/date_to when you have UI
+      // if (dateFrom) params.date_from = dateFrom;
+      // if (dateTo) params.date_to = dateTo;
 
-      // Convert array-of-arrays to array-of-objects mapped to columns
+      const res = await axios.get(`${apiUrl}/api/users`, { params });
+
+      // Convert array-of-arrays (tuples) to array-of-objects mapped to columns
       const data = res.data.map((arr) =>
         arr.reduce((obj, val, idx) => {
           obj[columns[idx]] = val;
@@ -69,9 +78,9 @@ export function Passenger() {
     } catch (error) {
       console.error("Failed to fetch passengers:", error);
     }
-  }, [platform]);
+  }, [platform /*, dateFrom, dateTo */]);
 
-  // Fetch whenever platform changes
+  // Fetch whenever filters change
   useEffect(() => {
     fetchPassengers();
   }, [fetchPassengers]);
@@ -96,21 +105,18 @@ export function Passenger() {
       return;
     }
 
-    // Optional final sync (keeps UI accurate in case of server-side changes)
+    // Optional final sync
     fetchPassengers();
   };
 
-  // Filter rows based on search query and platform
+  // Filter rows based on search query and platform code (backend already filtered by platform)
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
-      if (platform !== "all" && r.platform_source !== platform) return false;
       if (!q) return true;
-      return Object.values(r).some((v) =>
-        String(v ?? "").toLowerCase().includes(q)
-      );
+      return Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q));
     });
-  }, [rows, query, platform]);
+  }, [rows, query]);
 
   const toggleAll = (e) => {
     if (e.target.checked) {
@@ -131,8 +137,7 @@ export function Passenger() {
   };
 
   const allVisibleChecked =
-    filtered.length > 0 &&
-    filtered.every((r) => checked.has(idOf(r.User_ID)));
+    filtered.length > 0 && filtered.every((r) => checked.has(idOf(r.User_ID)));
 
   return (
     <>
@@ -172,10 +177,10 @@ export function Passenger() {
               aria-label="Filter by platform"
             >
               <option value="all">All Platforms</option>
-              <option value="MA">MA</option>
-              <option value="CB">CB</option>
-              <option value="GM">GM</option>
-              <option value="MB">MB</option>
+              <option value="MB">Mobile App</option>
+              <option value="CB">Chatbot</option>
+              <option value="EM">Email</option>
+              <option value="MA">Manual</option>
             </select>
           </div>
 
@@ -230,7 +235,7 @@ export function Passenger() {
                           />
                         </td>
                         {columns.map((c) => (
-                          <td key={`cell-${rowKey}-${c}`}>{r[c]}</td>
+                          <td key={`cell-${rowKey}-${c}`}>{String(r[c] ?? "")}</td>
                         ))}
                       </tr>
                     );
@@ -252,10 +257,7 @@ export function Passenger() {
           aria-describedby="pmc-confirm-desc"
           onClick={() => setShowConfirmDelete(false)}
         >
-          <div
-            className="pmc-confirmBox"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="pmc-confirmBox" onClick={(e) => e.stopPropagation()}>
             <div className="pmc-confirmHeader">
               <h3 id="pmc-confirm-title" className="pmc-confirmTitle">
                 Delete Records
@@ -269,7 +271,6 @@ export function Passenger() {
               </p>
             </div>
 
-            {/* Footer buttons now aligned to the bottom-right */}
             <div className="pmc-confirmActions">
               <button
                 className="pmc-btn pmc-btnOutline"
@@ -292,8 +293,4 @@ export function Passenger() {
   );
 }
 
-
-
-
-
-
+export default Passenger;
