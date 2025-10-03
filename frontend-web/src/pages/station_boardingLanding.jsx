@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
@@ -15,6 +15,10 @@ export function BoardingLandingPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // row refs for auto-scroll + highlight
+  const forwardRowRefs = useRef([]);
+  const reverseRowRefs = useRef([]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -59,7 +63,17 @@ export function BoardingLandingPage() {
     fetchBoardingSchedules();
   }, [fetchBoardingSchedules]);
 
-  // "HH:MM:SS" -> "h:mm AM/PM"
+  // ---------- helpers ----------
+  const parseDateTime = (dateStr, hhmmss) => {
+    if (!dateStr || !hhmmss) return null;
+    const [Y, M, D] = dateStr.split("-").map(Number);
+    const [hh = "0", mm = "0", ss = "0"] = String(hhmmss).split(":");
+    const dt = new Date();
+    dt.setFullYear(Y, (M || 1) - 1, D || 1);
+    dt.setHours(parseInt(hh, 10) || 0, parseInt(mm, 10) || 0, parseInt(ss, 10) || 0, 0);
+    return dt;
+  };
+
   const formatTime = (hhmmss) => {
     if (!hhmmss) return "";
     const [hStr = "0", mStr = "00"] = String(hhmmss).split(":");
@@ -70,7 +84,55 @@ export function BoardingLandingPage() {
     return `${h12}:${m} ${ampm}`;
   };
 
-  // Navigate to station boarding page for a schedule instance
+  // Stable finder for the next upcoming index for a given list
+  const nextIndexFor = useCallback(
+    (schedules) => {
+      if (!Array.isArray(schedules) || schedules.length === 0) return -1;
+
+      const today = new Date();
+      const selectedMidnight = new Date(selectedDate + "T00:00:00");
+      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      if (selectedMidnight > todayMidnight) return 0;   // future date -> first row
+      if (selectedMidnight < todayMidnight) return -1;  // past date -> none
+
+      // selected date === today: find first time >= now
+      const now = Date.now();
+      for (let i = 0; i < schedules.length; i++) {
+        const dep = parseDateTime(selectedDate, schedules[i]?.departure_time);
+        if (dep && dep.getTime() >= now) return i;
+      }
+      return -1;
+    },
+    [selectedDate]
+  );
+
+  // Memoized indices for the "next" rows (deps satisfied)
+  const nextForwardIndex = useMemo(
+    () => nextIndexFor(forwardSchedules),
+    [forwardSchedules, nextIndexFor]
+  );
+  const nextReverseIndex = useMemo(
+    () => nextIndexFor(reverseSchedules),
+    [reverseSchedules, nextIndexFor]
+  );
+
+  // Auto-scroll after data renders
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const elF = nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
+      const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
+
+      if (elF && typeof elF.scrollIntoView === "function") {
+        elF.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (elR && typeof elR.scrollIntoView === "function") {
+        elR.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, [nextForwardIndex, nextReverseIndex, forwardSchedules, reverseSchedules, loading]);
+
+  // ---------- navigation (no more blocking; everything is viewable) ----------
   const goToBoarding = ({ scheduleId, departureTimeHHMMSS, availableSeats, totalSeats, direction }) => {
     const formattedTime = formatTime(departureTimeHHMMSS);
     const availNum = Number(availableSeats || 0);
@@ -79,7 +141,7 @@ export function BoardingLandingPage() {
 
     const params = new URLSearchParams({
       date: selectedDate,
-      time: formattedTime,             // UI display only
+      time: formattedTime,
       avail: String(availNum),
       total: String(totalNum),
       booked: String(booked),
@@ -96,6 +158,16 @@ export function BoardingLandingPage() {
       navigate({ pathname: path, search });
     }
   };
+
+  // helpers to set row refs in map
+  const setForwardRef = (el, idx) => {
+    forwardRowRefs.current[idx] = el;
+  };
+  const setReverseRef = (el, idx) => {
+    reverseRowRefs.current[idx] = el;
+  };
+
+  const rowClass = (isNext) => "blp-row" + (isNext ? " blp-row-highlight" : "");
 
   return (
     <div className="blp-container">
@@ -152,22 +224,6 @@ export function BoardingLandingPage() {
           </div>
         )}
 
-        {!loading && (
-          <div
-            style={{
-              padding: "1rem",
-              backgroundColor: "#f8f9fa",
-              margin: "1rem 0",
-              borderRadius: "4px",
-              fontSize: "0.875rem",
-              color: "#666",
-            }}
-          >
-            <strong>Debug Info:</strong> Forward: {forwardSchedules.length} schedules, Reverse:{" "}
-            {reverseSchedules.length} schedules
-          </div>
-        )}
-
         <section className="blp-table-section">
           {/* FORWARD */}
           <div className="blp-card">
@@ -193,29 +249,37 @@ export function BoardingLandingPage() {
                       </td>
                     </tr>
                   ) : (
-                    forwardSchedules.map((s, i) => (
-                      <tr key={`f-${s.schedule_id}-${i}`}>
-                        <td>{formatTime(s.departure_time)}</td>
-                        <td>{s.available_seats} / {s.total_seats}</td>
-                        <td className="blp-action-cell">
-                          <button
-                            className="blp-view-btn"
-                            onClick={() =>
-                              goToBoarding({
-                                scheduleId: s.schedule_id,
-                                departureTimeHHMMSS: s.departure_time,
-                                availableSeats: s.available_seats,
-                                totalSeats: s.total_seats,
-                                direction: s.direction || "forward",
-                              })
-                            }
-                            disabled={loading}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    forwardSchedules.map((s, i) => {
+                      const isNext = i === nextForwardIndex;
+                      return (
+                        <tr
+                          key={`f-${s.schedule_id}-${i}`}
+                          ref={(el) => setForwardRef(el, i)}
+                          className={rowClass(isNext)}
+                        >
+                          <td>{formatTime(s.departure_time)}</td>
+                          <td>{s.available_seats} / {s.total_seats}</td>
+                          <td className="blp-action-cell">
+                            <button
+                              className="blp-view-btn"
+                              onClick={() =>
+                                goToBoarding({
+                                  scheduleId: s.schedule_id,
+                                  departureTimeHHMMSS: s.departure_time,
+                                  availableSeats: s.available_seats,
+                                  totalSeats: s.total_seats,
+                                  direction: s.direction || "forward",
+                                })
+                              }
+                              disabled={loading}
+                              title={isNext ? "Next upcoming schedule" : undefined}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -246,29 +310,37 @@ export function BoardingLandingPage() {
                       </td>
                     </tr>
                   ) : (
-                    reverseSchedules.map((s, i) => (
-                      <tr key={`r-${s.schedule_id}-${i}`}>
-                        <td>{formatTime(s.departure_time)}</td>
-                        <td>{s.available_seats} / {s.total_seats}</td>
-                        <td className="blp-action-cell">
-                          <button
-                            className="blp-view-btn"
-                            onClick={() =>
-                              goToBoarding({
-                                scheduleId: s.schedule_id,
-                                departureTimeHHMMSS: s.departure_time,
-                                availableSeats: s.available_seats,
-                                totalSeats: s.total_seats,
-                                direction: s.direction || "reverse",
-                              })
-                            }
-                            disabled={loading}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    reverseSchedules.map((s, i) => {
+                      const isNext = i === nextReverseIndex;
+                      return (
+                        <tr
+                          key={`r-${s.schedule_id}-${i}`}
+                          ref={(el) => setReverseRef(el, i)}
+                          className={rowClass(isNext)}
+                        >
+                          <td>{formatTime(s.departure_time)}</td>
+                          <td>{s.available_seats} / {s.total_seats}</td>
+                          <td className="blp-action-cell">
+                            <button
+                              className="blp-view-btn"
+                              onClick={() =>
+                                goToBoarding({
+                                  scheduleId: s.schedule_id,
+                                  departureTimeHHMMSS: s.departure_time,
+                                  availableSeats: s.available_seats,
+                                  totalSeats: s.total_seats,
+                                  direction: s.direction || "reverse",
+                                })
+                              }
+                              disabled={loading}
+                              title={isNext ? "Next upcoming schedule" : undefined}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

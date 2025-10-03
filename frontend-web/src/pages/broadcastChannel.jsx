@@ -5,7 +5,7 @@ import { Navbar } from "../components/navBar";
 import { StationNavbar } from "../components/station_navbar";
 import "./broadcastChannel.css";
 
-const EMOJI_PALETTE = ["👍", "🥰", "😮", "😢", "👎", "😡", "🙂"];
+const EMOJI_PALETTE = ["❤️", "😂", "😮", "😢", "😡", "👍"];
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const ROLES = {
