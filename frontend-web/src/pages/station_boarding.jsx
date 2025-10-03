@@ -105,10 +105,10 @@ export function Boarding() {
     return to12h(t);
   }, [scheduleInfo, qp.time]);
 
-  const headerBooked = useMemo(() => {
-    if (scheduleInfo?.booked_seats != null) return scheduleInfo.booked_seats;
-    return Number.isFinite(qp.booked) ? qp.booked : Math.max(0, qp.total - qp.avail);
-  }, [scheduleInfo, qp.booked, qp.total, qp.avail]);
+  const headerBoarded = useMemo(() => {
+    if (scheduleInfo?.boarded_seats != null) return scheduleInfo.boarded_seats;
+    return Number.isFinite(qp.boarded) ? qp.boarded : Math.max(0, qp.total - qp.avail);
+  }, [scheduleInfo, qp.boarded, qp.total, qp.avail]);
 
   const headerTotal = useMemo(() => {
     if (scheduleInfo?.total_seats != null) return scheduleInfo.total_seats;
@@ -181,10 +181,10 @@ export function Boarding() {
                 <div className="route-card__time">
                   {loading ? "Loading..." : headerTime || "—"}
                 </div>
-                <div className="route-card__booked">
-                  Booked:{" "}
+                <div className="route-card__boarded">
+                  Boarded:{" "}
                   <strong>
-                    {loading ? "…" : headerBooked}/{loading ? "…" : headerTotal}
+                    {loading ? "…" : headerBoarded}/{loading ? "…" : headerTotal}
                   </strong>
                 </div>
               </div>

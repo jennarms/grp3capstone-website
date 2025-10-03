@@ -100,20 +100,6 @@ export function Feedback() {
     setPendingDeleteId(null);
   };
 
-  // 🔹 Reply
-  const onReply = (id) => {
-    const text = window.prompt("Write admin reply:");
-    if (!text) return;
-    axios
-      .put(`${apiUrl}/api/feedback/${id}/reply`, { reply: text })
-      .then(() =>
-        setItems((prev) =>
-          prev.map((i) => (i.id === id ? { ...i, adminResponse: text } : i))
-        )
-      )
-      .catch((err) => console.error("Reply failed:", err));
-  };
-
   return (
     <>
       <Navbar />
@@ -170,16 +156,6 @@ export function Feedback() {
                       <path d="M10 11v6" />
                       <path d="M14 11v6" />
                     </svg>
-                  </button>
-
-                  {/* 🔹 Added Reply button */}
-                  <button
-                    className="icon-btn reply"
-                    title="Reply"
-                    aria-label={`Reply to feedback ${f.id}`}
-                    onClick={() => onReply(f.id)}
-                  >
-                    Reply
                   </button>
                 </div>
 
