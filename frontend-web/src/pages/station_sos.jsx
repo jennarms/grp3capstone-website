@@ -1,44 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StationNavbar } from "../components/station_navbar";
 import { LogoutButton } from "../components/logout_button";
 import "./station_sos.css";
+import { useSOSStore } from "../sos/SOSContext";
 
 /** Seed data (red=New, yellow=Responding, green=Resolved) */
 const DATA = [
-  {
-    id: "0241",
-    name: "Juan Dela Cruz",
-    time: "3:42 PM",
-    boardingStation: "Sta. Ana",
-    route: "Sta. Ana → Escolta",
-    status: "New", // red card + Respond button
-  },
-  {
-    id: "0231",
-    name: "Jin Dela Cruz",
-    time: "6:42 PM",
-    boardingStation: "Sta. Ana",
-    route: "Sta. Ana → Escolta",
-    status: "Responding", // yellow card + Responding button
-    respondingAt: "6:50 PM",
-  },
-  {
-    id: "0256",
-    name: "Paolo Reyes",
-    time: "1:00 PM",
-    boardingStation: "Pinagbuhatan Station",
-    route: "Pinagbuhatan → Sta. Ana",
-    status: "New",
-  },
-  {
-    id: "0257",
-    name: "Mae Trinidad",
-    time: "7:42 AM",
-    boardingStation: "Guadalupe Station",
-    route: "Guadalupe → Escolta",
-    status: "Resolved", // green card — no button
-    resolvedAt: "10:00 AM",
-  },
+  { id: "0241", name: "Juan Dela Cruz", time: "3:42 PM", boardingStation: "Sta. Ana", route: "Sta. Ana → Escolta", status: "New" },
+  { id: "0231", name: "Jin Dela Cruz", time: "6:42 PM", boardingStation: "Sta. Ana", route: "Sta. Ana → Escolta", status: "Responding", respondingAt: "6:50 PM" },
+  { id: "0256", name: "Paolo Reyes", time: "1:00 PM", boardingStation: "Pinagbuhatan Station", route: "Pinagbuhatan → Sta. Ana", status: "New" },
+  { id: "0257", name: "Mae Trinidad", time: "7:42 AM", boardingStation: "Guadalupe Station", route: "Guadalupe → Escolta", status: "Resolved", resolvedAt: "10:00 AM" },
 ];
 
 const FILTERS = ["New", "All", "Responding", "Resolved"];
@@ -107,15 +78,10 @@ export function StationSOS() {
       })
     );
 
-    // If we just resolved, pop success modal
-    if (pendingAction === "toResolved") {
-      setShowSuccess(true);
-    }
-
+    if (pendingAction === "toResolved") setShowSuccess(true);
     closeConfirm();
   };
 
-  // Text for confirm modal
   const modalTitle =
     pendingAction === "toResponding" ? "Confirm Respond" :
     pendingAction === "toResolved"   ? "Confirm Resolution" : "";
@@ -127,21 +93,49 @@ export function StationSOS() {
       ? "Mark this SOS alert as Resolved? This will complete the ticket and remove the action button."
       : "";
 
+  /* Listen for global SOS and prepend a 'New' red card */
+  const { latest } = useSOSStore();
+  const seenRef = useRef(new Set(DATA.map(d => d.id)));
+
+  useEffect(() => {
+    if (!latest) return;
+    const alertId = (latest.id ?? "").toString();
+    if (!alertId || seenRef.current.has(alertId)) return;
+
+    seenRef.current.add(alertId);
+
+    const newItem = {
+      id: alertId,
+      name: latest.userName || latest.userId || "Unknown Rider",
+      time: nowTimeString(),
+      boardingStation: latest.boardingStation || "Sta. Ana",
+      route: latest.tripRoute || "Sta. Ana → Escolta",
+      status: "New",
+      _enter: true,
+    };
+
+    setItems(prev => [newItem, ...prev]);
+    const t = setTimeout(() => {
+      setItems(prev => prev.map(r => r.id === newItem.id ? { ...r, _enter: false } : r));
+    }, 50);
+    return () => clearTimeout(t);
+  }, [latest]);
+
   return (
-    <div className="sos-page">
+    <div className="station-sos-page">
       <StationNavbar />
 
-      <main className="sos-main">
-        <header className="sos-topbar">
-          <div className="sos-title">
+      <main className="station-sos-main">
+        <header className="station-sos-topbar">
+          <div className="station-sos-title">
             <h1>SOS</h1>
           </div>
           <LogoutButton />
         </header>
 
-        <div className="sos-toolbar">
-          <label className="sos-search">
-            <span className="sos-search-icon" aria-hidden>
+        <div className="station-sos-toolbar">
+          <label className="station-sos-search">
+            <span className="station-sos-search-icon" aria-hidden>
               <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
                 <line x1="16.65" y1="16.65" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -156,13 +150,13 @@ export function StationSOS() {
             />
           </label>
 
-          <div className="sos-chips" role="tablist" aria-label="SOS filters">
+          <div className="station-sos-chips" role="tablist" aria-label="SOS filters">
             {FILTERS.map((f) => (
               <button
                 key={f}
                 role="tab"
                 aria-selected={activeFilter === f}
-                className={`sos-chip ${activeFilter === f ? "is-active" : ""}`}
+                className={`station-sos-chip ${activeFilter === f ? "is-active" : ""}`}
                 onClick={() => setActiveFilter(f)}
               >
                 {f} ({counts[f]})
@@ -171,28 +165,28 @@ export function StationSOS() {
           </div>
         </div>
 
-        <section className="sos-list">
+        <section className="station-sos-list">
           {filtered.map((r, i) => (
             <article
               key={`${r.id}-${i}`}
-              className={`sos-card ${
-                r.status === "Responding" ? "is-new" :      /* yellow for Responding */
-                r.status === "New" ? "is-responding" :     /* red for New */
-                "is-resolved"                               /* green for Resolved */
-              }`}
+              className={`station-sos-card ${
+                r.status === "New"        ? "is-new" :
+                r.status === "Responding" ? "is-responding" :
+                "is-resolved"
+              } ${r._enter ? "enter" : ""}`}
             >
               {/* Left status icon (triangle=new, dot=responding, check=resolved) */}
-              <div className="sos-card-icon" aria-hidden>
+              <div className="station-sos-card-icon" aria-hidden>
                 {r.status === "New" && (
-                  <span className="sos-triangle" title="New">
+                  <span className="station-sos-triangle" title="New">
                     <svg viewBox="0 0 24 24">
                       <path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                     </svg>
                   </span>
                 )}
-                {r.status === "Responding" && <span className="sos-dot" title="Responding" />}
+                {r.status === "Responding" && <span className="station-sos-dot" title="Responding" />}
                 {r.status === "Resolved" && (
-                  <span className="sos-check" title="Resolved">
+                  <span className="station-sos-check" title="Resolved">
                     <svg viewBox="0 0 24 24">
                       <path fill="currentColor" d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>
                     </svg>
@@ -201,59 +195,58 @@ export function StationSOS() {
               </div>
 
               {/* Details + centered action */}
-              <div className="sos-card-content">
-                <div className="sos-details">
-                  <div><span className="sos-label">Name:</span> {r.name}</div>
-                  <div><span className="sos-label">Time:</span> {r.time}</div>
-                  <div><span className="sos-label">Boarding Station:</span> {r.boardingStation}</div>
-                  <div><span className="sos-label">Trip Route:</span> {r.route}</div>
-                  <div><span className="sos-label">Ride ID:</span> #{r.id}</div>
+              <div className="station-sos-card-content">
+                <div className="station-sos-details">
+                  <div><span className="station-sos-label">Name:</span> {r.name}</div>
+                  <div><span className="station-sos-label">Time:</span> {r.time}</div>
+                  <div><span className="station-sos-label">Boarding Station:</span> {r.boardingStation}</div>
+                  <div><span className="station-sos-label">Trip Route:</span> {r.route}</div>
+                  <div><span className="station-sos-label">Ride ID:</span> #{r.id}</div>
                   {r.status === "Responding" && (
-                    <div><span className="sos-label">Responding at:</span> {r.respondingAt ?? "—"}</div>
+                    <div><span className="station-sos-label">Responding at:</span> {r.respondingAt ?? "—"}</div>
                   )}
                   {r.status === "Resolved" && (
-                    <div><span className="sos-label">Resolved at:</span> {r.resolvedAt ?? "—"}</div>
+                    <div><span className="station-sos-label">Resolved at:</span> {r.resolvedAt ?? "—"}</div>
                   )}
                 </div>
 
-                <div className="sos-card-action">
+                <div className="station-sos-card-action">
                   {r.status === "New" && (
-                    <button className="sos-pill" onClick={() => openToResponding(r.id)}>
+                    <button className="station-sos-pill" onClick={() => openToResponding(r.id)}>
                       Respond
                     </button>
                   )}
                   {r.status === "Responding" && (
-                    <button className="sos-pill" onClick={() => openToResolved(r.id)}>
+                    <button className="station-sos-pill" onClick={() => openToResolved(r.id)}>
                       Responding
                     </button>
                   )}
-                  {/* Resolved: no button */}
                 </div>
               </div>
             </article>
           ))}
 
-          {filtered.length === 0 && <div className="sos-empty">No SOS reports match your filters.</div>}
+          {filtered.length === 0 && <div className="station-sos-empty">No SOS reports match your filters.</div>}
         </section>
       </main>
 
-      {/* Confirm modal (navy buttons, uniform style) */}
+      {/* Confirm modal */}
       {pendingId && (
-        <div className="sos-modal-backdrop" role="presentation" onClick={closeConfirm}>
+        <div className="station-sos-modal-backdrop" role="presentation" onClick={closeConfirm}>
           <div
-            className="sos-modal"
+            className="station-sos-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="sos-modal-title"
-            aria-describedby="sos-modal-desc"
+            aria-labelledby="station-sos-modal-title"
+            aria-describedby="station-sos-modal-desc"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="sos-modal-title" className="sos-modal-title">{modalTitle}</h3>
-            <p id="sos-modal-desc" className="sos-modal-text">{modalBody}</p>
+            <h3 id="station-sos-modal-title" className="station-sos-modal-title">{modalTitle}</h3>
+            <p id="station-sos-modal-desc" className="station-sos-modal-text">{modalBody}</p>
 
-            <div className="sos-modal-actions">
-              <button className="sos-btn sos-btn--ghost" onClick={closeConfirm}>Cancel</button>
-              <button className="sos-btn sos-btn--navy" onClick={confirmAction}>Yes</button>
+            <div className="station-sos-modal-actions">
+              <button className="station-sos-btn station-sos-btn--ghost" onClick={closeConfirm}>Cancel</button>
+              <button className="station-sos-btn station-sos-btn--navy" onClick={confirmAction}>Yes</button>
             </div>
           </div>
         </div>
@@ -261,23 +254,23 @@ export function StationSOS() {
 
       {/* Success modal after resolving */}
       {showSuccess && (
-        <div className="sos-modal-backdrop" role="presentation" onClick={() => setShowSuccess(false)}>
+        <div className="station-sos-modal-backdrop" role="presentation" onClick={() => setShowSuccess(false)}>
           <div
-            className="sos-modal"
+            className="station-sos-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="sos-success-title"
-            aria-describedby="sos-success-desc"
+            aria-labelledby="station-sos-success-title"
+            aria-describedby="station-sos-success-desc"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sos-success-row">
-              <span className="sos-success-icon" aria-hidden>🏆</span>
-              <h3 id="sos-success-title" className="sos-modal-title">Successful</h3>
+            <div className="station-sos-success-row">
+              <span className="station-sos-success-icon" aria-hidden>🏆</span>
+              <h3 id="station-sos-success-title" className="station-sos-modal-title">Successful</h3>
             </div>
-            <p id="sos-success-desc" className="sos-modal-text">SOS marked as Resolved.</p>
+            <p id="station-sos-success-desc" className="station-sos-modal-text">SOS marked as Resolved.</p>
 
-            <div className="sos-modal-actions">
-              <button className="sos-btn sos-btn--navy" onClick={() => setShowSuccess(false)}>
+            <div className="station-sos-modal-actions">
+              <button className="station-sos-btn station-sos-btn--navy" onClick={() => setShowSuccess(false)}>
                 Close
               </button>
             </div>

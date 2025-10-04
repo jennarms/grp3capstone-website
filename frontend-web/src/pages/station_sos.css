@@ -1,5 +1,5 @@
 /* ===== Base layout ===== */
-.sos-page {
+.station-sos-page {
   display: flex;
   min-height: 100vh;
   background: #fff;
@@ -8,8 +8,8 @@
   margin-left: -30px;
 }
 
-/* PAGE SCROLLBAR (outer page scrolls; header scrolls with it) */
-.sos-main {
+/* PAGE SCROLLBAR */
+.station-sos-main {
   flex: 1;
   padding: 18px 22px 36px 22px;
   height: 100vh;
@@ -18,18 +18,16 @@
   scrollbar-gutter: stable both-edges;
   -webkit-overflow-scrolling: touch;
 }
-/* optional scrollbar styling */
-.sos-main { scrollbar-width: thin; scrollbar-color: #7f91d6 #eef3ff; }
-.sos-main::-webkit-scrollbar { width: 10px; }
-.sos-main::-webkit-scrollbar-track { background: #eef3ff; border-radius: 8px; }
-.sos-main::-webkit-scrollbar-thumb { background: #7f91d6; border-radius: 8px; }
-.sos-main::-webkit-scrollbar-thumb:hover { background: #5162b3; }
+.station-sos-main { scrollbar-width: thin; scrollbar-color: #7f91d6 #eef3ff; }
+.station-sos-main::-webkit-scrollbar { width: 10px; }
+.station-sos-main::-webkit-scrollbar-track { background: #eef3ff; border-radius: 8px; }
+.station-sos-main::-webkit-scrollbar-thumb { background: #7f91d6; border-radius: 8px; }
+.station-sos-main::-webkit-scrollbar-thumb:hover { background: #5162b3; }
 
-/* ===== Topbar (scrolls with content) ===== */
-.sos-topbar {
+/* ===== Topbar ===== */
+.station-sos-topbar {
   z-index: 1;
   background: #fff;
-
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -37,8 +35,8 @@
   padding: 6px 0;
   border-bottom: 1px solid #eee;
 }
-.sos-title { display: inline-flex; align-items: center; gap: 10px; }
-.sos-title h1 {
+.station-sos-title { display: inline-flex; align-items: center; gap: 10px; }
+.station-sos-title h1 {
   margin: 0;
   font-size: 50px;
   line-height: 1;
@@ -47,16 +45,16 @@
   color: black;
 }
 
-/* ===== Toolbar (search left, chips RIGHT) ===== */
-.sos-toolbar {
+/* ===== Toolbar ===== */
+.station-sos-toolbar {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 16px;
   align-items: center;
   margin: 10px 0 12px;
 }
-.sos-search { position: relative; display: block; }
-.sos-search input {
+.station-sos-search { position: relative; display: block; }
+.station-sos-search input {
   width: 100%;
   height: 36px;
   border-radius: 18px;
@@ -66,7 +64,7 @@
   outline: none;
   background: #fff;
 }
-.sos-search-icon {
+.station-sos-search-icon {
   position: absolute;
   left: 10px;
   top: 6px;
@@ -74,16 +72,15 @@
   height: 20px;
   display: inline-block;
 }
-.sos-search-icon svg { width: 100%; height: 100%; display: block; }
+.station-sos-search-icon svg { width: 100%; height: 100%; display: block; }
 
-/* chips aligned to RIGHT end with tight spacing */
-.sos-chips {
+/* Chips */
+.station-sos-chips {
   display: flex;
   margin-left: 650px;
-  gap: 8px;              
-
+  gap: 8px;
 }
-.sos-chip {
+.station-sos-chip {
   height: 34px;
   padding: 3px 14px;
   background: #fff;
@@ -92,17 +89,17 @@
   font-weight: 700;
   cursor: pointer;
 }
-.sos-chip.is-active { background: #eef3ff; }
+.station-sos-chip.is-active { background: #eef3ff; }
 
 /* ===== Cards list ===== */
-.sos-list {
+.station-sos-list {
   display: grid;
   grid-auto-rows: min-content;
   gap: 18px;
 }
 
-/* Card container (rounded corners) */
-.sos-card {
+/* Card container */
+.station-sos-card {
   display: grid;
   grid-template-columns: 48px 1fr;
   gap: 14px;
@@ -113,20 +110,20 @@
   width: 1500px;
 }
 
-/* Status colors */
-.sos-card.is-responding { background: #f3d9d9; border-color: #dca7a7; }
-.sos-card.is-new        { background: #fffbe6; border-color: #eae78c; }
-.sos-card.is-resolved   { background: #e8f5ea; border-color: #9bcaa5; }
+/* Status colors (New=red, Responding=yellow, Resolved=green) */
+.station-sos-card.is-new        { background: #f3d9d9; border-color: #dca7a7; }
+.station-sos-card.is-responding { background: #fffbe6; border-color: #eae78c; }
+.station-sos-card.is-resolved   { background: #e8f5ea; border-color: #9bcaa5; }
 
 /* Left status icon column */
-.sos-card-icon {
+.station-sos-card-icon {
   display: grid;
   align-content: start;
   padding-top: 6px;
 }
-.sos-triangle svg { width: 26px; height: 26px; color: #e11d2e; }
-.sos-check svg    { width: 26px; height: 26px; color: #2aa44f; }
-.sos-dot {
+.station-sos-triangle svg { width: 26px; height: 26px; color: #e11d2e; }
+.station-sos-check svg    { width: 26px; height: 26px; color: #2aa44f; }
+.station-sos-dot {
   width: 18px; height: 18px;
   border-radius: 999px;
   background: #f0e300;
@@ -134,31 +131,20 @@
 }
 
 /* Right content */
-.sos-card-content {
+.station-sos-card-content {
   display: grid;
-  grid-template-rows: auto auto; /* details, then centered button */
+  grid-template-rows: auto auto;
   align-items: start;
   row-gap: 12px;
 }
-
-/* Bold labels + monospace look */
-.sos-pre {
-  margin: 0;
-  white-space: pre-wrap;
-  text-align: center; /* matching your design */
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 15px;
-  letter-spacing: 0.18em;
-  line-height: 1.35;
-}
-.sos-label { font-weight: 800; }
+.station-sos-label { font-weight: 800; }
 
 /* Centered status button */
-.sos-card-action {
+.station-sos-card-action {
   display: grid;
   justify-content: center;
 }
-.sos-pill {
+.station-sos-pill {
   min-width: 210px;
   height: 36px;
   padding: 4px 18px;
@@ -171,7 +157,7 @@
 }
 
 /* Empty state */
-.sos-empty {
+.station-sos-empty {
   border: 2px dashed #d5dffb;
   border-radius: 14px;
   padding: 20px;
@@ -180,7 +166,7 @@
 }
 
 /* ===== Modal styles ===== */
-.sos-modal-backdrop {
+.station-sos-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.35);
@@ -188,7 +174,7 @@
   place-items: center;
   z-index: 50;
 }
-.sos-modal {
+.station-sos-modal {
   width: 560px;
   max-width: calc(100vw - 32px);
   background: #fff;
@@ -196,23 +182,23 @@
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   padding: 20px 18px 16px;
 }
-.sos-modal-title {
+.station-sos-modal-title {
   margin: 0 0 8px 0;
   font-size: 22px;
   font-weight: 800;
 }
-.sos-modal-text {
+.station-sos-modal-text {
   margin: 0 0 16px 0;
   font-size: 16px;
   line-height: 1.4;
 }
-.sos-modal-actions {
+.station-sos-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   padding: 10px;
 }
-.sos-btn {
+.station-sos-btn {
   height: 34px;
   padding: 3px 16px;
   border-radius: 8px;
@@ -221,48 +207,41 @@
   cursor: pointer;
   background: #fff;
 }
-.sos-btn.ghost { background: #fff; }
-.sos-btn.primary { background: #eef94b; } /* soft yellow like screenshot */
-.sos-btn:focus-visible {
-  outline: 3px solid #99b3ff;
-  outline-offset: 2px;
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 980px) {
-  .sos-toolbar { grid-template-columns: 1fr; }
-  .sos-chips { justify-content: flex-end; }
-}
-@media (max-width: 640px) {
-  .sos-card { grid-template-columns: 36px 1fr; }
-  .sos-pre { letter-spacing: 0.12em; }
-  .sos-pill { min-width: 180px; }
-}
-
-.sos-btn--navy {
+.station-sos-btn--navy {
   background: #051a7a;
   color: #fff;
   border-color: #000;
   width: 100px;
 }
-.sos-btn--navy:hover { background: #0a2aa0; }
-.sos-btn--navy:active { background: #0c2fb3; }
-.sos-btn--ghost { background: #fff; }
+.station-sos-btn--navy:hover { background: #0a2aa0; }
+.station-sos-btn--navy:active { background: #0c2fb3; }
+.station-sos-btn--ghost { background: #fff; }
+.station-sos-btn:focus-visible {
+  outline: 3px solid #99b3ff;
+  outline-offset: 2px;
+}
 
-/* Success modal layout (title with small icon) */
-.sos-success-row {
+/* Success modal */
+.station-sos-success-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
 }
-.sos-success-icon {
-  font-size: 26px;
-  line-height: 1;
-}
+.station-sos-success-icon { font-size: 26px; line-height: 1; }
 
-/* If you want the “Responding” pill to look disabled but still readable */
-.sos-card.is-new .sos-pill[disabled] {
+/* Disabled style example for “Responding” pill if ever needed */
+.station-sos-card.is-new .station-sos-pill[disabled] {
   opacity: 0.9;
   cursor: default;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 980px) {
+  .station-sos-toolbar { grid-template-columns: 1fr; }
+  .station-sos-chips { justify-content: flex-end; }
+}
+@media (max-width: 640px) {
+  .station-sos-card { grid-template-columns: 36px 1fr; }
+  .station-sos-pill { min-width: 180px; }
 }

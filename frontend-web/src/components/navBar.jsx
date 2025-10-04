@@ -1,36 +1,38 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import './navBar.css'; // Make sure this path is correct
+import './navBar.css';
+import BroadcastBadge from '../broadcast/BroadcastBadge';
 
 export function Navbar() {
-  // ✅ Get the username from localStorage
-  const [adminName, setAdminName] = useState("Main Admin");
+  const [adminName, setAdminName] = useState('Main Admin');
 
   useEffect(() => {
-    const storedName = localStorage.getItem("admin_name");
+    const storedName = localStorage.getItem('admin_name');
     if (storedName) setAdminName(storedName);
   }, []);
 
   return (
     <aside className="navbar-sidebar">
       <div className="navbar-sidebar-profile">
-        <img 
-          src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png" 
-          alt="Admin Icon" 
-          className="navbar-sidebar-icon" 
+        <img
+          src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png"
+          alt="Admin Icon"
+          className="navbar-sidebar-icon"
         />
       </div>
 
-      {/* Display the logged-in username */}
       <h2 className="navbar-sidebar-title">{adminName}</h2>
 
       <nav className="navbar-sidebar-nav">
         <Link to="/announcement" className="navbar-sidebar-link">
           General Announcement
         </Link>
-        <Link to="/broadcast" className="navbar-sidebar-link">
-          Broadcast Channel
+
+        <Link to="/broadcast" className="navbar-sidebar-link broadcast-link">
+          <span className="broadcast-link-label">Broadcast Channel</span>
+          <BroadcastBadge variant="circle" className="broadcast-badge-circle" />
         </Link>
+
         <Link to="/operations/vehicle" className="navbar-sidebar-link">
           Operations Management
         </Link>

@@ -1,0 +1,75 @@
+.bb-banner {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 16px;
+    z-index: 2500;
+  
+    width: min(960px, calc(100% - 48px));
+    background: #eef2ff;
+    border: 2px solid #6366f1;
+    border-radius: 48px;
+    padding: 22px 28px;
+  
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+  
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+  }
+  
+  .bb-banner:focus-visible {
+    outline: 3px solid #1f2937;
+    outline-offset: 3px;
+  }
+  
+  .bb-text { min-width: 0; }
+  
+  .bb-title {
+    font-weight: 600;
+    font-size: 22px;
+    color: #0f172a;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  /* New: admins-only chip */
+  .bb-chip {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #1e3a8a;   /* indigo-900 */
+    color: #fff;
+  }
+  
+  .bb-body {
+    font-size: 16px;
+    color: #111827;
+    line-height: 1.35;
+    justify-content: flex-start;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  @media (max-width: 768px) {
+    .bb-banner {
+      width: min(100%, calc(100% - 24px));
+      padding: 18px 20px;
+      border-radius: 36px;
+    }
+    .bb-title { font-size: 22px; }
+    .bb-body  { font-size: 16px; -webkit-line-clamp: 3; line-clamp: 3; }
+  }
+  

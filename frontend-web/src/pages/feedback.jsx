@@ -41,7 +41,6 @@ export function Feedback() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
-  // 🔹 Fetch feedback + settings
   useEffect(() => {
     axios
       .get(`${apiUrl}/api/feedback/`)
@@ -72,13 +71,11 @@ export function Feedback() {
       .catch((err) => console.error("Failed to load settings:", err));
   }, []);
 
-  // 🔹 Filter by category
   const filtered = useMemo(
     () => items.filter((i) => (filter === "all" ? true : i.category === filter)),
     [items, filter]
   );
 
-  // 🔹 Delete flow
   const onDelete = (id) => {
     setPendingDeleteId(id);
     setConfirmDeleteOpen(true);
@@ -98,20 +95,6 @@ export function Feedback() {
   const cancelDelete = () => {
     setConfirmDeleteOpen(false);
     setPendingDeleteId(null);
-  };
-
-  // 🔹 Reply
-  const onReply = (id) => {
-    const text = window.prompt("Write admin reply:");
-    if (!text) return;
-    axios
-      .put(`${apiUrl}/api/feedback/${id}/reply`, { reply: text })
-      .then(() =>
-        setItems((prev) =>
-          prev.map((i) => (i.id === id ? { ...i, adminResponse: text } : i))
-        )
-      )
-      .catch((err) => console.error("Reply failed:", err));
   };
 
   return (
@@ -171,16 +154,6 @@ export function Feedback() {
                       <path d="M14 11v6" />
                     </svg>
                   </button>
-
-                  {/* 🔹 Added Reply button */}
-                  <button
-                    className="icon-btn reply"
-                    title="Reply"
-                    aria-label={`Reply to feedback ${f.id}`}
-                    onClick={() => onReply(f.id)}
-                  >
-                    Reply
-                  </button>
                 </div>
 
                 <div className="fb-row">
@@ -227,7 +200,6 @@ export function Feedback() {
         </div>
       </div>
 
-      {/* Delete modal */}
       {confirmDeleteOpen && (
         <div
           className="fb-modal-overlay"
