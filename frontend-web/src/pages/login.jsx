@@ -8,6 +8,9 @@ export function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  // NEW: show/hide password
+  const [showPassword, setShowPassword] = useState(false);
+
   // Forgot/Reset UI
   const [showResetModal, setShowResetModal] = useState(false);      // OTP send modal
   const [showPasswordReset, setShowPasswordReset] = useState(false); // form after OTP sent
@@ -46,34 +49,34 @@ export function Login() {
     setLoginErrorMessage("");
 
     try {
-    const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
-    const data = res.data;
+      const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
+      const data = res.data;
 
-    // Persist existing info
-    if (data.token) localStorage.setItem("token", data.token);
-    if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
-    if (data.role) localStorage.setItem("role", data.role);
+      // Persist existing info
+      if (data.token) localStorage.setItem("token", data.token);
+      if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
+      if (data.role) localStorage.setItem("role", data.role);
 
-    // NEW: store username for navbar display
-    if (data.username) localStorage.setItem("admin_name", data.username);
+      // NEW: store username for navbar display
+      if (data.username) localStorage.setItem("admin_name", data.username);
 
-    setLoginMessage(data.message || "Login successful!");
-    setShowLoginSuccess(true);
+      setLoginMessage(data.message || "Login successful!");
+      setShowLoginSuccess(true);
 
-    setTimeout(() => {
-      if (data.role === "main-admin") navigate("/announcement");
-      else if (data.role === "station-admin") navigate("/dashboard");
-      else navigate("/dashboard");
-    }, REDIRECT_DELAY_MS);
-  } catch (err) {
-    const msg =
-      err.response?.data?.error ||
-      err.response?.data?.message ||
-      err.message;
-    setLoginErrorMessage(`Login failed: ${msg}`);
-  } finally {
-    setIsSubmitting(false);
-  }
+      setTimeout(() => {
+        if (data.role === "main-admin") navigate("/announcement");
+        else if (data.role === "station-admin") navigate("/dashboard");
+        else navigate("/dashboard");
+      }, REDIRECT_DELAY_MS);
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message;
+      setLoginErrorMessage(`Login failed: ${msg}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ---------- Send OTP ----------
@@ -146,7 +149,12 @@ export function Login() {
           alt="User Icon"
           className="login-icon"
         />
-        <h1 className="login-title">Log in</h1>
+
+        {/* --- Welcome header (new) --- */}
+        <div className="welcome">
+          <h1 className="welcome-title">Welcome!</h1>
+          <p className="welcome-subtitle">Sign in to your Admin Account</p>
+        </div>
 
         {/* Inline error banner */}
         {loginErrorMessage && (
@@ -182,14 +190,41 @@ export function Login() {
 
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
-              autoComplete="current-password"
-              disabled={isSubmitting || showLoginSuccess}
-            />
+
+            {/* --- Show/Hide wrapper (NEW) --- */}
+            <div className="password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-input"
+                autoComplete="current-password"
+                disabled={isSubmitting || showLoginSuccess}
+              />
+
+              <button
+                type="button"
+                className="password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {/* Eye icon: shows a slash when visible */}
+                <svg
+                  width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                >
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="12" r="3.2"
+                          stroke="currentColor" strokeWidth="1.6" />
+                  {showPassword && (
+                    <path d="M3 3L21 21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  )}
+                </svg>
+              </button>
+            </div>
+            {/* --- End show/hide --- */}
           </div>
 
           <button

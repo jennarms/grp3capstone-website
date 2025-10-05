@@ -1,374 +1,394 @@
 html, body {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  
-  /* Login container to fill full screen and center contents */
-  .login-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    width: 100vw;
-    background: linear-gradient(to top, #63C7FF, #86ECC0, #4B6EDC);
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    position: fixed; /* ✅ ensure it ignores scroll */
-    top: 0;
-    left: 0;
-  }
-  
-  /* Centered white box */
-  .login-box {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 40px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 600px;
-    height: 600px;
-  }
-  
-  .login-title {
-    text-align: center;
-    margin-bottom: 1rem;
-    color: #333;
-    font-size: 2.0rem;
-    
-  }
-  
-  .form-group {
-    margin-bottom: 1.5rem;
-    
-    
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 0.1rem;
-    color: #121212;
-    font-weight: 500;
-    text-align: start;
-  }
-  
-  .form-input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #2e2020;
-    border-radius: 5px;
-    font-size: 1rem;
-    
-  }
-  
-  .form-input:focus {
-    outline: none;
-    border-color: #007bff;
-  }
-  
-  .login-button {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #02106E;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .login-button:hover {
-    background-color: hsl(211, 100%, 35%);
-  }
-  
-  .forgot-password {
-    display: block;
-    text-align: center;
-    margin-top: 1rem;
-    color: #000000;
-    text-decoration: underline;
-    font-size: 0.9rem;
-  }
-  
-  .forgot-password:hover {
-    text-decoration: underline;
-  }
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
 
-  body {
-    margin: 0;
-    padding: 0;
-  }
+/* Login container to fill full screen and center contents */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(to top, #63C7FF, #86ECC0, #4B6EDC);
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  position: fixed; /* ✅ ensure it ignores scroll */
+  top: 0;
+  left: 0;
+}
 
-  .login-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    display: block;
-    margin: 0 auto 0.5rem auto;
-    background: transparent; 
-  }
+/* Centered white box */
+.login-box {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 40px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+  height: 600px;
+}
 
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5); /* dark background */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 999;
-  }
-  
-  .reset-modal {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    max-width: 800px;
-    width: 100%;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    text-align: start;
-    
-  }
-  
-  .send-code-button {
-    margin-top: 1rem;
-    padding: 0.5rem 1.5rem;
-    background-color: #ffcc00;
-    color: black;
-    font-weight: bold;
-    border: solid;
-    border-width: 2px;
-    border-radius: 15px;
-    cursor: pointer; 
-  }
-  
-  .send-code-button:hover {
-    background-color: #e6b800;
-  }
+/* (legacy title kept; not used now but harmless) */
+.login-title {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 2.0rem;
+}
 
-  .button-wrapper {
-    display: flex;
-    justify-content: center;
-  }
+/* --- Welcome header (NEW) --- */
+.welcome {
+text-align: center;
+margin: 0 0 1rem 0;
+}
+.welcome-title {
+margin: 0;
+font-size: 2.0rem;
+font-weight: 800;
+color: #101c2a;      /* blue like the sample */
+letter-spacing: 0.2px;
+}
+.welcome-subtitle {
+margin: 0.15rem 0 0;
+font-size: 1rem;
+font-weight: 600;
+color: #101c2a;      /* lighter blue like the sample */
+opacity: 0.95;
+}
 
-  .required {
-    color: red;
-  }
+.form-group { margin-bottom: 1.5rem; }
 
-  .reset-modal h2 {
-    font-size: 2.0rem; /* or increase to 1.75rem, 2rem etc. */
-  }
+.form-group label {
+  display: block;
+  margin-bottom: 0.1rem;
+  color: #121212;
+  font-weight: 500;
+  text-align: start;
+}
 
-  .password-hint {
-    display: flex;
-    align-items: center; /* Align icon and text vertically */
-    font-size: 0.85rem;
-    color: #555;
-    margin-bottom: 0.5rem;
-  }
-  
-  .hint-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-  }
-  
-  .error-message {
-    background-color: #ffe6e6;
-    border: 1px solid #ff9999;
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 14px;
-    color: #b30000;
-  }
-  
-  .error-icon {
-    width: 20px;
-    height: 20px;
-  }
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #2e2020;
+  border-radius: 5px;
+  font-size: 1rem;
+}
 
-  .success-message {
-    background-color: #d4f8d4;
-    color: #2e7d32;
-    border: 1px solid #81c784;
-    padding: 10px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 1rem;
-  }
-  
-  .success-icon {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .login-error {
-    margin-bottom: 1rem;
-    position: relative;
-    padding-right: 2rem; /* space for close button */
-  }
-  
-  .error-close {
-    position: absolute;
-    right: 8px;
-    top: 6px;
-    border: none;
-    background: transparent;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    color: #7a0000;
-  }
-  
-  /* --- Shake animation for invalid attempt --- */
-  @keyframes shakeAnim {
-    0% { transform: translateX(0); }
-    15% { transform: translateX(-6px); }
-    30% { transform: translateX(6px); }
-    45% { transform: translateX(-4px); }
-    60% { transform: translateX(4px); }
-    75% { transform: translateX(-2px); }
-    100% { transform: translateX(0); }
-  }
-  
-  .shake {
-    animation: shakeAnim 0.5s ease;
-  }
-  
-  /* --- Button spinner --- */
-  .spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-top-color: rgba(255, 255, 255, 1);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    vertical-align: -2px;
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
-  /* --- Success overlay after login --- */
-  .success-modal {
-    background: white;
-    padding: 2rem 2.25rem;
-    border-radius: 16px;
-    max-width: 480px;
-    width: 92%;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.25);
-    text-align: center;
-  }
-  
-  .success-big-icon {
-    width: 64px;
-    height: 64px;
-    margin-bottom: 0.75rem;
-  }
-  
-  .success-modal h3 {
-    margin: 0.25rem 0 0.25rem;
-    font-size: 1.375rem;
-    color: #1b5e20;
-  }
-  
-  .success-modal p {
-    margin: 0 0 1rem;
-    color: #333;
-  }
-  
-  /* subtle progress hint while waiting to redirect */
-  .progress-bar {
-    width: 100%;
-    height: 6px;
-    background: #e7f5e7;
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  
-  .progress {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, #4caf50, #81c784, #4caf50);
-    animation: progressSlide 1.4s ease-in-out infinite;
-  }
-  
-  @keyframes progressSlide {
-    0%   { transform: translateX(-100%); }
-    50%  { transform: translateX(-40%); }
-    100% { transform: translateX(0%); }
-  }
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
 
-  .login-error {
-    margin-bottom: 1rem;
-    position: relative;
-    padding-right: 2rem; /* space for close button */
-  }
-  
-  .error-close {
-    position: absolute;
-    right: 8px;
-    top: 30%;                 /* center vertically */
-    transform: translateY(-50%);
-    border: none;
-    background: transparent;
-    font-size: 20px;
-    cursor: pointer;
-    color: #7a0000;
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
-  }
-  
-  /* Success overlay card for login */
-  .success-modal {
-    background: white;
-    padding: 2rem 2.25rem;
-    border-radius: 16px;
-    max-width: 420px;
-    width: 92%;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.25);
-    text-align: center;
-  }
-  
-  .success-big-icon {
-    width: 64px;
-    height: 64px;
-  }
-  
-  .success-title {
-    margin: 0;
-    font-size: 1.375rem;
-    color: #000000;
-  }
+.login-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #02106E;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
 
-  .success-modal {
-    display: flex;
-    flex-direction: column;
-    align-items: center;   /* horizontal center */
-    justify-content: center; /* vertical center within the card */
-    text-align: center;    /* keep text centered */
-  }
-  
-  /* Ensure the check icon itself is centered */
-  .success-big-icon {
-    display: block;
-    margin: 0 auto 0.75rem; /* center horizontally + keep spacing below */
-  }
+.login-button:hover {
+  background-color: hsl(211, 100%, 35%);
+}
+
+.forgot-password {
+  display: block;
+  text-align: center;
+  margin-top: 1rem;
+  color: #000000;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+.forgot-password:hover { text-decoration: underline; }
+
+body { margin: 0; padding: 0; }
+
+.login-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: block;
+  margin: 0 auto 0.5rem auto;
+  background: transparent; 
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* dark background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.reset-modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  text-align: start;
+}
+
+.send-code-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1.5rem;
+  background-color: #ffcc00;
+  color: black;
+  font-weight: bold;
+  border: solid;
+  border-width: 2px;
+  border-radius: 15px;
+  cursor: pointer; 
+}
+.send-code-button:hover { background-color: #e6b800; }
+
+.button-wrapper { display: flex; justify-content: center; }
+.required { color: red; }
+
+.reset-modal h2 { font-size: 2.0rem; }
+
+.password-hint {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+.hint-icon { width: 16px; height: 16px; margin-right: 8px; }
+
+.error-message {
+  background-color: #ffe6e6;
+  border: 1px solid #ff9999;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 14px;
+  color: #b30000;
+}
+.error-icon { width: 20px; height: 20px; }
+
+.success-message {
+  background-color: #d4f8d4;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+  padding: 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+.success-icon { width: 20px; height: 20px; }
+
+.login-error {
+  margin-bottom: 1rem;
+  position: relative;
+  padding-right: 2rem; /* space for close button */
+}
+.error-close {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: #7a0000;
+}
+
+/* --- Shake animation for invalid attempt --- */
+@keyframes shakeAnim {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+.shake { animation: shakeAnim 0.5s ease; }
+
+/* --- Button spinner --- */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-top-color: rgba(255, 255, 255, 1);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Success overlay after login --- */
+.success-modal {
+  background: white;
+  padding: 2rem 2.25rem;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 92%;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+  text-align: center;
+}
+.success-big-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 0.75rem;
+}
+.success-modal h3 {
+  margin: 0.25rem 0 0.25rem;
+  font-size: 1.375rem;
+  color: #1b5e20;
+}
+.success-modal p { margin: 0 0 1rem; color: #333; }
+
+/* subtle progress hint while waiting to redirect */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e7f5e7;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #81c784, #4caf50);
+  animation: progressSlide 1.4s ease-in-out infinite;
+}
+@keyframes progressSlide {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(-40%); }
+  100% { transform: translateX(0%); }
+}
+
+.login-error {
+  margin-bottom: 1rem;
+  position: relative;
+  padding-right: 2rem; /* space for close button */
+}
+.error-close {
+  position: absolute;
+  right: 8px;
+  top: 30%;                 /* center vertically */
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: #7a0000;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+
+/* Success overlay card for login */
+.success-modal {
+  background: white;
+  padding: 2rem 2.25rem;
+  border-radius: 16px;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+  text-align: center;
+}
+.success-big-icon { width: 64px; height: 64px; }
+.success-title {
+  margin: 0;
+  font-size: 1.375rem;
+  color: #000000;
+}
+.success-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.success-big-icon {
+  display: block;
+  margin: 0 auto 0.75rem;
+}
+
+.password-wrapper { position: relative; }
+.password-wrapper .form-input { padding-right: 44px; /* room for the eye button */ }
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.password-toggle:hover { color: #02106E; }
+.password-toggle:focus-visible {
+  outline: 0px solid #435b75;
+  outline-offset: 2px;
+}
+
+/* Eye button: remove default border/outline/background */
+.password-toggle {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Remove Firefox inner focus border */
+.password-toggle::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* SVG inherits color; no surrounding box */
+.password-toggle svg {
+  display: block;
+}
+
+/* Keep an accessible, subtle focus style (not a black box) */
+.password-toggle:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+  border-radius: 6px; /* only affects the blue focus ring, not a permanent border */
+}
+
+/* Optional: softer hover color */
+.password-toggle:hover {
+  color: #02106E;
+}

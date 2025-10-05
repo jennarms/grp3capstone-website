@@ -1,194 +1,291 @@
+/* =========================
+   Station Dashboard (Polished)
+   ========================= */
 
+/* --- Design Tokens --- */
+:root {
+  --bg: #f7f9fc;
+  --surface: #ffffff;
+  --text: #0f172a;       /* slate-900 */
+  --muted: #64748b;      /* slate-500 */
+  --line: #e2e8f0;       /* slate-200 */
 
-/* Main Content */
+  --brand-1: #4f46e5;    /* indigo-600 */
+  --brand-2: #2563eb;    /* blue-600 */
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #ef4444;
+
+  --radius: 16px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 1px rgba(16, 24, 40, 0.02);
+  --shadow-md: 0 6px 20px rgba(2, 6, 23, 0.08);
+
+  /* Scrollbar tokens (for Trips table only) */
+  --sb-thumb: #cbd5e1;        /* slate-300 */
+  --sb-thumb-hover: #94a3b8;  /* slate-400 */
+  --sb-track: transparent;
+  --sb-radius: 999px;
+  --sb-size: 10px;
+}
+
+/* =========================
+   Shell / Layout
+   ========================= */
+.station-dashboard-container {
+  /* Page-level scroll ONLY for this dashboard page */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;             /* scrolling happens here */
+  -webkit-overflow-scrolling: touch;
+
+  /* Hide the container's scrollbar but keep scrolling */
+  -ms-overflow-style: none;     /* IE/old Edge */
+  scrollbar-width: none;        /* Firefox */
+  width: 1650px;
+}
+.station-dashboard-container::-webkit-scrollbar {
+  width: 0;
+  height: 0;                    /* Chrome/Safari/Edge */
+}
+
 .station-main-content {
-  margin-top: 270px;
-  background-color: transparent; /* Make the background transparent */
+  margin-top: 70px;            /* adjust for your navbar height */
+  background-color: transparent;
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 30px;
-  box-shadow: none; /* Remove the shadow if you want a cleaner look */
-  width: 1550px;
+  padding: 24px;
+  box-shadow: none;
+  width: 1600px;                /* keep fixed width if desired */
+  margin-left: -25px;
+  margin-right: auto;
+  gap: 16px;
 }
 
-/* Dashboard Header */
-.station-dashboard-header {
-  display: flex;
-  justify-content: flex-start;  /* Align the title to the left */
-  align-items: center;
-  padding: 0 10px;
-  border-bottom: 1px solid #ddd;
-  margin-bottom: 0px;
-  background-color: #ffffff; /* Light background for the header */
-  border-radius: 8px; /* Rounded corners for the header */
-}
+/* Header Row */
+.station-header-row { display: flex; gap: 12px; }
 
-/* Station Title */
+/* Titles */
 .station-title {
-  font-family: 'Roboto', sans-serif;
-  color: #000000;
-  font-size: 45px; /* Increase the font size for better visibility */
-  font-weight: 800;
-  text-align: left;  /* Ensure title is aligned left */
+  color: var(--text);
+  font-size: 45px;
+  font-weight: 700;
+  text-align: left;
   margin: 0;
-  padding-left: 20px; /* Padding for spacing */
-  font-family: 'Roboto', sans-serif; /* Modern font */
+  padding-left: 0;
+}
+.station-title-announcement {
+  color: var(--text);
+  font-size: 37px;
+  font-weight: 700;
+  text-align: left;
+  margin-bottom: -35px;
+  padding-left: 0;
 }
 
-.station-title-announcement{
-  color: #000000;
-  font-size: 40px; /* Increase the font size for better visibility */
-  font-weight: 750;
-  text-align: left;  /* Ensure title is aligned left */
-  margin-top: 20px;
-  margin-bottom: -50px;
-  padding-left: 20px; /* Padding for spacing */
-  font-family: 'Roboto', sans-serif; /* Modern font */
-}
-
-/* Stats Section */
+/* =========================
+   KPI / Stats
+   ========================= */
 .station-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-  gap: 20px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 8px;
 }
-
 .station-stat-box {
-  background: #051a7a; /* Dark blue background */
+  position: relative;
+  background: var(--surface);
   padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-  flex-grow: 1;
-  text-align: center;
-  min-width: 200px; /* Ensure the icons don’t stretch too far */
-  margin-bottom: 2px;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+  text-align: left;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  overflow: hidden;
 }
-
-.station-stat-box h3 {
-  font-size: 30px;
-  font-weight: 600;
-  color: rgb(255, 255, 255);
+.station-stat-box::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
+}
+.station-stat-box:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(2, 6, 23, 0.08);
+}
+.station-stat-info h3 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 2px;
+}
+.station-stat-info p {
+  font-size: 13.5px;
+  color: var(--muted);
   margin: 0;
 }
 
-.station-stat-box p {
-  font-size: 19px;
-  color: #ffffff;
-  margin-top: 5px;
-}
-
-.station-stat-icon {
-  font-size: 3rem;
-  margin-bottom: 15px;
-  transition: transform 0.3s ease;
-}
-
-.station-stat-box:hover {
-  background-color: #b8c7ff; /* Darker blue on hover */
-  transform: scale(1.05); /* Slightly scale up on hover */
-}
-
-.station-stat-icon:hover {
-  transform: scale(1.1); /* Slightly enlarge the icon on hover */
-}
-
-/* Trip Table Section */
+/* =========================
+   Trips Table (with its own visible scrollbar)
+   ========================= */
 .station-trip-table {
-  margin-top: 20px;
-  overflow-x: auto;
-  max-height: 600px;   /* 👈 Allow more space for rows */
-  overflow-y: scroll;    /* 👈 Enable vertical scroll */
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  overflow: hidden;              /* for rounded corners */
+}
+
+/* Inner scroll wrapper for the table */
+.station-trip-table__scroll {
+  max-height: 520px;             /* adjust to taste */
+  overflow-y: auto;
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb-thumb) var(--sb-track);
+}
+/* Chrome/Safari/Edge scrollbar */
+.station-trip-table__scroll::-webkit-scrollbar {
+  width: var(--sb-size);
+  height: var(--sb-size);
+}
+.station-trip-table__scroll::-webkit-scrollbar-track {
+  background: var(--sb-track);
+}
+.station-trip-table__scroll::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: var(--sb-radius);
+}
+.station-trip-table__scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb-hover);
 }
 
 .station-trip-table table {
   width: 100%;
-  border-collapse: collapse;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
 }
-
 .station-trip-table th,
 .station-trip-table td {
-  padding: 14px 20px;  /* 👈 Slightly bigger padding for readability */
+  padding: 14px 18px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
-  font-size: 16px;     /* 👈 Make text a little larger */
+  border-bottom: 1px solid #eef2f7;
+  font-size: 15px;
+  color: #0b1324;
 }
-
-.station-trip-table th {
-  background-color: #a9c4ff;
-  font-weight: 700;   /* Bolder header */
-  color: #333;
-  position: sticky;   /* 👈 Keep headers visible while scrolling */
+.station-trip-table thead th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #334155;
+  position: sticky;              /* sticks to top of the SCROLL WRAPPER */
   top: 0;
   z-index: 1;
 }
+.station-trip-table tbody tr:hover { background-color: #f9fafb; }
+.station-trip-table tbody tr:nth-child(even) { background-color: #fcfdff; }
 
-.station-trip-table tbody tr:hover {
-  background-color: #f9fafb;
+/* =========================
+   Status Pills
+   ========================= */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+.status-pill.is-ontime    { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.status-pill.is-delayed   { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.status-pill.is-cancelled { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+/* =========================
+   Announcements (scrolls, scrollbar hidden)
+   ========================= */
+.station-announcements {
+  margin-top: 16px;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-/* Announcement Section */
-.station-announcements {
-  margin-top: 40px;
-  background-color: #ffffff; /* Light blue background for the announcement container */
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  max-height: 400px;   /* Set a maximum height for the announcement section */
-  overflow-y: scroll;    /* Enable vertical scrolling if there are many announcements */
+/* Keep inner scroll but hide the scrollbar */
+.station-announcements--scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+
+  /* Hide scrollbar cross-browser */
+  -ms-overflow-style: none;   /* IE/old Edge */
+  scrollbar-width: none;      /* Firefox */
+}
+.station-announcements--scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;                  /* Chrome/Safari/Edge */
 }
 
 .station-announcement-card {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 12px;
-  border: #000000 solid;
-  border-width: 0.1px;
-  margin-top: 10px;
+  background-color: var(--surface);
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-top: 12px;
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-
+.station-announcement-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
 .station-announcement-card h3 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 0px;
+  font-size: 18px;
+  font-weight: 750;
+  color: #0b1324;
+  margin: 0 0 6px 0;
   text-align: start;
 }
-
 .station-announcement-card p {
-  font-size: 1rem;
-  color: #555;
-  margin: 5px 0;
+  font-size: 14.5px;
+  color: var(--muted);
+  margin: 6px 0;
   text-align: start;
 }
 
-/* General Announcements Title */
-.station-announcements h2.station-title {
-  font-size: 2rem; /* Increase the font size */
-  font-weight: 700; /* Make the font bold */
-  color: #1e7dd7; /* Blue color for emphasis */
-  margin-bottom: -10px; /* Add space below the title */
-  border-bottom: 2px solid #1e7dd7; /* Add a bottom border to separate it from the content */
-  padding-bottom: 10px; /* Add some space between the title and the content */
+/* =========================
+   SOS Badge
+   ========================= */
+.station-sos-badge {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-left: 8px;
+  border: 1px solid #fecaca;
 }
 
-/* ========== Responsive Design ========== */
-@media (max-width: 1024px) {
-  .station-stat-box {
-    width: 48%;
-  }
+/* =========================
+   Responsive
+   ========================= */
+@media (max-width: 1280px) {
+  .station-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
-@media (max-width: 768px) {
-  .station-stat-box {
-    width: 100%;
-  }
-
+@media (max-width: 900px) {
+  .station-title { font-size: 32px; }
+  .station-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .station-main-content { margin-top: 96px; padding: 18px; }
 }
-
+@media (max-width: 640px) {
+  .station-stats { grid-template-columns: 1fr; }
+}
