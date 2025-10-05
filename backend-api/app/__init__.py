@@ -102,5 +102,8 @@ def create_app():
 
     from app.routes.boarding_passengertable import boarding_passengertable_bp
     app.register_blueprint(boarding_passengertable_bp, url_prefix="/api/passengertable")
-    
+
+    from app.routes.boarding_manualbooking import boarding_manualbooking_bp 
+    app.register_blueprint(boarding_manualbooking_bp, url_prefix="/api/boarding/manual")
+
     return app
