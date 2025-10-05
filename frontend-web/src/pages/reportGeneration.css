@@ -16,6 +16,7 @@
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: #93ace6 #eef3ff;
+  margin-left: 50px;
 }
 
 .reports-page::-webkit-scrollbar {

@@ -137,7 +137,6 @@ html { scrollbar-gutter: stable; }
   .fb-photo{ width: 100%; height: 200px; }
 }
 
-/* ====== FEEDBACK MODAL ====== */
 .fb-modal-overlay{
   position: fixed; inset: 0;
   background: rgba(0,0,0,.35);
@@ -155,7 +154,7 @@ html { scrollbar-gutter: stable; }
 }
 .fb-modal-title{
   font-weight: 800;
-  text-align: left;           /* title on the left */
+  text-align: left;
   display: block;
 }
 .fb-modal-body{
@@ -163,7 +162,7 @@ html { scrollbar-gutter: stable; }
 }
 .fb-modal-actions{
   padding: 12px 20px 16px;
-  display: flex; justify-content: flex-end; gap: 10px;  /* buttons bottom-right */
+  display: flex; justify-content: flex-end; gap: 10px;
 }
 .fb-btn{
   padding: 8px 16px; border-radius: 8px; cursor: pointer;
@@ -173,7 +172,6 @@ html { scrollbar-gutter: stable; }
   border: 1px solid #ccd1e5; background: #fff; color: #111;
 }
 .fb-btn-outline:hover{ background: #f5f6f8; }
-/* Delete = navy, like your previous modal */
 .fb-btn-danger{
   border: 1px solid transparent;
   background: var(--accent-navy, #0b1a78);
@@ -181,7 +179,6 @@ html { scrollbar-gutter: stable; }
 }
 .fb-btn-danger:hover{ filter: brightness(1.05); }
 
-/* Controls row layout */
 .fb-controls-row{
   display: flex;
   align-items: center;

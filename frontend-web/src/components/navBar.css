@@ -4,19 +4,16 @@
   --sidebar-w-sm: 200px;
 }
 
-/* Prevent accidental horizontal scroll when sidebar slides */
 html, body {
   overflow-x: hidden;
 }
 
-/* Main content should live beside the fixed sidebar on desktop */
 .navbar-main-content {
   margin-left: var(--sidebar-w);
   padding: 20px;
   transition: margin-left .25s ease;
 }
 
-/* ========== Navbar (Desktop) ========== */
 .navbar-sidebar {
   position: fixed;
   z-index: 1000;
@@ -35,7 +32,6 @@ html, body {
   transition: transform .25s ease, width .25s ease, padding .25s ease;
 }
 
-/* Profile Icon */
 .navbar-sidebar-profile {
   margin-bottom: 20px;
 }
@@ -48,7 +44,6 @@ html, body {
   padding: 10px;
 }
 
-/* Title */
 .navbar-sidebar-title {
   margin-bottom: 30px;
   font-size: 1.5rem;
@@ -57,7 +52,6 @@ html, body {
   text-align: center;
 }
 
-/* Nav */
 .navbar-sidebar-nav {
   width: 100%;
   display: flex;
@@ -87,16 +81,50 @@ html, body {
   transform: scale(.98);
 }
 
-/* Optional: a button you position in your header to toggle the drawer on mobile */
 .navbar-menu-button {
   border: none;
   background: transparent;
   cursor: pointer;
 }
 
-/* ========== Responsive ========== */
+/* Broadcast badge + centered label */
+.navbar-sidebar-link.broadcast-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: visible;
+}
 
-/* <= 1024px: use slightly narrower sidebar; turn it into an off-canvas drawer. Content becomes full width unless the drawer is opened (you’ll toggle classes). */
+.navbar-sidebar-link .broadcast-link-label {
+  font-weight: bold;
+}
+
+.broadcast-badge.base-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  background: #b12d24;
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.broadcast-badge-circle {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  z-index: 2;
+  margin-left: 0 !important;
+  padding: 0 !important;
+}
+
 @media (max-width: 1024px) {
   .navbar-sidebar {
     width: var(--sidebar-w-md);
@@ -104,7 +132,6 @@ html, body {
     transform: translateX(-100%);
   }
 
-  /* When you add .open (e.g., clicking your hamburger), it slides in */
   .navbar-sidebar.open {
     transform: translateX(0);
   }
@@ -136,9 +163,19 @@ html, body {
     font-size: 1.1rem;
     padding: 10px;
   }
+
+  .broadcast-badge.base-circle {
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
+  .broadcast-badge-circle {
+    top: -9px;
+    right: -10px;
+  }
 }
 
-/* <= 768px: even narrower drawer */
 @media (max-width: 768px) {
   .navbar-sidebar {
     width: var(--sidebar-w-sm);
@@ -161,5 +198,16 @@ html, body {
   .navbar-sidebar-link {
     font-size: 1rem;
     padding: 8px;
+  }
+
+  .broadcast-badge.base-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+  }
+
+  .broadcast-badge-circle {
+    top: -8px;
+    right: -9px;
   }
 }

@@ -41,7 +41,6 @@ export function Feedback() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
-  // 🔹 Fetch feedback + settings
   useEffect(() => {
     axios
       .get(`${apiUrl}/api/feedback/`)
@@ -72,13 +71,11 @@ export function Feedback() {
       .catch((err) => console.error("Failed to load settings:", err));
   }, []);
 
-  // 🔹 Filter by category
   const filtered = useMemo(
     () => items.filter((i) => (filter === "all" ? true : i.category === filter)),
     [items, filter]
   );
 
-  // 🔹 Delete flow
   const onDelete = (id) => {
     setPendingDeleteId(id);
     setConfirmDeleteOpen(true);
@@ -203,7 +200,6 @@ export function Feedback() {
         </div>
       </div>
 
-      {/* Delete modal */}
       {confirmDeleteOpen && (
         <div
           className="fb-modal-overlay"

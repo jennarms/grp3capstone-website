@@ -5,7 +5,10 @@ import { Navbar } from "../components/navBar";
 import { StationNavbar } from "../components/station_navbar";
 import "./broadcastChannel.css";
 
+/* 👇 Add: broadcast context to mark messages as read */
+import { useBroadcast } from "../broadcast/BroadcastProvider";
 const EMOJI_PALETTE = ["❤️", "😂", "😮", "😢", "😡", "👍"];
+
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const ROLES = {
@@ -259,6 +262,9 @@ export function Broadcast() {
   const role = useRole();
   const userId = localStorage.getItem("admin_id");
 
+  /* 👇 Add: mark read integration */
+  const { markAllRead } = useBroadcast();
+
   useEffect(() => {
     if (error) {
       const t = setTimeout(() => setError(""), 5000);
@@ -448,6 +454,32 @@ export function Broadcast() {
   }, [messages, tab, apiCall, loadMessages]);
 
   const filtered = useMemo(() => messages.filter((m) => (tab === "admins" ? m.audience === "admins" : m.audience === "everyone")), [messages, tab]);
+
+  /* 👇 Clear unread when page is viewed */
+  useEffect(() => {
+    // On initial mount (user opened Broadcast page)
+    markAllRead();
+  }, [markAllRead]);
+
+  /* 👇 Keep cleared while page is visible/focused */
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "visible") markAllRead();
+    };
+    window.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [markAllRead]);
+
+  /* 👇 Also clear after new messages load while you're on this page */
+  useEffect(() => {
+    if (document.visibilityState === "visible") {
+      markAllRead();
+    }
+  }, [messages, markAllRead]);
 
   if (!canViewChannel())
     return (
