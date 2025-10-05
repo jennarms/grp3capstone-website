@@ -37,47 +37,52 @@ export function Login() {
   console.log("API URL from env:", apiUrl);
 
   // ---------- Login ----------
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!username || !password) {
-      setLoginErrorMessage("Please enter username and password");
-      return;
+  if (!username || !password) {
+    setLoginErrorMessage("Please enter username and password");
+    return;
+  }
+
+  setIsSubmitting(true);
+  setLoginErrorMessage("");
+
+  try {
+    const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
+    const data = res.data;
+
+    // Persist existing info
+    if (data.token) localStorage.setItem("token", data.token);
+    if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
+    if (data.role) localStorage.setItem("role", data.role);
+
+    // Store the station name from the backend in localStorage
+    if (data.station_name) {
+      localStorage.setItem("StationName", data.station_name); // Store StationName in localStorage
     }
 
-    setIsSubmitting(true);
-    setLoginErrorMessage("");
+    // NEW: store username for navbar display
+    if (data.username) localStorage.setItem("admin_name", data.username);
 
-    try {
-      const res = await axios.post(`${apiUrl}/api/auth/login`, { username, password });
-      const data = res.data;
+    setLoginMessage(data.message || "Login successful!");
+    setShowLoginSuccess(true);
 
-      // Persist existing info
-      if (data.token) localStorage.setItem("token", data.token);
-      if (data.admin_id) localStorage.setItem("admin_id", data.admin_id);
-      if (data.role) localStorage.setItem("role", data.role);
-
-      // NEW: store username for navbar display
-      if (data.username) localStorage.setItem("admin_name", data.username);
-
-      setLoginMessage(data.message || "Login successful!");
-      setShowLoginSuccess(true);
-
-      setTimeout(() => {
-        if (data.role === "main-admin") navigate("/announcement");
-        else if (data.role === "station-admin") navigate("/dashboard");
-        else navigate("/dashboard");
-      }, REDIRECT_DELAY_MS);
-    } catch (err) {
-      const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message;
-      setLoginErrorMessage(`Login failed: ${msg}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    setTimeout(() => {
+      if (data.role === "main-admin") navigate("/announcement");
+      else if (data.role === "station-admin") navigate("/dashboard");
+      else navigate("/dashboard");
+    }, REDIRECT_DELAY_MS);
+  } catch (err) {
+    const msg =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message;
+    setLoginErrorMessage(`Login failed: ${msg}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // ---------- Send OTP ----------
   const sendOtp = async () => {

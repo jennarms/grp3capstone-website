@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from datetime import timedelta
 import os
 
-
 # Global extension instances
 mysql = MySQL()
 mail = Mail()
@@ -31,7 +30,7 @@ def create_app():
     app.config['MYSQL_USER'] = os.getenv('DB_USER')
     app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD')
     app.config['MYSQL_DB'] = os.getenv('DB_NAME')
-    app.config['MYSQL_CHARSET'] = 'utf8mb4' 
+    app.config['MYSQL_CHARSET'] = 'utf8mb4'
 
     # Mail Config
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')

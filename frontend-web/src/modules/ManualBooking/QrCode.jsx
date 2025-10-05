@@ -1,4 +1,4 @@
-// src/modules/ManualBooking/QrCode.jsx
+import * as QRCode from "qrcode.react";
 import { useRef } from "react";
 
 export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
@@ -21,7 +21,8 @@ export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
 
         <div className="qr-ticket__body">
           <div className="qr-faux">
-            <div className="qr-square qr-square--lg" aria-hidden="true">QR</div>
+            {/* Generate the QR code */}
+            <QRCode value={data.qrCodeID} size={256} />
           </div>
           <div className="qr-lines qr-lines--lg">
             <div>Passenger: <strong>{passengerInfo.firstName} {passengerInfo.lastName}</strong></div>
@@ -29,8 +30,8 @@ export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
             <div>From: <strong>{data.origin || "—"}</strong></div>
             <div>Destination: <strong>{data.destination || "—"}</strong></div>
             <div>Paid Amount: <strong>₱ {data.paidAmount || "0.00"}</strong></div>
-            <div>Payment Status: <strong>{data.paymentStatus}</strong></div>
-            <div>Source: <strong>{passengerInfo.platformSource}</strong></div>
+            <div>Payment Status: <strong>{data.paymentStatus || "—"}</strong></div>
+            <div>Source: <strong>{passengerInfo.platformSource || "—"}</strong></div>
           </div>
         </div>
 

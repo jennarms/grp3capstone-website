@@ -1,4 +1,4 @@
-// src/modules/ManualBooking/Payment.jsx
+
 export default function Payment({ data, onBack, onPaid }) {
   return (
     <div className="boarding-manual-section">
@@ -24,7 +24,16 @@ export default function Payment({ data, onBack, onPaid }) {
 
       <div className="wizard-actions-split">
         <button className="boarding-modal-btn boarding-modal-cancel" onClick={onBack}>Back</button>
-        <button className="boarding-manual-next" onClick={onPaid} title="Received Payment">Received Payment</button>
+        <button 
+          className="boarding-manual-next" 
+          onClick={() => {
+            console.log("Received Payment Button Clicked");  // Debugging log for button click
+            onPaid(data.paidAmount);  // Trigger the onPaid function
+          }} 
+          title="Received Payment"
+        >
+          Received Payment
+        </button>
       </div>
     </div>
   );
