@@ -14,6 +14,8 @@ boarding_manualbooking_bp = Blueprint('boarding_manualbooking_bp', __name__)
 @boarding_manualbooking_bp.route('/register_user', methods=['POST'])
 def register_user():
     data = request.get_json()
+    print(f"Received data: {data}")  # Log received data
+
     first_name = data.get('first_name')
     last_name = data.get('last_name')
     address = data.get('address')
@@ -22,23 +24,43 @@ def register_user():
     age = data.get('age')
     gender = data.get('gender')
 
+    # Validate fields
     if not all([first_name, last_name, address, profession, contact_number, age, gender]):
         return jsonify({"error": "All fields are required"}), 400
 
+    # Ensure age is a valid integer
+    try:
+        age = int(age)
+    except ValueError:
+        return jsonify({"error": "Age must be a valid number"}), 400
+
     try:
         cur = mysql.connection.cursor()
+
+        # Insert into the Users table (without specifying User_ID)
         cur.execute("""
             INSERT INTO Users (first_name, last_name, address, profession, contact_number, age, gender, platform_source, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, 'MA', NOW())
         """, (first_name, last_name, address, profession, contact_number, age, gender))
+
+        # Commit and get last inserted ID
         mysql.connection.commit()
+
         user_id = cur.lastrowid
         user_id_formatted = f"UID{user_id:03d}"
+
+        cur.execute("""
+            UPDATE Users
+            SET User_ID = %s
+            WHERE User_ID IS NULL AND first_name = %s AND last_name = %s
+        """, (user_id_formatted, first_name, last_name))  
+
+        mysql.connection.commit()
         cur.close()
 
         return jsonify({"message": "User registered successfully", "user_id": user_id_formatted}), 201
     except Exception as e:
-        print(traceback.format_exc())
+        print(f"Error occurred: {e}")
         return jsonify({"error": str(e)}), 500
 
 # =======================
@@ -48,7 +70,7 @@ def register_user():
 def create_booking():
     data = request.get_json()
 
-    user_id = data.get('user_id')  # User ID passed from frontend after registration
+    user_id = data.get('user_id')
     origin = data.get('origin')
     destination = data.get('destination')
     departure_date = data.get('departure_date')
@@ -70,8 +92,10 @@ def create_booking():
 
         return jsonify({"message": "Booking created successfully", "booking_id": booking_id_formatted}), 201
     except Exception as e:
-        print(traceback.format_exc())
+        print(f"Error occurred while creating booking: {e}")
+        print(traceback.format_exc())  # Log the full traceback
         return jsonify({"error": str(e)}), 500
+
 
 # =======================
 # MODULE 3: FARE & PAYMENT

@@ -1,9 +1,14 @@
-import * as QRCode from "qrcode.react";
+
 import { useRef } from "react";
+import QRCode from 'react-qr-code'; // Import react-qr-code
 
 export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
   const qrPrintRef = useRef(null);
   const printQR = () => window.print();
+
+  if (!passengerInfo) {
+    return <div>Loading...</div>;  // Show a loading state if passengerInfo is not yet available
+  }
 
   return (
     <div className="boarding-manual-section">
@@ -12,7 +17,7 @@ export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
 
       <div id="qr-print" ref={qrPrintRef} className="qr-ticket">
         <div className="qr-ticket__header">
-          <div className="qr-ticket__title">Nervalós Ferry — Boarding Pass</div>
+          <div className="qr-ticket__title">Boarding Pass</div>
           <div className="qr-ticket__meta">
             <span>Date: {data.departureDate || "—"}</span>
             <span>Time: {data.departureTime || "—"}</span>
@@ -21,7 +26,7 @@ export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
 
         <div className="qr-ticket__body">
           <div className="qr-faux">
-            {/* Generate the QR code */}
+            {/* Generate the QR code with react-qr-code */}
             <QRCode value={data.qrCodeID} size={256} />
           </div>
           <div className="qr-lines qr-lines--lg">

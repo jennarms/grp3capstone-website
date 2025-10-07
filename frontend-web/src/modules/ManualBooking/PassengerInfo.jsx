@@ -50,7 +50,15 @@ export default function PassengerInfo({ data, errors, setData, onNext }) {
         <Field 
           label="Age" 
           value={data.age} 
-          onChange={(v) => setData((s) => ({ ...s, age: v }))} 
+          onChange={(v) => {
+            const age = Number(v);
+            if (isNaN(age) || age <= 0 || age > 120) {
+              setData((s) => ({ ...s, age: "" }));
+              errors.age = "Enter a valid age (1–120)";
+            } else {
+              setData((s) => ({ ...s, age }));
+            }
+          }} 
           error={errors.age}
         />
         

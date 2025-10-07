@@ -1,4 +1,4 @@
-import axios from "axios"; // Axios for making API calls
+import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { getFare, getNearestSchedule, toHmma, toYYYYMMDD } from "../boarding_shared.jsx";
 import BookingInfo from "./BookingInfo.jsx";
@@ -8,13 +8,8 @@ import QrCode from "./QrCode.jsx";
 
 // API URL from environment variable
 const apiUrl = import.meta.env.VITE_API_URL;
-console.log("API URL from env:", apiUrl);
 
-export default function ManualBookingModal({
-  open,
-  onClose,
-  addPassengerRow,   // function(newRow) => void
-}) {
+export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
   const [step, setStep] = useState(1);
   const [manualData, setManualData] = useState({
     bookingID: "", userID: "", qrCodeID: "",
@@ -29,7 +24,7 @@ export default function ManualBookingModal({
   });
   const [errors, setErrors] = useState({});
 
-  // Validation functions for passenger, manual, and payment
+  // Validation functions
   const validatePassenger = (d) => {
     const errs = {};
     const req = (k, label) => { if (!String(d[k] ?? "").trim()) errs[k] = label + " is required"; };
@@ -49,34 +44,9 @@ export default function ManualBookingModal({
     return errs;
   };
 
-  const validateManual = (d) => {
-    const errs = {};
-    const req = (k, label) => { if (!String(d[k] ?? "").trim()) errs[k] = label + " is required"; };
-    req("origin", "Origin");
-    req("destination", "Destination");
-    req("departureDate", "Departure date");
-    req("departureTime", "Departure time");
-
-    if (d.origin && d.destination && d.origin === d.destination) errs.destination = "Destination must be different from origin";
-
-    const dateRe = /^\d{4}[/-]\d{2}[/-]\d{2}$/;
-    const timeRe = /^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(am|pm)$/i;
-    if (d.departureDate && !dateRe.test(d.departureDate)) errs.departureDate = "Use YYYY-MM-DD";
-    if (d.departureTime && !timeRe.test(d.departureTime)) errs.departureTime = "Use h:mm am/pm";
-
-    return errs;
-  };
-
-  const validatePayment = (d) => {
-    const errs = {};
-    const amt = Number(d.paidAmount);
-    if (String(d.paidAmount).trim() === "" || isNaN(amt) || amt < 0) errs.paidAmount = "Enter a non-negative number";
-    return errs;
-  };
-
   const isManualValid = useMemo(() => {
-    return Object.keys(validateManual(manualData)).length === 0;
-  }, [manualData]);
+    return Object.keys(validatePassenger(passengerInfo)).length === 0;
+  }, [passengerInfo]);
 
   // Auto-calculate fare when Origin/Destination changes
   useEffect(() => {
@@ -113,6 +83,68 @@ export default function ManualBookingModal({
     setErrors({});
   }, [open]);
 
+  const saveBookingData = async () => {
+  console.log("Passenger Info:", passengerInfo);  // Debugging line
+
+  try {
+    // Register user if not exists
+    const userResponse = await axios.post(`${apiUrl}/api/boarding/manual/register_user`, passengerInfo);
+    const userID = userResponse.data.user_id;
+
+    // Save booking details
+    const bookingResponse = await axios.post(`${apiUrl}/api/boarding/manual/create_booking`, {
+      user_id: userID, // Ensure user ID is passed correctly
+      origin: manualData.origin,
+      destination: manualData.destination,
+      departure_date: manualData.departureDate,
+      departure_time: manualData.departureTime,
+    });
+
+    const bookingID = bookingResponse.data.booking_id;
+
+    // Update payment status
+    await axios.post(`${apiUrl}/api/boarding/manual/update_payment`, {
+      booking_id: bookingID,
+      paid_amount: manualData.paidAmount,
+    });
+
+    // Generate QR code
+    await axios.post(`${apiUrl}/api/boarding/manual/generate_qr`, { booking_id: bookingID });
+
+    console.log("Booking data saved successfully.");
+  } catch (error) {
+    console.error("Error saving booking data:", error);
+  }
+};
+
+  const handlePayment = async () => {
+    const errs = validatePassenger(passengerInfo);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    const uniqueQRCode = await generateUniqueQR();  // Generate unique QR code
+    setManualData((v) => ({
+      ...v,
+      paymentStatus: "P", // Mark as Paid
+      paidAt: toHmma(new Date()),
+      qrCodeID: uniqueQRCode,
+    }));
+
+    await saveBookingData();  // Save all data after payment is completed
+    setStep(4);  // Move to next step (QR Code)
+  };
+
+  // Function to generate a unique QR code
+ const generateUniqueQR = async () => {
+  let code = "TC" + Math.floor(10000 + Math.random() * 89999);  // Generate random 5 digit code
+  const isUnique = await checkIfQRCodeExists(code); // Check uniqueness via backend
+  if (isUnique) {
+    return generateUniqueQR(); // Recursive call if QR exists
+  }
+  return code; // Return unique QR code
+};
+
+
   // Function to check if the QR code exists
   const checkIfQRCodeExists = async (code) => {
     try {
@@ -124,74 +156,9 @@ export default function ManualBookingModal({
     }
   };
 
-  // Function to generate a unique QR code
-  const generateUniqueQR = async () => {
-    let code = "TC" + Math.floor(10000 + Math.random() * 89999);  // Generate random 5 digit code
-    const isUnique = await checkIfQRCodeExists(code); // Check uniqueness via backend
-    if (isUnique) {
-      return generateUniqueQR(); // Recursive call if QR exists
-    }
-    return code; // Return unique QR code
-  };
-
-  // Save the booking and user data (including payment and QR code)
-  const saveBookingData = async () => {
-    try {
-      // Register user if not exists
-      const userResponse = await axios.post(`${apiUrl}/api/boarding/manual/register_user`, passengerInfo);
-      const userID = userResponse.data.user_id;
-
-      // Save booking details
-      const bookingResponse = await axios.post(`${apiUrl}/api/boarding/manual/create_booking`, {
-        user_id: userID,
-        origin: manualData.origin,
-        destination: manualData.destination,
-        departure_date: manualData.departureDate,
-        departure_time: manualData.departureTime,
-      });
-
-      const bookingID = bookingResponse.data.booking_id;
-
-      // Update payment status
-      await axios.post(`${apiUrl}/api/boarding/manual/update_payment`, {
-        booking_id: bookingID,
-        paid_amount: manualData.paidAmount,
-      });
-
-      // Generate QR code
-      await axios.post(`${apiUrl}/api/boarding/manual/generate_qr`, { booking_id: bookingID });
-
-      console.log("Booking data saved successfully.");
-    } catch (error) {
-      console.error("Error saving booking data:", error);
-    }
-  };
-
-  // Handle Payment (update status, generate QR)
-  const handlePayment = async () => {
-    const errs = validatePayment(manualData);
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    // Generate unique QR Code for the payment
-    const uniqueQRCode = await generateUniqueQR(); // Ensure QR code is unique
-    setManualData((v) => ({
-      ...v,
-      paymentStatus: "P", // Mark as Paid
-      paidAt: toHmma(new Date()),
-      qrCodeID: uniqueQRCode, // Set generated unique QR code ID
-    }));
-
-    // Save all the data after payment is completed
-    await saveBookingData();
-
-    setErrors({});
-    setStep(4);  // Move to the next step (QR Code)
-  };
-
   // Handle next step
   const handleNext = () => {
-    const errs = validateManual(manualData);
+    const errs = validatePassenger(passengerInfo);
     setErrors(errs);
     if (Object.keys(errs).length === 0) {
       setStep(3); // Move to the next step
@@ -252,6 +219,7 @@ export default function ManualBookingModal({
         {/* Step 4: QR Code */}
         {step === 4 && (
           <QrCode
+            passengerInfo={passengerInfo}  // Pass the full passengerInfo object here
             data={manualData}
             onBack={() => setStep(3)}
             onFinish={() => {
@@ -259,6 +227,7 @@ export default function ManualBookingModal({
               onClose();
             }}
           />
+
         )}
       </div>
     </div>
