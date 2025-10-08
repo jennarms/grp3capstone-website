@@ -3,7 +3,6 @@ import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_boarding.css";
 
-import { getParams } from "../modules/boarding_shared.jsx";
 import ManualBookingModal from "../modules/ManualBooking/ManualBookingModal.jsx";
 import PassengerTable from "../modules/PassengerTable.jsx";
 import ScanButtonModule from "../modules/ScanButtonModule.jsx";
@@ -11,6 +10,20 @@ import ScanButtonModule from "../modules/ScanButtonModule.jsx";
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export function Boarding() {
+  // ---- Extract query parameters manually ----
+  const getParams = () => {
+    const sp = new URLSearchParams(window.location.search);
+    return {
+      time: sp.get("time") || "8:40 AM",
+      total: parseInt(sp.get("total") || "30", 10),
+      avail: parseInt(sp.get("avail") || "26", 10), // so Booked 4/30 matches UI
+      booked: parseInt(sp.get("booked") || "4", 10),
+      dir: (sp.get("dir") || "forward").toLowerCase(),
+      station: sp.get("station") || "PUP → Kalawaan",
+      date: sp.get("date") || "",
+    };
+  };
+  
   const qp = getParams();
 
   // ---- scheduleId extraction that works with BrowserRouter AND HashRouter

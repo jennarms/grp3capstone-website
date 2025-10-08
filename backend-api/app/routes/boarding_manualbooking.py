@@ -9,7 +9,7 @@ from io import BytesIO
 boarding_manualbooking_bp = Blueprint('boarding_manualbooking_bp', __name__)
 
 # =======================
-# MODULE 1: USER INFORMATION
+# USER INFORMATION
 # =======================
 @boarding_manualbooking_bp.route('/register_user', methods=['POST'])
 def register_user():
@@ -38,9 +38,9 @@ def register_user():
         cur = mysql.connection.cursor()
 
         # Insert into the Users table (without specifying User_ID)
-        cur.execute("""
-            INSERT INTO Users (first_name, last_name, address, profession, contact_number, age, gender, platform_source, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'MA', NOW())
+        cur.execute(""" 
+            INSERT INTO Users (first_name, last_name, address, profession, contact_number, age, gender, platform_source, created_at) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'MA', NOW()) 
         """, (first_name, last_name, address, profession, contact_number, age, gender))
 
         # Commit and get last inserted ID
@@ -53,7 +53,7 @@ def register_user():
             UPDATE Users
             SET User_ID = %s
             WHERE User_ID IS NULL AND first_name = %s AND last_name = %s
-        """, (user_id_formatted, first_name, last_name))  
+        """, (user_id_formatted, first_name, last_name))
 
         mysql.connection.commit()
         cur.close()
@@ -61,10 +61,77 @@ def register_user():
         return jsonify({"message": "User registered successfully", "user_id": user_id_formatted}), 201
     except Exception as e:
         print(f"Error occurred: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Internal server error"}), 500
 
 # =======================
-# MODULE 2: BOOKING DETAILS
+# STATION DATA
+# =======================
+@boarding_manualbooking_bp.route('/get_stations', methods=['GET'])
+def get_stations():
+    try:
+        cur = mysql.connection.cursor()
+
+        # Get all stations
+        cur.execute("SELECT Station_ID, StationName FROM Station")
+        stations = cur.fetchall()
+
+        return jsonify({"stations": [{"Station_ID": station[0], "StationName": station[1]} for station in stations]}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({"error": "Internal server error"}), 500
+
+# =======================
+# DEPARTURE SCHEDULES
+# =======================
+@boarding_manualbooking_bp.route('/get_departure_schedules', methods=['GET'])
+def get_departure_schedules():
+    try:
+        origin = request.args.get('origin')
+        if not origin:
+            return jsonify({"error": "Origin station is required"}), 400
+
+        cur = mysql.connection.cursor()
+        
+        # Fetch schedules based on the origin station
+        cur.execute("SELECT departureTime FROM Schedule WHERE RouteStation_ID = (SELECT RouteStation_ID FROM RouteStations WHERE StationName = %s)", (origin,))
+        schedules = cur.fetchall()
+
+        return jsonify({"schedules": [schedule[0] for schedule in schedules]}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({"error": "Internal server error"}), 500
+
+# =======================
+# FARE DATA
+# =======================
+@boarding_manualbooking_bp.route('/get_fare', methods=['GET'])
+def get_fare():
+    origin = request.args.get("origin")
+    destination = request.args.get("destination")
+    if not origin or not destination:
+        return jsonify({"error": "Origin and destination are required"}), 400
+
+    try:
+        cur = mysql.connection.cursor()
+        
+        # Fetch fare from Fare table based on origin and destination
+        cur.execute("""
+            SELECT Fare FROM Fare 
+            WHERE From_Station_ID = (SELECT Station_ID FROM Station WHERE StationName = %s)
+            AND To_Station_ID = (SELECT Station_ID FROM Station WHERE StationName = %s)
+        """, (origin, destination))
+        fare = cur.fetchone()
+
+        if fare:
+            return jsonify({"fare": fare[0]}), 200
+        else:
+            return jsonify({"error": "Fare not found for the selected route"}), 404
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({"error": "Internal server error"}), 500
+
+# =======================
+# BOOKING DETAILS
 # =======================
 @boarding_manualbooking_bp.route('/create_booking', methods=['POST'])
 def create_booking():
@@ -93,36 +160,11 @@ def create_booking():
         return jsonify({"message": "Booking created successfully", "booking_id": booking_id_formatted}), 201
     except Exception as e:
         print(f"Error occurred while creating booking: {e}")
-        print(traceback.format_exc())  # Log the full traceback
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error": "Internal server error"}), 500
 
 # =======================
-# MODULE 3: FARE & PAYMENT
+# PAYMENT & QR CODE
 # =======================
-@boarding_manualbooking_bp.route('/get_fare', methods=['GET'])
-def get_fare():
-    origin = request.args.get("origin")
-    destination = request.args.get("destination")
-
-    if not origin or not destination:
-        return jsonify({"error": "Origin and destination are required"}), 400
-
-    try:
-        cur = mysql.connection.cursor()
-        cur.execute("""
-            SELECT Fare FROM Fare WHERE From_Station_ID = %s AND To_Station_ID = %s
-        """, (origin, destination))
-        fare = cur.fetchone()
-
-        if fare:
-            return jsonify({"fare": fare[0]}), 200
-        else:
-            return jsonify({"error": "Fare not found for the selected route"}), 404
-    except Exception as e:
-        print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
-
 @boarding_manualbooking_bp.route('/update_payment', methods=['POST'])
 def update_payment():
     data = request.get_json()
@@ -146,11 +188,8 @@ def update_payment():
         return jsonify({"message": "Payment received successfully"}), 200
     except Exception as e:
         print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Internal server error"}), 500
 
-# =======================
-# MODULE 4: QR CODE GENERATION
-# =======================
 @boarding_manualbooking_bp.route('/generate_qr', methods=['POST'])
 def generate_qr_code():
     booking_id = request.get_json().get('booking_id')
@@ -178,7 +217,8 @@ def generate_qr_code():
         return jsonify({"message": "QR Code generated successfully", "qr_code": qr_code}), 200
     except Exception as e:
         print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Internal server error"}), 500
+
 
 def save_qr_code(booking_id, qr_code):
     try:
@@ -196,36 +236,3 @@ def save_qr_code(booking_id, qr_code):
     except Exception as e:
         print(f"Error saving QR code: {e}")
         return None
-
-@boarding_manualbooking_bp.route('/check_qr_exists', methods=['POST'])
-def check_qr_exists():
-    data = request.get_json()
-    qr_code = data.get('qr_code')
-
-    if not qr_code:
-        return jsonify({"error": "QR Code is required"}), 400
-
-    try:
-        cur = mysql.connection.cursor()
-
-        # Check if the QR code already exists in the QRCode table
-        cur.execute("SELECT COUNT(*) FROM QRCode WHERE QRCode_ID = %s", (qr_code,))
-        count = cur.fetchone()[0]
-
-        if count > 0:
-            # QR code exists, increment the last QR code by 1
-            cur.execute("SELECT MAX(CAST(SUBSTRING(QRCode_ID, 3) AS UNSIGNED)) FROM QRCode")
-            last_qr_code = cur.fetchone()[0]  # Get the last incremented QR code
-            new_qr_code = last_qr_code + 1 if last_qr_code is not None else 10000
-            new_qr_code_id = f"TC{new_qr_code}"
-
-            return jsonify({"exists": True, "new_qr_code": new_qr_code_id}), 200
-        else:
-            # QR code does not exist
-            return jsonify({"exists": False}), 200
-
-    except Exception as e:
-        print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
-
-
