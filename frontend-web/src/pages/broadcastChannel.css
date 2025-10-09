@@ -22,12 +22,7 @@
 
 .page-title {
   font-size: 28px;
-  /* make sure it’s left-aligned and not centered by a flex parent */
-  align-self: flex-start;
   text-align: left;
-
-  /* optional: match the 24px horizontal rhythm used by tabs/feed */
-  margin: 0 24px 10px 24px;
 }
 
 /* Tabs */

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HeaderButton } from '../components/headerButton';
 import { Navbar } from '../components/navBar';
 import './FaqsManagement.css';
@@ -32,6 +32,22 @@ export function FAQs() {
   const token = localStorage.getItem('token');
   const adminId = localStorage.getItem('admin_id');
   const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
+
+  // --- Optional: autosize textareas so they grow with content ---
+  const useAutosizeTextArea = (value) => {
+    const ref = useRef(null);
+    useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }, [value]);
+    return ref;
+  };
+  const addQRef = useAutosizeTextArea(newQuestion);
+  const addARef = useAutosizeTextArea(newAnswer);
+  const editQRef = useAutosizeTextArea(editQuestion);
+  const editARef = useAutosizeTextArea(editAnswer);
 
   // Fetch FAQs
   const fetchFaqs = useCallback(async () => {
@@ -130,7 +146,6 @@ export function FAQs() {
   );
 
   return (
-
     <>
       <Navbar />
       <HeaderButton />
@@ -148,7 +163,7 @@ export function FAQs() {
                 alt="Search"
                 className="search-icon"
               />
-            <input
+              <input
                 type="text"
                 placeholder="Search"
                 className="search-input"
@@ -188,55 +203,55 @@ export function FAQs() {
                     <td>{index + 1}</td>
                     <td>{faq.faq_id}</td>
                     <td>{faq.admin_id}</td>
-                    <td>{faq.question}</td>
-                    <td>{faq.answer}</td>
-                   
-<td>
-  <div className="action-buttons" style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-    <button
-      className="edit-btn"
-      style={{ 
-        display: 'block', 
-        visibility: 'visible', 
-        backgroundColor: '#fff',
-        border: '2px solid #000c6f',
-        color: '#000c6f',
-        padding: '6px 12px',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }}
-      onClick={() => {
-        setFaqToEdit(faq);
-        setEditQuestion(faq.question);
-        setEditAnswer(faq.answer);
-        setEditModalVisible(true);
-      }}
-    >
-      Edit
-    </button>
-    <button
-      className="delete-btn"
-      style={{ 
-        display: 'block !important', 
-        visibility: 'visible !important', 
-        backgroundColor: '#fff',
-        border: '2px solid red',
-        color: 'red',
-        padding: '6px 12px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        minWidth: '60px'
-      }}
-      onClick={() => {
-        console.log('Delete clicked for:', faq); // Add this for debugging
-        setFaqToDelete(faq);
-        setShowDeleteConfirm(true);
-      }}
-    >
-      Delete
-    </button>
-  </div>
-</td>
+                    {/* Preserve formatting so multi-line content is readable */}
+                    <td style={{ whiteSpace: 'pre-wrap' }}>{faq.question}</td>
+                    <td style={{ whiteSpace: 'pre-wrap' }}>{faq.answer}</td>
+
+                    <td>
+                      <div className="action-buttons" style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                        <button
+                          className="edit-btn"
+                          style={{
+                            display: 'block',
+                            visibility: 'visible',
+                            backgroundColor: '#fff',
+                            border: '2px solid #000c6f',
+                            color: '#000c6f',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            setFaqToEdit(faq);
+                            setEditQuestion(faq.question);
+                            setEditAnswer(faq.answer);
+                            setEditModalVisible(true);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="delete-btn"
+                          style={{
+                            display: 'block',
+                            visibility: 'visible',
+                            backgroundColor: '#fff',
+                            border: '2px solid red',
+                            color: 'red',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            minWidth: '60px'
+                          }}
+                          onClick={() => {
+                            setFaqToDelete(faq);
+                            setShowDeleteConfirm(true);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -257,19 +272,25 @@ export function FAQs() {
             <div className="fm-modalBody">
               <div className="fm-field">
                 <label className="fm-label">Question</label>
-                <input
-                  type="text"
+                <textarea
+                  ref={addQRef}
+                  className="fm-textarea"
+                  rows={6}
                   value={newQuestion}
                   onChange={(e) => setNewQuestion(e.target.value)}
+                  placeholder="Type the question here…"
                 />
               </div>
 
               <div className="fm-field">
                 <label className="fm-label">Answer</label>
-                <input
-                  type="text"
+                <textarea
+                  ref={addARef}
+                  className="fm-textarea"
+                  rows={10}
                   value={newAnswer}
                   onChange={(e) => setNewAnswer(e.target.value)}
+                  placeholder="Write the answer here. Line breaks and spacing will be preserved."
                 />
               </div>
             </div>
@@ -294,19 +315,25 @@ export function FAQs() {
             <div className="fm-modalBody">
               <div className="fm-field">
                 <label className="fm-label">Question</label>
-                <input
-                  type="text"
+                <textarea
+                  ref={editQRef}
+                  className="fm-textarea"
+                  rows={6}
                   value={editQuestion}
                   onChange={(e) => setEditQuestion(e.target.value)}
+                  placeholder="Update the question…"
                 />
               </div>
 
               <div className="fm-field">
                 <label className="fm-label">Answer</label>
-                <input
-                  type="text"
+                <textarea
+                  ref={editARef}
+                  className="fm-textarea"
+                  rows={10}
                   value={editAnswer}
                   onChange={(e) => setEditAnswer(e.target.value)}
+                  placeholder="Update the answer…"
                 />
               </div>
             </div>
@@ -319,7 +346,7 @@ export function FAQs() {
         </div>
       )}
 
-      {/* Confirm Delete — now matches previous modal style */}
+      {/* Confirm Delete */}
       {showDeleteConfirm && faqToDelete && (
         <div className="fm-modalOverlay" onClick={() => setShowDeleteConfirm(false)}>
           <div
