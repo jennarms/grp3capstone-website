@@ -1,4 +1,3 @@
-
 import { useRef } from "react";
 import QRCode from 'react-qr-code'; // Import react-qr-code
 
@@ -6,8 +5,9 @@ export default function QrCode({ passengerInfo, data, onBack, onFinish }) {
   const qrPrintRef = useRef(null);
   const printQR = () => window.print();
 
-  if (!passengerInfo) {
-    return <div>Loading...</div>;  // Show a loading state if passengerInfo is not yet available
+  // Check if data and qrCodeID are available
+  if (!data || !data.qrCodeID) {
+    return <div>Loading QR Code...</div>;  // Show loading state if qrCodeID is not yet available
   }
 
   return (

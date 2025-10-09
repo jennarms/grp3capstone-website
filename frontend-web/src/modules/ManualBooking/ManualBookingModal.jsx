@@ -14,12 +14,12 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     bookingID: "", userID: "", qrCodeID: "",
     origin: "", destination: "", departureDate: "", departureTime: "",
     paymentStatus: "NP", paidAmount: "", paidAt: "",
-    bookingStatus: "PE", bookingSource: "MA",
+    bookingStatus: "PE", bookingSource: "M",
   });
   const [passengerInfo, setPassengerInfo] = useState({
     firstName: "", lastName: "", address: "",
     profession: "", contactNumber: "", age: "",
-    gender: "", platformSource: "MA",
+    gender: "", email: "", platformSource: "M",
   });
   const [errors, setErrors] = useState({});
   const [stations, setStations] = useState([]);  // Stations state
@@ -72,7 +72,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
 
     const okGenders = ["Male", "Female", "Other"];
     if (d.gender && okGenders.indexOf(d.gender) === -1) errs.gender = "Select Male, Female, or Other";
-    if (d.platformSource !== "MA") errs.platformSource = "Platform Source must be MA";
+    if (d.platformSource !== "M") errs.platformSource = "Platform Source must be M";
     return errs;
   };
 
@@ -80,13 +80,23 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     return Object.keys(validatePassenger(passengerInfo)).length === 0;
   }, [passengerInfo]);
 
-  // Save booking data
+  // Save booking data (Including user registration)
   const saveBookingData = async () => {
     console.log("Passenger Info to register:", passengerInfo);  // Log passenger info before sending
 
     try {
       // Register user if not exists
-      const userResponse = await axios.post(`${apiUrl}/api/boarding/manual/register_user`, passengerInfo);
+      const userResponse = await axios.post(`${apiUrl}/api/boarding/manual/register_user`, {
+        first_name: passengerInfo.firstName,
+        last_name: passengerInfo.lastName,
+        address: passengerInfo.address,
+        contact_number: passengerInfo.contactNumber,
+        age: passengerInfo.age,
+        gender: passengerInfo.gender,
+        email: passengerInfo.email, 
+        platform_source: passengerInfo.platformSource,
+      });
+
       console.log("User Response:", userResponse.data);  // Log user registration response
       const userID = userResponse.data.user_id;
 
@@ -97,7 +107,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
 
       // Log booking data before sending
       console.log("Booking Data to save:", {
-        user_id: userID, 
+        user_id: userID,
         origin: manualData.origin,
         destination: manualData.destination,
         departure_date: manualData.departureDate,
@@ -115,22 +125,38 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
 
       console.log("Booking Response:", bookingResponse.data);  // Log booking response
       const bookingID = bookingResponse.data.booking_id;
+      const qrCodeID = bookingResponse.data.qr_code;  // Get the QR Code ID from the response
 
       if (!bookingID) {
         console.error("Error: No booking_id received from booking creation.");
         return;
       }
 
-      // Update payment status
+      // Set qrCodeID in manualData state
+      setManualData(prevData => ({
+        ...prevData,
+        bookingID: bookingID,
+        qrCodeID: qrCodeID,  // Set the QR Code ID here
+      }));
+
+      // Fetch fare before proceeding with the payment update
+      const fareResponse = await axios.get(`${apiUrl}/api/boarding/manual/get_fare`, {
+        params: { origin: manualData.origin, destination: manualData.destination }
+      });
+
+      const fare = fareResponse.data.fare;
+
+      if (!fare) {
+        console.error("Error: No fare found for this route.");
+        return;
+      }
+
+      // Update the booking's fare and change the payment status to 'P'
       const paymentResponse = await axios.post(`${apiUrl}/api/boarding/manual/update_payment`, {
-        booking_id: bookingID,
-        paid_amount: manualData.paidAmount,
+        Booking_ID: bookingID,  // Corrected key: Booking_ID
+        payment_amount: fare,    // Corrected key: payment_amount
       });
       console.log("Payment Status Updated:", paymentResponse.data);
-
-      // Generate QR code
-      const qrResponse = await axios.post(`${apiUrl}/api/boarding/manual/generate_qr`, { booking_id: bookingID });
-      console.log("QR Code Generated:", qrResponse.data);
 
       console.log("Booking data saved successfully.");
     } catch (error) {

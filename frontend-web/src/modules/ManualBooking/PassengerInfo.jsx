@@ -2,7 +2,7 @@ export default function PassengerInfo({ data, errors, setData, onNext }) {
   return (
     <div className="boarding-manual-section">
       <h4 className="boarding-manual-subtitle">Passenger Information</h4>
-      <p className="boarding-manual-desc">Please enter the passenger’s details. All fields are required.</p>
+      <p className="boarding-manual-desc">Please enter the passenger’s details. All fields are required except for the email.</p>
 
       <div className="boarding-manual-grid">
         {/* First Name */}
@@ -70,13 +70,20 @@ export default function PassengerInfo({ data, errors, setData, onNext }) {
           error={errors.gender}
           options={["Male", "Female", "Other"]}
         />
+
+        {/* Email (Optional) */}
+        <Field 
+          label="Email" 
+          value={data.email} 
+          onChange={(v) => setData((s) => ({ ...s, email: v }))} 
+          error={errors.email}
+        />
       </div>
 
       {/* Hidden Field for platformSource */}
-      {/* Platform Source */}
       <input
         type="hidden"
-        value="MA"
+        value="M"
         onChange={() => {}}
         readOnly
       />

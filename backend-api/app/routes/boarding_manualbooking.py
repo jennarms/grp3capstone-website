@@ -11,6 +11,16 @@ boarding_manualbooking_bp = Blueprint('boarding_manualbooking_bp', __name__)
 # =======================
 # USER REGISTRATION
 # =======================
+def generate_user_id(cursor):
+    """Generate next ID like UID001, UID002... based on MAX(User_ID)."""
+    cursor.execute("SELECT MAX(User_ID) FROM Users")
+    last_id = (cursor.fetchone() or [None])[0]
+    if last_id and last_id.startswith("UID") and last_id[3:].isdigit():
+        new_num = int(last_id[3:]) + 1
+    else:
+        new_num = 1
+    return f"UID{new_num:03d}"
+
 @boarding_manualbooking_bp.route('/register_user', methods=['POST'])
 def register_user():
     data = request.get_json()
@@ -21,10 +31,11 @@ def register_user():
     contact_number = data.get('contact_number')
     age = data.get('age')
     gender = data.get('gender')
+    email = data.get('email') 
 
     # Validate fields
     if not all([first_name, last_name, address, contact_number, age, gender]):
-        return jsonify({"error": "All fields are required"}), 400
+        return jsonify({"error": "First name, last name, address, contact number, age, and gender are required"}), 400
 
     # Ensure age is a valid integer
     try:
@@ -35,36 +46,50 @@ def register_user():
     try:
         cur = mysql.connection.cursor()
 
-        # Insert user into the Users table
+        # Generate user_id using custom function
+        user_id = generate_user_id(cur)
+
+        # Insert user into the Users table with email
         cur.execute(""" 
-            INSERT INTO Users (first_name, last_name, address, contact_number, age, gender, platform_source, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, 'MA', NOW())
-        """, (first_name, last_name, address, contact_number, age, gender))
+            INSERT INTO Users (User_ID, first_name, last_name, address, contact_number, age, gender, email, platform_source, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'M', NOW())
+        """, (user_id, first_name, last_name, address, contact_number, age, gender, email))
 
-        # Commit and get last inserted ID
+        # Commit the insert and get the last inserted ID (this is the actual auto-incremented ID)
         mysql.connection.commit()
 
-        user_id = cur.lastrowid
-        user_id_formatted = f"UID{user_id:03d}"
+        # Check if the user was successfully created
+        if cur.rowcount == 0:
+            return jsonify({"error": "User creation failed."}), 500
 
-        # Update the Users table with the generated user_id
-        cur.execute("""
-            UPDATE Users 
-            SET User_ID = %s 
-            WHERE User_ID IS NULL AND first_name = %s AND last_name = %s
-        """, (user_id_formatted, first_name, last_name))
-
-        mysql.connection.commit()
+        # Commit the transaction and close the cursor
         cur.close()
 
-        return jsonify({"message": "User registered successfully", "user_id": user_id_formatted}), 201
+        return jsonify({"message": "User registered successfully", "user_id": user_id}), 201
     except Exception as e:
-        print(f"Error occurred: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        print(f"Error occurred: {str(e)}")
+        print(traceback.format_exc())  # Print the full traceback for debugging
+        return jsonify({"error": f"Internal server error: {str(e)}", "trace": traceback.format_exc()}), 500
 
 # =======================
 # CREATE BOOKING
 # =======================
+def generate_booking_id(cursor):
+    """Generate next Booking ID like BK000001, BK000002... based on MAX(Booking_ID)."""
+    cursor.execute("SELECT MAX(CAST(SUBSTRING(Booking_ID, 3) AS UNSIGNED)) AS max_num FROM Booking")
+    row = cursor.fetchone()
+    last = (row["max_num"] if isinstance(row, dict) else row[0]) if row else 0
+    nxt = (last or 0) + 1
+    return f"BK{nxt:06d}"
+
+def generate_qrcode_id(cursor):
+    """Generate next QR Code ID like QR000001, QR000002... based on MAX(Qrcode_ID)."""
+    cursor.execute("SELECT MAX(CAST(SUBSTRING(Qrcode_ID, 3) AS UNSIGNED)) AS max_num FROM QRCode")
+    row = cursor.fetchone()
+    last = (row["max_num"] if isinstance(row, dict) else row[0]) if row else 0
+    nxt = (last or 0) + 1
+    return f"QR{nxt:06d}"
+
 @boarding_manualbooking_bp.route('/create_booking', methods=['POST'])
 def create_booking():
     data = request.get_json()
@@ -79,6 +104,20 @@ def create_booking():
     if not all([user_id, origin, destination, departure_date, departure_time]):
         return jsonify({"error": "All fields are required"}), 400
 
+    # Validate that the user exists
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT User_ID FROM Users WHERE User_ID = %s", (user_id,))
+        user = cur.fetchone()
+
+        if not user:
+            return jsonify({"error": "User does not exist"}), 400  # User not found
+
+    except Exception as e:
+        print(f"Error occurred during user validation: {str(e)}")
+        print(traceback.format_exc())  # Print the full traceback for debugging
+        return jsonify({"error": f"Error validating user: {str(e)}", "trace": traceback.format_exc()}), 500
+
     # Validate departure date (Ensure it's not Sunday)
     try:
         dep_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
@@ -90,48 +129,45 @@ def create_booking():
     try:
         cur = mysql.connection.cursor()
 
-        # Step 1: Create Booking without QR Code
+        # Generate a custom Booking_ID using generate_booking_id function
+        booking_id = generate_booking_id(cur)
+
+        # Step 1: Create Booking with generated Booking_ID (without fare logic)
         cur.execute("""
-            INSERT INTO Booking (User_ID, origin, destination, departure_date, departure_time, booking_source, payment_status)
-            VALUES (%s, %s, %s, %s, %s, 'MA', 'NP')
-        """, (user_id, origin, destination, departure_date, departure_time))
+            INSERT INTO Booking (Booking_ID, User_ID, origin, destination, departure_date, departure_time, booking_source, payment_status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'M', 'NP')
+        """, (booking_id, user_id, origin, destination, departure_date, departure_time))
         mysql.connection.commit()
-        booking_id = cur.lastrowid
-        booking_id_formatted = f"BK{booking_id:06d}"
 
-        # Step 2: Generate QR Code for Booking
-        img = qrcode.make(booking_id_formatted)
-        img_byte_arr = BytesIO()
-        img.save(img_byte_arr)
-        img_byte_arr.seek(0)
+        # Step 2: Generate QR Code ID using generate_qrcode_id function
+        qrcode_id = generate_qrcode_id(cur)
+        print(f"Generated QR Code ID: {qrcode_id}")  # Debugging output
 
-        # Save QR Code to DB and associate with booking
+        # Step 3: Insert the QR Code into the QRCode table (with User_ID)
         cur.execute("""
-            INSERT INTO QRCode (Booking_ID, Generated_at, ExpiresAt, Maximum_Scan)
-            VALUES (%s, NOW(), DATE_ADD(NOW(), INTERVAL 24 HOUR), 3)
-        """, (booking_id,))
+            INSERT INTO QRCode (Booking_ID, User_ID, Qrcode_ID, Generated_at, ExpiresAt, Maximum_Scan)
+            VALUES (%s, %s, %s, NOW(), DATE_ADD(NOW(), INTERVAL 24 HOUR), 2)
+        """, (booking_id, user_id, qrcode_id))
         mysql.connection.commit()
-        qr_code_id = cur.lastrowid
-        qr_code_formatted = f"QR{qr_code_id:06d}"
 
-        # Step 3: Update Booking with QR Code
+        # Step 4: Update Booking with the generated QR Code ID
         cur.execute("""
             UPDATE Booking
             SET Qrcode_ID = %s
             WHERE Booking_ID = %s
-        """, (qr_code_formatted, booking_id))
+        """, (qrcode_id, booking_id))
         mysql.connection.commit()
 
         cur.close()
 
         return jsonify({
-            "booking_id": booking_id_formatted,
-            "qr_code": qr_code_formatted
+            "booking_id": booking_id,
+            "qr_code": qrcode_id
         }), 201
     except Exception as e:
-        print(f"Error occurred while creating booking: {e}")
-        return jsonify({"error": "Internal server error"}), 500
-
+        print(f"Error occurred while creating booking: {str(e)}")
+        print(traceback.format_exc())  # Print the full traceback for debugging
+        return jsonify({"error": f"Internal server error: {str(e)}", "trace": traceback.format_exc()}), 500
 
 # =======================
 # GET STATIONS
@@ -153,7 +189,6 @@ def get_stations():
 # =======================
 # GET DEPARTURE SCHEDULES
 # =======================
-@boarding_manualbooking_bp.route('/get_departure_schedules', methods=['GET'])
 @boarding_manualbooking_bp.route('/get_departure_schedules', methods=['GET'])
 def get_departure_schedules():
     origin = request.args.get("origin")  # Station Name
@@ -282,3 +317,38 @@ def get_fare():
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({"error": "Internal server error"}), 500
+    
+@boarding_manualbooking_bp.route('/update_payment', methods=['POST'])
+def update_payment():
+    data = request.get_json()
+
+    booking_id = data.get('Booking_ID')
+    paid_amount = data.get('payment_amount')
+
+    if not booking_id or not paid_amount:
+        return jsonify({"error": "Booking ID and paid amount are required"}), 400
+
+    try:
+        cur = mysql.connection.cursor()
+
+        # Step 1: Check if the booking exists
+        cur.execute("SELECT Booking_ID FROM Booking WHERE Booking_ID = %s", (booking_id,))
+        booking = cur.fetchone()
+        if not booking:
+            return jsonify({"error": "Booking not found"}), 404
+
+        # Step 2: Update the payment status and paid amount
+        cur.execute("""
+            UPDATE Booking 
+            SET payment_amount = %s, payment_status = 'P' 
+            WHERE Booking_ID = %s
+        """, (paid_amount, booking_id))
+
+        mysql.connection.commit()
+
+        cur.close()
+
+        return jsonify({"message": "Payment updated successfully"}), 200
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
