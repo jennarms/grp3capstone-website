@@ -31,7 +31,7 @@ def register_user():
     contact_number = data.get('contact_number')
     age = data.get('age')
     gender = data.get('gender')
-    email = data.get('email') 
+    email = data.get('email')  # Email can be an empty string or null
 
     # Validate fields
     if not all([first_name, last_name, address, contact_number, age, gender]):
@@ -42,6 +42,13 @@ def register_user():
         age = int(age)
     except ValueError:
         return jsonify({"error": "Age must be a valid number"}), 400
+
+    # Validate email if provided
+    if email and not isinstance(email, str):
+        return jsonify({"error": "Email must be a valid string"}), 400
+
+    if email == '':
+        email = None  # Set it as None (NULL) if empty string is passed
 
     try:
         cur = mysql.connection.cursor()
@@ -70,6 +77,7 @@ def register_user():
         print(f"Error occurred: {str(e)}")
         print(traceback.format_exc())  # Print the full traceback for debugging
         return jsonify({"error": f"Internal server error: {str(e)}", "trace": traceback.format_exc()}), 500
+
 
 # =======================
 # CREATE BOOKING

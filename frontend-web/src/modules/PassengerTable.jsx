@@ -1,66 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+
+const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function PassengerTable() {
-  const [query, setQuery] = useState("");
-  const [passengers, setPassengers] = useState([]);
+  const [passengerData, setPassengerData] = useState([]); // Data from the backend
+  const [currentPage, setCurrentPage] = useState(1);  // For pagination
+  const [totalPages, setTotalPages] = useState(0);  // Total number of pages
+  const [query, setQuery] = useState("");  // For search functionality
 
+  // Fetch boarding data from the backend based on current page and query
+  const fetchBoardingData = async (page) => {
+    try {
+      const response = await axios.get(`${apiUrl}/api/boarding_passengertable/get_boarding_details`, {
+        params: { page, query },  // Pass current page and query to the backend
+      });
+      setPassengerData(response.data.boardingData);
+      setTotalPages(response.data.totalPages);  // Set the total number of pages
+    } catch (error) {
+      console.error("Error fetching boarding data:", error);
+    }
+  };
+
+  // Load data when the page number or query changes
   useEffect(() => {
-    // Fetch passengers from backend
-    const fetchPassengers = async () => {
-      const response = await fetch(`/api/passengertable/get_passenger_table?station_id=1&schedule_id=1`);
-      const data = await response.json();
-      setPassengers(data.passengers); // Set passengers in state
-    };
+    fetchBoardingData(currentPage);
+  }, [currentPage, query]);  // Re-run the effect whenever currentPage or query changes
 
-    fetchPassengers();
-  }, []);
+  // Poll every 5 seconds to check for new updates (this will keep fetching new data)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchBoardingData(currentPage);  // Keep fetching data periodically
+    }, 5000); // 5 seconds
 
-  // Filter passengers based on search query
-  const finalFiltered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return passengers;
-    return passengers.filter((p) =>
-      Object.values(p).some((v) => String(v).toLowerCase().includes(q))
-    );
-  }, [query, passengers]);
-
-  // Map booking status to CSS class for styling
-  const bookingStatusClass = (s) => {
-    switch (s) {
-      case "OB": return "status-badge status-ob"; // Boarded
-      case "CO": return "status-badge status-co"; // Cancelled
-      case "PE": return "status-badge status-pe"; // Pending
-      case "CA": return "status-badge status-ca"; // Cancelled
-      case "DI": return "status-badge status-di"; // Disembarked
-      default: return "status-badge";
-    }
-  };
-
-  // Handle Accept booking (update status to 'Boarded')
-  const handleAccept = async (bookingID) => {
-    const response = await fetch('/api/passengertable/accept_booking', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingID })
-    });
-
-    if (response.ok) {
-      setPassengers(prev => prev.map(p => p.Booking_ID === bookingID ? { ...p, status: 'B' } : p));
-    }
-  };
-
-  // Handle Cancel booking (update status to 'Cancelled')
-  const handleCancel = async (bookingID) => {
-    const response = await fetch('/api/passengertable/cancel_booking', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingID })
-    });
-
-    if (response.ok) {
-      setPassengers(prev => prev.map(p => p.Booking_ID === bookingID ? { ...p, status: 'C' } : p));
-    }
-  };
+    // Clean up the interval when the component unmounts or stops fetching
+    return () => clearInterval(interval);
+  }, [currentPage]);
 
   return (
     <>
@@ -83,37 +58,50 @@ export default function PassengerTable() {
           <table className="passenger-list-table">
             <thead>
               <tr>
-                <th>Name</th><th>BD_ID</th><th>Booking_ID</th><th>Station_ID</th>
-                <th>boarding_time</th><th>disembarking_time</th><th>status</th><th>Qrcode_ID</th><th>actions</th>
+                <th>Booking ID</th>
+                <th>Passenger Name</th>
+                <th>Status</th>
+                <th>Boarding Time</th>
+                <th>Disembarking Time</th>
               </tr>
             </thead>
             <tbody>
-              {finalFiltered.map((p) => (
-                <tr key={p.Booking_ID}>
-                  <td>{p.name}</td>
-                  <td>{p.BD_ID}</td>
-                  <td>{p.Booking_ID}</td>
-                  <td>{p.Station_ID}</td>
-                  <td>{p.boardingTime}</td>
-                  <td>{p.disembarkingTime}</td>
-                  <td><span className={bookingStatusClass(p.status)}>{p.status}</span></td>
-                  <td>{p.Qrcode_ID}</td>
-                  <td>
-                    {p.status === "PE" ? (
-                      <div className="action-cell">
-                        <button onClick={() => handleAccept(p.Booking_ID)}>Accept</button>
-                        <button onClick={() => handleCancel(p.Booking_ID)}>Cancel</button>
-                      </div>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+              {passengerData.length > 0 ? (
+                passengerData.map((passenger) => (
+                  <tr key={passenger.BD_ID}>
+                    <td>{passenger.Booking_ID}</td>
+                    <td>{`${passenger.first_name} ${passenger.last_name}`}</td>
+                    <td>{passenger.status}</td>
+                    <td>{passenger.boarding_time || '—'}</td>
+                    <td>{passenger.disembarking_time || '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5">No passengers available.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </section>
+
+      {/* Pagination Controls */}
+      <div className="pagination">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          Prev
+        </button>
+        <span>{currentPage}</span>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          Next
+        </button>
+      </div>
     </>
   );
 }
