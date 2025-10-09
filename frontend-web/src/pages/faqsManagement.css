@@ -9,6 +9,7 @@
 /* ===== Card wrapper that holds the toolbar + table ===== */
 .table-card {
   width: 1508px;
+  margin-top: 130px;
   margin-left: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -16,7 +17,7 @@
   background: #fff;
   display: flex;
   flex-direction: column;
-  height: 595px;
+  height: 750px;
 }
 
 /* ===== Toolbar (Search + Add) ===== */
@@ -78,7 +79,7 @@
   table-layout: fixed;
 }
 
-/* Column widths - this is key for showing buttons properly */
+/* Column widths */
 .faqs-table th:nth-child(1),
 .faqs-table td:nth-child(1) { width: 50px; }    /* # */
 .faqs-table th:nth-child(2),
@@ -90,10 +91,10 @@
 .faqs-table th:nth-child(5),
 .faqs-table td:nth-child(5) { width: 400px; }   /* Answer */
 .faqs-table th:nth-child(6),
-.faqs-table td:nth-child(6) { 
-  width: 220px; 
+.faqs-table td:nth-child(6) {
+  width: 220px;
   min-width: 220px;
-} /* Actions - ensures enough space */
+} /* Actions */
 
 .faqs-table thead th {
   position: sticky;
@@ -114,7 +115,13 @@
   height: 75px;
 }
 
-/* ===== Action Buttons Container - Fixed ===== */
+/* Preserve multi-line formatting in table cells for Q/A */
+.faqs-table td:nth-child(4),
+.faqs-table td:nth-child(5) {
+  white-space: pre-wrap;
+}
+
+/* ===== Action Buttons Container ===== */
 .action-buttons {
   display: flex;
   flex-direction: row;
@@ -127,7 +134,7 @@
   padding: 5px;
 }
 
-/* ===== Buttons in table - Fixed ===== */
+/* ===== Buttons in table ===== */
 .edit-btn,
 .delete-btn {
   min-width: 80px;
@@ -196,7 +203,7 @@
   z-index: 1000;
 }
 
-/* ===== Modal (unified, no duplicates) ===== */
+/* ===== Generic Modal (unused by new fm- classes, but kept) ===== */
 .modal {
   background: #fff;
   padding: 20px 24px;
@@ -211,89 +218,17 @@
   box-shadow: 0 10px 20px rgba(0,0,0,0.2);
   position: relative;
 }
-
-/* Header */
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.modal-header h2 {
-  margin: 0;
-  color: #000;
-  font-weight: 800;
-  font-size: 24px;
-}
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  color: #444;
-}
-
-/* Body */
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: unset;
-  overflow-y: visible;
-}
-
-/* Field row: label + input */
-.modal-field {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.modal-label {
-  font-weight: 700;
-  color: #333;
-  font-size: 15px;
-  width: 100px;
-  text-align: right;
-}
-
-.modal-body input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-/* Footer */
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-}
-
-/* Footer buttons */
-.btn {
-  padding: 10px 18px;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
-  min-width: 110px;
-  text-align: center;
-  border: 1px solid #aaa;
-  background: #fff;
-}
-.btn.primary {
-  background: #000c6f;
-  color: #fff;
-  border: none;
-}
-.btn.cancel {
-  background: #fff;
-  color: #333;
-}
+.modal-header { display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { margin: 0; color: #000; font-weight: 800; font-size: 24px; }
+.close-btn { background: none; border: none; font-size: 24px; font-weight: bold; cursor: pointer; color: #444; }
+.modal-body { display: flex; flex-direction: column; gap: 16px; flex: unset; overflow-y: visible; }
+.modal-field { display: flex; align-items: center; gap: 12px; }
+.modal-label { font-weight: 700; color: #333; font-size: 15px; width: 100px; text-align: right; }
+.modal-body input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 10px; border-top: 1px solid #eee; }
+.btn { padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; min-width: 110px; text-align: center; border: 1px solid #aaa; background: #fff; }
+.btn.primary { background: #000c6f; color: #fff; border: none; }
+.btn.cancel { background: #fff; color: #333; }
 
 /* ===== Confirm dialog ===== */
 .confirm-box {
@@ -305,38 +240,12 @@
   text-align: center;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
-.confirm-box h3 {
-  margin-top: 0;
-  font-size: 22px;
-  font-weight: 800;
-  text-align: left;
-}
-.confirm-buttons {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-.cancel-btn {
-  background-color: #fff;
-  border: 1px solid #aaa;
-  padding: 8px 18px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-}
-.yes-btn {
-  background-color: #000c6f;
-  color: #fff;
-  padding: 8px 20px;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  min-width: 100px;
-  text-align: center;
-}
+.confirm-box h3 { margin-top: 0; font-size: 22px; font-weight: 800; text-align: left; }
+.confirm-buttons { margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px; }
+.cancel-btn { background-color: #fff; border: 1px solid #aaa; padding: 8px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+.yes-btn { background-color: #000c6f; color: #fff; padding: 8px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; min-width: 100px; text-align: center; }
 
+/* ===== Notice Overlay ===== */
 .fm-noticeOverlay{
   position: fixed;
   inset: 0;
@@ -354,28 +263,13 @@
   box-shadow: 0 12px 30px rgba(0,0,0,.2);
   overflow: hidden;
 }
-.fm-noticeHeader{
-  padding: 16px 20px 10px;
-  border-bottom: 1px solid #eee;
-}
-.fm-noticeTitle{
-  font-weight: 800;
-  font-size: 1.5rem;
-  color: #111;
-}
-.fm-noticeBody{
-  padding: 14px 20px;
-  color: #000;
-  font-size: 18px;
-}
+.fm-noticeHeader{ padding: 16px 20px 10px; border-bottom: 1px solid #eee; }
+.fm-noticeTitle{ font-weight: 800; font-size: 1.5rem; color: #111; }
+.fm-noticeBody{ padding: 14px 20px; color: #000; font-size: 18px; }
 .fm-noticeBody--center{ text-align: center; }
-.fm-noticeActions{
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 16px 16px;
-}
+.fm-noticeActions{ display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px 16px; }
 
+/* ===== Modals (Add/Edit/Confirm) ===== */
 .fm-modalOverlay{
   position: fixed;
   inset: 0;
@@ -386,10 +280,11 @@
   z-index: 30001;
 }
 
+/* Widen the modal for easier composing */
 .fm-modal{
-  width: 520px;
+  width: 800px;          /* was 520px */
   max-width: 95vw;
-  max-height: 78vh;
+  max-height: 85vh;      /* a bit taller for long content */
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(0,0,0,.2);
@@ -429,15 +324,6 @@
   font-weight: 700;
   margin-bottom: 6px;
 }
-.fm-modalBody input{
-  width: 100%;
-  border: 1px solid #cfd1d8;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 16px;
-  outline: none;
-  box-sizing: border-box;
-}
 
 .fm-modalFooter{
   display: flex;
@@ -447,6 +333,7 @@
   border-top: 1px solid #eee;
 }
 
+/* Keep text left-aligned */
 .fm-modal,
 .fm-modalBody,
 .fm-modalBody .fm-field,
@@ -455,6 +342,35 @@
   text-align: left;
 }
 
-.fm-modalBody input {
-  text-align: left;
+/* ===== NEW: Big, comfy textarea for composing ===== */
+.fm-textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 12px 14px;
+  border: 1px solid #cfd1d8;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #111;
+  background: #fff;
+  resize: vertical;          /* allow users to pull it taller */
+  box-sizing: border-box;
+  white-space: pre-wrap;     /* keep line breaks & indentation */
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+.fm-textarea:focus {
+  outline: none;
+  border-color: #000c6f;
+  box-shadow: 0 0 0 3px rgba(0, 12, 111, 0.12);
+}
+
+/* Leave input styles (used elsewhere) intact */
+.fm-modalBody input{
+  width: 100%;
+  border: 1px solid #cfd1d8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
 }
