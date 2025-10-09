@@ -7,8 +7,8 @@ import "./broadcastChannel.css";
 
 /* 👇 Add: broadcast context to mark messages as read */
 import { useBroadcast } from "../broadcast/BroadcastProvider";
+const EMOJI_PALETTE = ["❤️", "😂", "😮", "😢", "😡", "👍"];
 
-const EMOJI_PALETTE = ["👍", "🥰", "😮", "😢", "👎", "😡", "🙂"];
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const ROLES = {

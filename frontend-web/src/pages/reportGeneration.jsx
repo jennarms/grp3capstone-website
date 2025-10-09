@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs'; // Import exceljs
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
@@ -51,9 +52,7 @@ function Toast({ open, title, message, tone = "success" }) {
   );
 }
 
-
 export function Report() {
-  /* Dates only affect labels in this demo dataset (no per-day rows here) */
   const today = new Date();
   const aWeekAgo = new Date(today);
   aWeekAgo.setDate(today.getDate() - 7);
@@ -64,7 +63,6 @@ export function Report() {
 
   const reportRef = useRef(null);
 
-  /* Toast state */
   const [toast, setToast] = useState({ open: false, title: "", message: "", tone: "success" });
   const toastTimer = useRef(null);
   const showToast = (title, message, tone = "success") => {
@@ -72,6 +70,7 @@ export function Report() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, open: false })), 2800);
   };
+
   useEffect(() => () => toastTimer.current && clearTimeout(toastTimer.current), []);
 
   /* Aggregations for charts */
@@ -103,7 +102,7 @@ export function Report() {
   );
 
   const sourceTotals = useMemo(() => {
-    const agg = { "Mobile App": 0, Chatbot: 0, Gmail: 0, Manual: 0 };
+    const agg = { "Mobile App": 0, "Chatbot": 0, "Gmail": 0, "Manual": 0 };
     rows.forEach((r) => {
       agg["Mobile App"] += r.mobApp || 0;
       agg["Chatbot"] += r.chatbot || 0;
@@ -118,9 +117,9 @@ export function Report() {
       rows.map((r) => ({
         name: r.stationName,
         "Mobile App": r.mobApp,
-        Chatbot: r.chatbot,
-        Gmail: r.gmail,
-        Manual: r.manual,
+        "Chatbot": r.chatbot,
+        "Gmail": r.gmail,
+        "Manual": r.manual,
       })),
     [rows]
   );
@@ -171,54 +170,61 @@ export function Report() {
 
   const exportExcel = async () => {
     try {
-      const XLSX = await import("xlsx");
+      const workbook = new ExcelJS.Workbook();
 
       // 1) Stations table
-      const sheet1 = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet1, "Stations");
+      const sheet1 = workbook.addWorksheet("Stations");
+      sheet1.columns = [
+        { header: 'Station Name', key: 'stationName', width: 20 },
+        { header: 'Total Bookings', key: 'totalBookings', width: 15 },
+        { header: 'Female Count', key: 'femaleCount', width: 15 },
+        { header: 'Male Count', key: 'maleCount', width: 15 },
+        { header: 'Peak Start', key: 'peakStart', width: 15 },
+        { header: 'Peak End', key: 'peakEnd', width: 15 },
+        { header: 'Mobile App', key: 'mobApp', width: 12 },
+        { header: 'Chatbot', key: 'chatbot', width: 12 },
+        { header: 'Gmail', key: 'gmail', width: 12 },
+        { header: 'Manual', key: 'manual', width: 12 }
+      ];
+      sheet1.addRows(rows);
 
       // 2) Totals (gender + sources)
-      const sheet2 = XLSX.utils.json_to_sheet([
-        { Metric: "Female Total", Value: genderTotals[0].value },
-        { Metric: "Male Total", Value: genderTotals[1].value },
-        ...sourceTotals.map((s) => ({ Metric: s.name, Value: s.value })),
-      ]);
-      XLSX.utils.book_append_sheet(wb, sheet2, "Totals");
+      const sheet2 = workbook.addWorksheet("Totals");
+      sheet2.addRow(['Metric', 'Value']);
+      sheet2.addRow(['Female Total', genderTotals[0].value]);
+      sheet2.addRow(['Male Total', genderTotals[1].value]);
+      sourceTotals.forEach(s => {
+        sheet2.addRow([s.name, s.value]);
+      });
 
-      XLSX.writeFile(wb, `StationReport_${fmt(start)}-${fmt(end)}.xlsx`);
+      // Save the workbook
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `StationReport_${fmt(start)}-${fmt(end)}.xlsx`;
+      link.click();
+
       showToast("Success!", "Excel exported successfully!", "success");
     } catch (err) {
       console.error(err);
-      showToast("Export failed", "Please install 'xlsx'.", "error");
+      showToast("Export failed", "Please install 'exceljs'.", "error");
     }
   };
 
-  /* Generate handler (kept simple for now) */
   const handleGenerate = () => {
-    // plug your fetch/filter logic here later
     showToast("Report refreshed", `Range: ${fmt(start)} — ${fmt(end)}`, "success");
   };
 
   return (
     <>
       <Navbar />
-      {/* Fixed header buttons (gear + logout) */}
       <HeaderButton />
 
-      {/* Top toast (under the navbar) */}
-      <Toast
-        open={toast.open}
-        title={toast.title}
-        message={toast.message}
-        tone={toast.tone}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-      />
+      <Toast open={toast.open} title={toast.title} message={toast.message} tone={toast.tone} onClose={() => setToast((t) => ({ ...t, open: false }))} />
 
-      {/* PAGE-SCOPED SCROLLER — see CSS: .reports-page owns the vertical scrollbar */}
       <div className="reports-page" id="reportsPage">
         <main className="reports-main">
-          {/* Header */}
           <header className="reports-header-row">
             <div>
               <h1 className="reports-title">Report Generation</h1>
@@ -226,39 +232,21 @@ export function Report() {
             </div>
           </header>
 
-          {/* Controls (just the date pickers now) */}
           <div className="reports-controls">
             <div className="rg-dates">
               <span>Date range:</span>
-              <input
-                type="date"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                aria-label="start date"
-              />
+              <input type="date" value={start} onChange={(e) => setStart(e.target.value)} aria-label="start date" />
               <span>—</span>
-              <input
-                type="date"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                aria-label="end date"
-              />
+              <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="end date" />
             </div>
           </div>
 
-          {/* CONTENT used for PDF capture */}
           <div ref={reportRef}>
-            {/* Table header bar: label left, Generate button right */}
             <div className="rg-table-head">
-              <div className="rg-range-label">
-                Report for <b>{fmt(start)}</b> — <b>{fmt(end)}</b>
-              </div>
-              <button className="rg-btn rg-btn-generate" type="button" onClick={handleGenerate}>
-                Generate Report
-              </button>
+              <div className="rg-range-label">Report for <b>{fmt(start)}</b> — <b>{fmt(end)}</b></div>
+              <button className="rg-btn rg-btn-generate" type="button" onClick={handleGenerate}>Generate Report</button>
             </div>
 
-            {/* ===== Scrollable table (has its own scrollbars inside the card) ===== */}
             <div className="rg-table-wrap" role="region" aria-label="Station totals">
               <table className="rg-table">
                 <thead>
@@ -296,8 +284,8 @@ export function Report() {
               </table>
             </div>
 
-            {/* Charts */}
             <div className="rg-charts">
+              {/* Total Bookings Chart */}
               <section className="chart-card">
                 <h3 className="chart-title">Total Bookings</h3>
                 <div className="chart-body">
@@ -313,6 +301,7 @@ export function Report() {
                 </div>
               </section>
 
+              {/* Gender Ratio Chart */}
               <section className="chart-card">
                 <h3 className="chart-title">Gender Ratio</h3>
                 <div className="chart-body">
@@ -337,6 +326,7 @@ export function Report() {
                 </div>
               </section>
 
+              {/* Gender per Station Chart */}
               <section className="chart-card">
                 <h3 className="chart-title">Gender per Station</h3>
                 <div className="chart-body">
@@ -358,6 +348,7 @@ export function Report() {
                 </div>
               </section>
 
+              {/* Booking Source Chart */}
               <section className="chart-card">
                 <h3 className="chart-title">Booking Source</h3>
                 <div className="chart-body">
@@ -383,6 +374,7 @@ export function Report() {
                 </div>
               </section>
 
+              {/* Booking Source per Station Chart */}
               <section className="chart-card chart-span-2">
                 <h3 className="chart-title">Booking Source per Station</h3>
                 <div className="chart-body">
@@ -408,14 +400,9 @@ export function Report() {
             </div>
           </div>
 
-          {/* Export buttons */}
           <div className="rg-export-row">
-            <button className="rg-export" onClick={exportPDF}>
-              Export as PDF
-            </button>
-            <button className="rg-export" onClick={exportExcel}>
-              Export as Excel
-            </button>
+            <button className="rg-export" onClick={exportPDF}>Export as PDF</button>
+            <button className="rg-export" onClick={exportExcel}>Export as Excel</button>
           </div>
         </main>
       </div>

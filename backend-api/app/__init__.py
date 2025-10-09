@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from datetime import timedelta
 import os
 
-
 # Global extension instances
 mysql = MySQL()
 mail = Mail()
@@ -31,7 +30,7 @@ def create_app():
     app.config['MYSQL_USER'] = os.getenv('DB_USER')
     app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD')
     app.config['MYSQL_DB'] = os.getenv('DB_NAME')
-    app.config['MYSQL_CHARSET'] = 'utf8mb4' 
+    app.config['MYSQL_CHARSET'] = 'utf8mb4'
 
     # Mail Config
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
@@ -94,5 +93,16 @@ def create_app():
     from app.routes.broadcastchannel import broadcast_bp
     app.register_blueprint(broadcast_bp, url_prefix="/api/broadcast")
 
-    
+    from app.routes.boarding_routecard import boarding_routecard_bp
+    app.register_blueprint(boarding_routecard_bp, url_prefix="/api")
+
+    from app.routes.scanqr import scanqr_bp
+    app.register_blueprint(scanqr_bp, url_prefix="/api/scan")
+
+    from app.routes.boarding_passengertable import boarding_passengertable_bp
+    app.register_blueprint(boarding_passengertable_bp, url_prefix="/api/passengertable")
+
+    from app.routes.boarding_manualbooking import boarding_manualbooking_bp 
+    app.register_blueprint(boarding_manualbooking_bp, url_prefix="/api/boarding/manual")
+
     return app

@@ -140,3 +140,9 @@
 }
 .blp-view-btn:hover { background: #0a2aa0; }
 .blp-view-btn:focus { outline: none; box-shadow: none; }
+
+.blp-row { transition: background-color 200ms ease; }
+.blp-row-highlight {
+  outline: 2px solid #007bff33;
+  background-color: #e9f2ff;
+}
