@@ -146,3 +146,6 @@
   z-index: 2147483646;
   display: flex; align-items: center; justify-content: center;
 }
+
+.sos-fab { display: none !important; }
+
