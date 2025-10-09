@@ -52,7 +52,7 @@ def register_user():
         # Insert user into the Users table with email
         cur.execute(""" 
             INSERT INTO Users (User_ID, first_name, last_name, address, contact_number, age, gender, email, platform_source, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'M', NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'MB', NOW())
         """, (user_id, first_name, last_name, address, contact_number, age, gender, email))
 
         # Commit the insert and get the last inserted ID (this is the actual auto-incremented ID)
@@ -95,8 +95,8 @@ def create_booking():
     data = request.get_json()
 
     user_id = data.get('user_id')
-    origin = data.get('origin')
-    destination = data.get('destination')
+    origin = data.get('origin')  # Station name (origin)
+    destination = data.get('destination')  # Station name (destination)
     departure_date = data.get('departure_date')
     departure_time = data.get('departure_time')
 
@@ -129,28 +129,43 @@ def create_booking():
     try:
         cur = mysql.connection.cursor()
 
+        # Step 1: Convert Station Names to Station_IDs
+        # Fetch Station_ID for origin station
+        cur.execute("SELECT Station_ID FROM Station WHERE StationName = %s", (origin,))
+        origin_station = cur.fetchone()
+        if not origin_station:
+            return jsonify({"error": f"Origin station '{origin}' not found"}), 400
+        origin_station_id = origin_station[0]
+
+        # Fetch Station_ID for destination station
+        cur.execute("SELECT Station_ID FROM Station WHERE StationName = %s", (destination,))
+        destination_station = cur.fetchone()
+        if not destination_station:
+            return jsonify({"error": f"Destination station '{destination}' not found"}), 400
+        destination_station_id = destination_station[0]
+
         # Generate a custom Booking_ID using generate_booking_id function
         booking_id = generate_booking_id(cur)
 
-        # Step 1: Create Booking with generated Booking_ID (without fare logic)
+        # Step 2: Create the Booking with Station IDs
         cur.execute("""
             INSERT INTO Booking (Booking_ID, User_ID, origin, destination, departure_date, departure_time, booking_source, payment_status)
-            VALUES (%s, %s, %s, %s, %s, %s, 'M', 'NP')
-        """, (booking_id, user_id, origin, destination, departure_date, departure_time))
+            VALUES (%s, %s, %s, %s, %s, %s, 'MB', 'NP')
+        """, (booking_id, user_id, origin_station_id, destination_station_id, departure_date, departure_time))
         mysql.connection.commit()
 
-        # Step 2: Generate QR Code ID using generate_qrcode_id function
+        # Step 3: Generate QR Code ID
         qrcode_id = generate_qrcode_id(cur)
         print(f"Generated QR Code ID: {qrcode_id}")  # Debugging output
 
-        # Step 3: Insert the QR Code into the QRCode table (with User_ID)
+        # Step 4: Insert the QR Code into the QRCode table
         cur.execute("""
             INSERT INTO QRCode (Booking_ID, User_ID, Qrcode_ID, Generated_at, ExpiresAt, Maximum_Scan)
             VALUES (%s, %s, %s, NOW(), DATE_ADD(NOW(), INTERVAL 24 HOUR), 2)
         """, (booking_id, user_id, qrcode_id))
         mysql.connection.commit()
 
-        # Step 4: Update Booking with the generated QR Code ID
+        # Step 5: Update Booking with the generated QR Code ID
         cur.execute("""
             UPDATE Booking
             SET Qrcode_ID = %s

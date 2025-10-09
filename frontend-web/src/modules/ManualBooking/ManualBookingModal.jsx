@@ -14,12 +14,12 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     bookingID: "", userID: "", qrCodeID: "",
     origin: "", destination: "", departureDate: "", departureTime: "",
     paymentStatus: "NP", paidAmount: "", paidAt: "",
-    bookingStatus: "PE", bookingSource: "M",
+    bookingStatus: "PE", bookingSource: "MB",
   });
   const [passengerInfo, setPassengerInfo] = useState({
     firstName: "", lastName: "", address: "",
     profession: "", contactNumber: "", age: "",
-    gender: "", email: "", platformSource: "M",
+    gender: "", email: "", platformSource: "MB",
   });
   const [errors, setErrors] = useState({});
   const [stations, setStations] = useState([]);  // Stations state
@@ -72,7 +72,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
 
     const okGenders = ["Male", "Female", "Other"];
     if (d.gender && okGenders.indexOf(d.gender) === -1) errs.gender = "Select Male, Female, or Other";
-    if (d.platformSource !== "M") errs.platformSource = "Platform Source must be M";
+    if (d.platformSource !== "MB") errs.platformSource = "Platform Source must be M";
     return errs;
   };
 
