@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-export default function PassengerTable() {
+export default function PassengerTable({ origin, scheduleTime }) {
   const [passengerData, setPassengerData] = useState([]); // Data from the backend
   const [currentPage, setCurrentPage] = useState(1);  // For pagination
   const [totalPages, setTotalPages] = useState(0);  // Total number of pages
@@ -12,9 +12,15 @@ export default function PassengerTable() {
   // Fetch boarding data from the backend based on current page and query
   const fetchBoardingData = async (page) => {
     try {
-      const response = await axios.get(`${apiUrl}/api/boarding_passengertable/get_boarding_details`, {
-        params: { page, query },  // Pass current page and query to the backend
+      const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, {
+        params: { 
+          page, 
+          query, 
+          origin,       // Send the selected origin
+          schedule_time: scheduleTime  // Send the selected schedule time
+        }, 
       });
+
       setPassengerData(response.data.boardingData);
       setTotalPages(response.data.totalPages);  // Set the total number of pages
     } catch (error) {
@@ -37,6 +43,17 @@ export default function PassengerTable() {
     return () => clearInterval(interval);
   }, [currentPage]);
 
+  // Handle actions like Accept or Cancel
+  const handleAction = (action, passengerId) => {
+    if (action === "accept") {
+      // Handle Accept action
+      console.log("Accepted passenger with ID:", passengerId);
+    } else if (action === "cancel") {
+      // Handle Cancel action
+      console.log("Cancelled passenger with ID:", passengerId);
+    }
+  };
+
   return (
     <>
       <section className="passenger-head-section">
@@ -58,27 +75,46 @@ export default function PassengerTable() {
           <table className="passenger-list-table">
             <thead>
               <tr>
-                <th>Booking ID</th>
-                <th>Passenger Name</th>
-                <th>Status</th>
+                <th>BD_ID</th>
+                <th>Booking_ID</th>
+                <th>User_ID</th>
                 <th>Boarding Time</th>
                 <th>Disembarking Time</th>
+                <th>Status</th>
+                <th>Qrcode_ID</th>
+                <th>Schedule_ID</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>Departure Date</th>
+                <th>Departure Time</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {passengerData.length > 0 ? (
                 passengerData.map((passenger) => (
                   <tr key={passenger.BD_ID}>
+                    <td>{passenger.BD_ID}</td>
                     <td>{passenger.Booking_ID}</td>
-                    <td>{`${passenger.first_name} ${passenger.last_name}`}</td>
-                    <td>{passenger.status}</td>
+                    <td>{passenger.User_ID}</td>
                     <td>{passenger.boarding_time || '—'}</td>
                     <td>{passenger.disembarking_time || '—'}</td>
+                    <td>{passenger.status || '—'}</td>
+                    <td>{passenger.Qrcode_ID || '—'}</td>
+                    <td>{passenger.Schedule_ID || '—'}</td>
+                    <td>{passenger.origin || '—'}</td>
+                    <td>{passenger.destination || '—'}</td>
+                    <td>{passenger.departure_date || '—'}</td>
+                    <td>{passenger.departure_time || '—'}</td>
+                    <td>
+                      <button onClick={() => handleAction('accept', passenger.BD_ID)}>Accept</button>
+                      <button onClick={() => handleAction('cancel', passenger.BD_ID)}>Cancel</button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5">No passengers available.</td>
+                  <td colSpan="13">No passengers available.</td> {/* Adjusted colSpan to 13 */}
                 </tr>
               )}
             </tbody>
