@@ -16,7 +16,7 @@ export function BoardingLandingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // row refs for auto-scroll + highlight
+  // Row refs for auto-scroll + highlight
   const forwardRowRefs = useRef([]);
   const reverseRowRefs = useRef([]);
 
@@ -117,22 +117,30 @@ export function BoardingLandingPage() {
     [reverseSchedules, nextIndexFor]
   );
 
-  // Auto-scroll after data renders
+  // ---------- Auto-scroll after data renders for both forward and reverse schedules ----------
+  // Scroll forward table
   useEffect(() => {
     const t = setTimeout(() => {
       const elF = nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
-      const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
-
       if (elF && typeof elF.scrollIntoView === "function") {
         elF.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (elR && typeof elR.scrollIntoView === "function") {
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, [nextForwardIndex, forwardSchedules]);
+
+  // Scroll reverse table
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
+      if (elR && typeof elR.scrollIntoView === "function") {
         elR.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 0);
     return () => clearTimeout(t);
-  }, [nextForwardIndex, nextReverseIndex, forwardSchedules, reverseSchedules, loading]);
+  }, [nextReverseIndex, reverseSchedules]);
 
-  // ---------- navigation (no more blocking; everything is viewable) ----------
+  // ---------- navigation ----------
   const goToBoarding = ({ scheduleId, departureTimeHHMMSS, availableSeats, totalSeats, direction }) => {
     const formattedTime = formatTime(departureTimeHHMMSS);
     const availNum = Number(availableSeats || 0);

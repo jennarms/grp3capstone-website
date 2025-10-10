@@ -83,7 +83,7 @@ export default function PassengerInfo({ data, errors, setData, onNext }) {
       {/* Hidden Field for platformSource */}
       <input
         type="hidden"
-        value="M"
+        value="MB"
         onChange={() => {}}
         readOnly
       />
