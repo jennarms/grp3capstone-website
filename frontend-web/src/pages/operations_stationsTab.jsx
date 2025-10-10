@@ -31,6 +31,8 @@ export function StationsTab() {
     email: "",
     password: "",
     confirmPassword: "",
+    lat: "",
+    lon: "",
   });
 
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -40,91 +42,79 @@ export function StationsTab() {
   };
 
   const apiRequest = useCallback(async (url, options = {}) => {
-  const token = getToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
+    const token = getToken();
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    };
 
-  const response = await fetch(`${apiUrl}${url}`, {
-    ...options,
-    headers,
-  });
+    const response = await fetch(`${apiUrl}${url}`, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
-      error: "Request failed",
-    }));
-    throw new Error(errorData.error || `HTTP ${response.status}`);
-  }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        error: "Request failed",
+      }));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
 
-  return response.json();
-}, [apiUrl]);
+    return response.json();
+  }, [apiUrl]);
 
-  // ✅ Wrap in useCallback to stabilize reference
   const fetchCompanies = useCallback(async () => {
-  try {
-    const data = await apiRequest("/api/company/");
-    setCompanies(data);
+    try {
+      const data = await apiRequest("/api/company/");
+      setCompanies(data);
 
-    // use functional update to safely update state
-    setNewStation((prev) => ({
-      ...prev,
-      companyId: prev.companyId || data[0]?.companyId || data[0]?.Company_ID || "",
-    }));
-  } catch (err) {
-    console.error("Failed to fetch companies:", err);
-    setCompanies([{ companyId: "company001", companyName: "Default Company" }]);
-    setNewStation((prev) => ({ ...prev, companyId: prev.companyId || "company001" }));
-  }
-}, [apiRequest]);
-
-  const fetchStations = useCallback(async () => {
-  setLoading(true);
-  setError("");
-  try {
-    const data = await apiRequest("/api/station/");
-    setRows(data);
-  } catch (err) {
-    setError(`Failed to fetch stations: ${err.message}`);
-  } finally {
-    setLoading(false);
-  }
+      setNewStation((prev) => ({
+        ...prev,
+        companyId: prev.companyId || data[0]?.companyId || data[0]?.Company_ID || "",
+      }));
+    } catch (err) {
+      console.error("Failed to fetch companies:", err);
+      setCompanies([{ companyId: "company001", companyName: "Default Company" }]);
+      setNewStation((prev) => ({ ...prev, companyId: prev.companyId || "company001" }));
+    }
   }, [apiRequest]);
 
+  const fetchStations = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await apiRequest("/api/station/");
+      setRows(data);
+    } catch (err) {
+      setError(`Failed to fetch stations: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiRequest]);
 
-  // ✅ Add callbacks as dependencies in useEffect
   useEffect(() => {
     fetchCompanies();
     fetchStations();
   }, [fetchCompanies, fetchStations]);
 
-
   const filtered = useMemo(() => {
     if (!query.trim()) return rows;
     const q = query.toLowerCase();
     return rows.filter((r) =>
-      (
-        r.stationId +
-        r.companyId +
-        r.stationName +
-        r.email +
-        r.username
-      ).toLowerCase().includes(q)
+      (r.stationId + r.companyId + r.stationName + r.email + r.username).toLowerCase().includes(q)
     );
   }, [rows, query]);
 
-  // ADD
   const onAdd = () => {
     setFormError("");
     setShowAddModal(true);
   };
 
   const handleAddSave = async () => {
-    const { companyId, stationName, username, email, password, confirmPassword } = newStation;
+    const { companyId, stationName, username, email, password, confirmPassword, lat, lon } = newStation;
 
-    if (!companyId || !stationName || !username || !email || !password || !confirmPassword) {
+    if (!companyId || !stationName || !username || !email || !password || !confirmPassword || !lat || !lon) {
       setFormError("All fields are required.");
       return;
     }
@@ -133,7 +123,6 @@ export function StationsTab() {
       return;
     }
 
-    // ✅ Prevent duplicate emails before backend call
     if (rows.some(station => station.email === email)) {
       setFormError("This email is already used by another station.");
       return;
@@ -176,6 +165,8 @@ export function StationsTab() {
         email: "",
         password: "",
         confirmPassword: "",
+        lat: "",
+        lon: "",
       });
 
       await fetchStations();
@@ -187,7 +178,6 @@ export function StationsTab() {
     }
   };
 
-  // EDIT
   const onEdit = (id) => {
     const station = rows.find((r) => r.stationId === id);
     setEditStation({ ...station, password: "", confirmPassword: "" });
@@ -207,7 +197,6 @@ export function StationsTab() {
       return;
     }
 
-    // ✅ Prevent duplicate emails before backend call
     if (emailChanged && rows.some(station => station.email === editStation.email)) {
       setFormError("This email is already used by another station.");
       return;
@@ -253,6 +242,8 @@ export function StationsTab() {
             stationName: editStation.stationName,
             email: editStation.email,
             username: editStation.username,
+            lat: editStation.lat,
+            lon: editStation.lon,
             ...(editStation.password && { password: editStation.password }),
           },
         }),
@@ -272,7 +263,6 @@ export function StationsTab() {
     }
   };
 
-  // DELETE
   const onDelete = async (id) => {
     try {
       setLoading(true);
@@ -313,7 +303,6 @@ export function StationsTab() {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="ops-stn-container">
@@ -360,19 +349,21 @@ export function StationsTab() {
                 <th>StationName</th>
                 <th>Email</th>
                 <th>Username</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '20px' }}>
                     Loading stations...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '20px' }}>
                     No stations found
                   </td>
                 </tr>
@@ -385,6 +376,8 @@ export function StationsTab() {
                     <td>{r.stationName}</td>
                     <td>{r.email}</td>
                     <td>{r.username}</td>
+                    <td>{r.lat}</td>
+                    <td>{r.lon}</td>
                     <td className="ops-stn-actions">
                       <button className="ops-stn-action ops-stn-edit" onClick={() => onEdit(r.stationId)}>Edit</button>
                       <button className="ops-stn-action ops-stn-delete" onClick={() => onDelete(r.stationId)}>Delete</button>
@@ -410,15 +403,15 @@ export function StationsTab() {
 
             <div className="stn-modal-body-stations">
               <label>Company:</label>
-              <select 
-                value={newStation.companyId} 
+              <select
+                value={newStation.companyId}
                 onChange={(e) => setNewStation({ ...newStation, companyId: e.target.value })}
                 disabled={loading}
               >
                 <option value="">Select a company...</option>
                 {companies.map(company => (
-                  <option 
-                    key={company.companyId || company.Company_ID} 
+                  <option
+                    key={company.companyId || company.Company_ID}
                     value={company.companyId || company.Company_ID}
                   >
                     {company.companyName || company.Company_Name || `Company ${company.companyId || company.Company_ID}`}
@@ -427,38 +420,52 @@ export function StationsTab() {
               </select>
               
               <label>Station Name:</label>
-              <input 
-                type="text" 
-                value={newStation.stationName} 
-                onChange={(e) => setNewStation({ ...newStation, stationName: e.target.value })} 
+              <input
+                type="text"
+                value={newStation.stationName}
+                onChange={(e) => setNewStation({ ...newStation, stationName: e.target.value })}
                 disabled={loading}
               />
               <label>Username:</label>
-              <input 
-                type="text" 
-                value={newStation.username} 
-                onChange={(e) => setNewStation({ ...newStation, username: e.target.value })} 
+              <input
+                type="text"
+                value={newStation.username}
+                onChange={(e) => setNewStation({ ...newStation, username: e.target.value })}
                 disabled={loading}
               />
               <label>Email:</label>
-              <input 
-                type="email" 
-                value={newStation.email} 
-                onChange={(e) => setNewStation({ ...newStation, email: e.target.value })} 
+              <input
+                type="email"
+                value={newStation.email}
+                onChange={(e) => setNewStation({ ...newStation, email: e.target.value })}
                 disabled={loading}
               />
               <label>New Password:</label>
-              <input 
-                type="password" 
-                value={newStation.password} 
-                onChange={(e) => setNewStation({ ...newStation, password: e.target.value })} 
+              <input
+                type="password"
+                value={newStation.password}
+                onChange={(e) => setNewStation({ ...newStation, password: e.target.value })}
                 disabled={loading}
               />
               <label>Confirm New Password:</label>
-              <input 
-                type="password" 
-                value={newStation.confirmPassword} 
-                onChange={(e) => setNewStation({ ...newStation, confirmPassword: e.target.value })} 
+              <input
+                type="password"
+                value={newStation.confirmPassword}
+                onChange={(e) => setNewStation({ ...newStation, confirmPassword: e.target.value })}
+                disabled={loading}
+              />
+              <label>Latitude:</label>
+              <input
+                type="text"
+                value={newStation.lat}
+                onChange={(e) => setNewStation({ ...newStation, lat: e.target.value })}
+                disabled={loading}
+              />
+              <label>Longitude:</label>
+              <input
+                type="text"
+                value={newStation.lon}
+                onChange={(e) => setNewStation({ ...newStation, lon: e.target.value })}
                 disabled={loading}
               />
             </div>
@@ -487,9 +494,9 @@ export function StationsTab() {
             <div className="stn-modal-body-stations">
               <p>An OTP has been sent to your email. Please enter it below:</p>
               <label>OTP Code:</label>
-              <input 
-                type="text" 
-                value={otpCode} 
+              <input
+                type="text"
+                value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
                 placeholder="Enter 6-digit OTP"
                 maxLength="6"
@@ -500,7 +507,7 @@ export function StationsTab() {
             <div className="stn-modal-actions-stations">
               <button className="stn-btn stn-btnOutline" onClick={() => setShowOtpModal(false)} disabled={loading}>Cancel</button>
               <button className="stn-btn stn-btnNavy" onClick={confirmAdd} disabled={loading}>
-                {loading ? 'Creating...' : 'Confirm'}
+                                {loading ? 'Creating...' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -522,38 +529,52 @@ export function StationsTab() {
               <label>Station ID: {editStation.stationId}</label>
               <label>Company: {editStation.companyId}</label>
               <label>Station Name:</label>
-              <input 
-                type="text" 
-                value={editStation.stationName} 
-                onChange={(e) => setEditStation({ ...editStation, stationName: e.target.value })} 
+              <input
+                type="text"
+                value={editStation.stationName}
+                onChange={(e) => setEditStation({ ...editStation, stationName: e.target.value })}
                 disabled={loading}
               />
               <label>Username:</label>
-              <input 
-                type="text" 
-                value={editStation.username} 
-                onChange={(e) => setEditStation({ ...editStation, username: e.target.value })} 
+              <input
+                type="text"
+                value={editStation.username}
+                onChange={(e) => setEditStation({ ...editStation, username: e.target.value })}
                 disabled={loading}
               />
               <label>Email:</label>
-              <input 
-                type="email" 
-                value={editStation.email} 
-                onChange={(e) => setEditStation({ ...editStation, email: e.target.value })} 
+              <input
+                type="email"
+                value={editStation.email}
+                onChange={(e) => setEditStation({ ...editStation, email: e.target.value })}
                 disabled={loading}
               />
               <label>New Password:</label>
-              <input 
-                type="password" 
-                value={editStation.password} 
-                onChange={(e) => setEditStation({ ...editStation, password: e.target.value })} 
+              <input
+                type="password"
+                value={editStation.password}
+                onChange={(e) => setEditStation({ ...editStation, password: e.target.value })}
                 disabled={loading}
               />
               <label>Confirm New Password:</label>
-              <input 
-                type="password" 
-                value={editStation.confirmPassword} 
-                onChange={(e) => setEditStation({ ...editStation, confirmPassword: e.target.value })} 
+              <input
+                type="password"
+                value={editStation.confirmPassword}
+                onChange={(e) => setEditStation({ ...editStation, confirmPassword: e.target.value })}
+                disabled={loading}
+              />
+              <label>Latitude:</label>
+              <input
+                type="text"
+                value={editStation.lat}
+                onChange={(e) => setEditStation({ ...editStation, lat: e.target.value })}
+                disabled={loading}
+              />
+              <label>Longitude:</label>
+              <input
+                type="text"
+                value={editStation.lon}
+                onChange={(e) => setEditStation({ ...editStation, lon: e.target.value })}
                 disabled={loading}
               />
             </div>
@@ -582,9 +603,9 @@ export function StationsTab() {
             <div className="stn-modal-body-stations">
               <p>An OTP has been sent to the new email address. Please enter it below:</p>
               <label>OTP Code:</label>
-              <input 
-                type="text" 
-                value={otpCode} 
+              <input
+                type="text"
+                value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
                 placeholder="Enter 6-digit OTP"
                 maxLength="6"
@@ -645,7 +666,7 @@ export function StationsTab() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
+

@@ -103,7 +103,7 @@ def generate_station_id():
 @jwt_required()
 def get_stations():
     cur = mysql.connection.cursor()
-    cur.execute("SELECT Station_ID, Company_ID, StationName, email, username FROM Station")
+    cur.execute("SELECT Station_ID, Company_ID, StationName, email, username, lat, lon FROM Station")
     rows = cur.fetchall()
     cur.close()
 
@@ -112,7 +112,9 @@ def get_stations():
         "companyId": r[1],
         "stationName": r[2],
         "email": r[3],
-        "username": r[4]
+        "username": r[4],
+        "lat": r[5],
+        "lon": r[6]
     } for r in rows]
 
     return jsonify(stations), 200
@@ -129,7 +131,6 @@ def request_add_station():
     send_email(data["email"], "OTP for Station Creation", f"Your OTP is {otp_code}.")
     return jsonify({"message": "OTP sent to admin"}), 200
 
-
 @station_bp.route("/confirm-add", methods=["POST"])
 @jwt_required()
 def confirm_add_station():
@@ -140,7 +141,7 @@ def confirm_add_station():
     if not valid:
         return jsonify({"error": error}), 400
 
-    # ✅ validate password
+    # ✅ Validate password
     is_valid, msg = validate_password(details["password"])
     if not is_valid:
         return jsonify({"error": msg}), 400
@@ -149,12 +150,13 @@ def confirm_add_station():
 
     cur = mysql.connection.cursor()
 
-    # ✅ check if email already exists
+    # ✅ Check if email already exists
     cur.execute("SELECT Station_ID FROM Station WHERE email=%s", (details["email"],))
     if cur.fetchone():
         cur.close()
         return jsonify({"error": "Email already exists for another station"}), 400
 
+    # ✅ Get company_id (ensure there's a company in the DB)
     cur.execute("SELECT Company_ID FROM Transport_Provider LIMIT 1")
     company_row = cur.fetchone()
     if not company_row:
@@ -162,26 +164,25 @@ def confirm_add_station():
         return jsonify({"error": "No company found in DB"}), 400
     company_id = company_row[0]
 
-    cur.execute(
-        """
-        INSERT INTO Station (Station_ID, Company_ID, StationName, email, username, password)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (
-            station_id,
-            company_id,
-            details["stationName"],
-            details["email"],
-            details["username"],
-            hashed_pw,
-        ),
-    )
+    # ✅ Insert the station with lat and lon
+    cur.execute("""
+        INSERT INTO Station (Station_ID, Company_ID, StationName, email, username, password, lat, lon)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        station_id,
+        company_id,
+        details["stationName"],
+        details["email"],
+        details["username"],
+        hashed_pw,
+        details["lat"],  # Add latitude
+        details["lon"]   # Add longitude
+    ))
     mysql.connection.commit()
     cur.close()
 
     mark_otp_used(otp_id)
     return jsonify({"message": "Station created successfully", "stationId": station_id}), 201
-
 
 # ==================================================
 # UPDATE
@@ -200,7 +201,6 @@ def request_update_station(station_id):
     send_email(new_email, "OTP for Station Email Update", f"Your OTP is {otp_code}.")
     return jsonify({"message": "OTP sent to new email"}), 200
 
-
 @station_bp.route("/update/<station_id>", methods=["POST"])
 @jwt_required()
 def update_station(station_id):
@@ -218,7 +218,7 @@ def update_station(station_id):
 
     otp_id = None
     if details.get("email") and details["email"] != current_email:
-        # ✅ prevent duplicate email
+        # ✅ Prevent duplicate email
         cur.execute("SELECT Station_ID FROM Station WHERE email=%s", (details["email"],))
         existing = cur.fetchone()
         if existing and existing[0] != station_id:
@@ -233,7 +233,7 @@ def update_station(station_id):
             cur.close()
             return jsonify({"error": error}), 400
 
-    # ✅ build dynamic update query
+    # ✅ Build dynamic update query for fields
     fields, values = [], []
 
     if details.get("stationName"):
@@ -256,6 +256,14 @@ def update_station(station_id):
         hashed_pw = bcrypt.hashpw(details["password"].encode("utf-8"), bcrypt.gensalt())
         fields.append("password=%s")
         values.append(hashed_pw)
+
+    if details.get("lat"):
+        fields.append("lat=%s")
+        values.append(details["lat"])
+
+    if details.get("lon"):
+        fields.append("lon=%s")
+        values.append(details["lon"])
 
     if not fields:
         cur.close()

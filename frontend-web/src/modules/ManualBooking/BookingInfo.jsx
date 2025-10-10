@@ -55,6 +55,7 @@ export default function BookingInfo({
 }) {
   const [stations, setStations] = useState([]); // Stations state
   const [departureSchedules, setDepartureSchedules] = useState([]); // Schedules state
+  const [dateError, setDateError] = useState("");  // State to store date-related error (Sunday)
 
   // Fetch stations and departure schedules
   useEffect(() => {
@@ -142,6 +143,19 @@ export default function BookingInfo({
     }
   }, [data.origin, data.destination]);
 
+  // Handle Departure Date change and check if it's a Sunday
+  const handleDepartureDateChange = (date) => {
+    setData((prevData) => ({ ...prevData, departureDate: date }));
+
+    // Check if the selected date is a Sunday (0 represents Sunday in JavaScript Date object)
+    const selectedDate = new Date(date);
+    if (selectedDate.getDay() === 0) {
+      setDateError("Booking is not allowed on Sundays.");
+    } else {
+      setDateError(""); // Clear error if it's not Sunday
+    }
+  };
+
   return (
     <div className="boarding-manual-section">
       <h4 className="boarding-manual-subtitle">Booking Information</h4>
@@ -178,15 +192,15 @@ export default function BookingInfo({
         <DateField
           label="Departure Date"
           value={data.departureDate}
-          onChange={(v) => setData((s) => ({ ...s, departureDate: v }))}
-          error={errors.departureDate}
+          onChange={handleDepartureDateChange}  // Use the new handler for date change
+          error={errors.departureDate || dateError}  // Show Sunday warning error
         />
 
         {/* Departure Time Field */}
         <Select
           label="Departure Time"
           value={data.departureTime}
-          onChange={(v) => setData((s) => ({ ...s, departureTime: v }))}
+          onChange={(v) => setData((s) => ({ ...s, departureTime: v }))} 
           options={departureSchedules}
           error={errors.departureTime}
         />
@@ -199,7 +213,7 @@ export default function BookingInfo({
         <button
           className="boarding-manual-next"
           onClick={onNext}
-          disabled={!isValid}
+          disabled={!isValid || dateError}  // Disable if there's a Sunday warning
         >
           Next
         </button>
