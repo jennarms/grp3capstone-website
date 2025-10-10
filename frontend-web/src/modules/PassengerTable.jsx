@@ -37,6 +37,17 @@ export default function PassengerTable() {
     return () => clearInterval(interval);
   }, [currentPage]);
 
+  // Handle actions like Accept or Cancel
+  const handleAction = (action, passengerId) => {
+    if (action === "accept") {
+      // Handle Accept action
+      console.log("Accepted passenger with ID:", passengerId);
+    } else if (action === "cancel") {
+      // Handle Cancel action
+      console.log("Cancelled passenger with ID:", passengerId);
+    }
+  };
+
   return (
     <>
       <section className="passenger-head-section">
@@ -58,27 +69,46 @@ export default function PassengerTable() {
           <table className="passenger-list-table">
             <thead>
               <tr>
-                <th>Booking ID</th>
                 <th>Passenger Name</th>
-                <th>Status</th>
                 <th>Boarding Time</th>
                 <th>Disembarking Time</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>QR Code</th>
+                <th>Departure Date</th>
+                <th>Departure Time</th>
+                <th>Status</th> {/* New column for status */}
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {passengerData.length > 0 ? (
                 passengerData.map((passenger) => (
                   <tr key={passenger.BD_ID}>
-                    <td>{passenger.Booking_ID}</td>
                     <td>{`${passenger.first_name} ${passenger.last_name}`}</td>
-                    <td>{passenger.status}</td>
                     <td>{passenger.boarding_time || '—'}</td>
                     <td>{passenger.disembarking_time || '—'}</td>
+                    <td>{passenger.origin || '—'}</td>
+                    <td>{passenger.destination || '—'}</td>
+                    <td>
+                      {passenger.qr_code ? (
+                        <img src={passenger.qr_code} alt="QR Code" width="50" height="50" />
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>{passenger.departure_date || '—'}</td>
+                    <td>{passenger.departure_time || '—'}</td>
+                    <td>{passenger.status || '—'}</td> {/* Display the status */}
+                    <td>
+                      <button onClick={() => handleAction('accept', passenger.BD_ID)}>Accept</button>
+                      <button onClick={() => handleAction('cancel', passenger.BD_ID)}>Cancel</button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5">No passengers available.</td>
+                  <td colSpan="10">No passengers available.</td> {/* Adjusted colSpan to 10 */}
                 </tr>
               )}
             </tbody>
