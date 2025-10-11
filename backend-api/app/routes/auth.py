@@ -19,7 +19,6 @@ def generate_otp(length=6):
 # LOGIN (MainAdmin + Station)
 # =====================
 @auth.route('/login', methods=['POST'])
-@auth.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     username_or_email = data.get('username')
@@ -32,9 +31,9 @@ def login():
         cur = mysql.connection.cursor()
 
         # Check MainAdmin
-        cur.execute(""" 
+        cur.execute("""
             SELECT Admin_ID, username, passwordHash, 'main-admin' as role
-            FROM MainAdmin 
+            FROM MainAdmin
             WHERE username = %s OR email = %s
         """, (username_or_email, username_or_email))
         account = cur.fetchone()
@@ -42,8 +41,8 @@ def login():
         # If not MainAdmin, check Station
         if not account:
             cur.execute("""
-                SELECT Station_ID, username, password, 'station-admin' as role, StationName
-                FROM Station 
+                SELECT Station_ID, username, password, 'station-admin' as role
+                FROM Station
                 WHERE username = %s OR email = %s
             """, (username_or_email, username_or_email))
             account = cur.fetchone()
@@ -54,12 +53,9 @@ def login():
 
         # Unpack values
         user_id = account[0]
-        username = account[1]
+        username = account[1]  # <-- fetch username directly
         stored_hash = account[2].encode('utf-8')
         role = account[3]
-        
-        # Assign station_name only if it's a station-admin
-        station_name = account[4] if role == 'station-admin' else None
 
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
             # Create JWT token
@@ -72,9 +68,8 @@ def login():
             return jsonify({
                 "message": "Login successful!",
                 "role": role,
-                "user_id": user_id,
-                "username": username,
-                "station_name": station_name,  # Send StationName only for station-admins
+                "admin_id": user_id,
+                "username": username,  # <-- now returned correctly
                 "token": token
             }), 200
         else:
@@ -84,6 +79,7 @@ def login():
     except Exception as err:
         print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
+
 
 # =====================
 # FORGOT PASSWORD - SEND OTP (Admin)
