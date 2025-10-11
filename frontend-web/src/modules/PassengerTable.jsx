@@ -18,34 +18,28 @@ export default function PassengerTable({ origin, scheduleTime }) {
     }
   };
 
-  // Fetch boarding data from the backend based on current page and query
-  const fetchBoardingData = useCallback(async (page) => {
-    console.log(`Origin: ${origin}, Schedule Time: ${scheduleTime}`);
+ const fetchBoardingData = useCallback(async (page) => {
+  // Make sure to pass an empty string for the query if no search is performed
+  const queryParam = query || '';  // Default to empty if no query
 
-    // Validation: Ensure both origin and scheduleTime are provided
-    if (!origin || !scheduleTime) {
-      console.error("Missing origin or schedule time!");
-      return;  // Prevent API call if parameters are missing
-    }
+  try {
+    const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, {
+      params: {
+        page,
+        query: queryParam,  // Send the query value
+        origin,
+        schedule_time: scheduleTime
+      }
+    });
 
-    try {
-      const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, {
-        params: { 
-          page, 
-          query, 
-          origin,       // Pass the origin (station)
-          schedule_time: scheduleTime  // Pass the selected schedule time
-        }, 
-      });
+    // Handle the response data
+    setPassengerData(response.data.boardingData);
+    setTotalPages(response.data.totalPages);
+  } catch (error) {
+    console.error("Error fetching boarding data:", error);
+  }
+}, [origin, scheduleTime, query]);
 
-      console.log("API response:", response.data); // Check the response
-
-      setPassengerData(response.data.boardingData);
-      setTotalPages(response.data.totalPages);  // Set the total number of pages
-    } catch (error) {
-      console.error("Error fetching boarding data:", error);
-    }
-  }, [origin, scheduleTime, query]);  // Add dependencies
 
   useEffect(() => {
     console.log('Loading boarding data...');
@@ -103,8 +97,8 @@ export default function PassengerTable({ origin, scheduleTime }) {
                     <td>{passenger.BD_ID}</td>
                     <td>{passenger.Booking_ID}</td>
                     <td>{passenger.User_ID}</td>
-                    <td>{passenger.boarding_time || '—'}</td>
-                    <td>{passenger.disembarking_time || '—'}</td>
+                    <td>{passenger.boarding_time || '—'}</td> {/* Displaying boarding time */}
+                    <td>{passenger.disembarking_time || '—'}</td> {/* Displaying disembarking time */}
                     <td>{passenger.status || '—'}</td>
                     <td>{passenger.Qrcode_ID || '—'}</td>
                     <td>{passenger.Schedule_ID || '—'}</td>
