@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_apscheduler import APScheduler  # Import APScheduler
 from flask_cors import CORS
 from flask_mysqldb import MySQL
 from flask_mail import Mail
@@ -11,6 +12,9 @@ import os
 mysql = MySQL()
 mail = Mail()
 jwt = JWTManager()
+
+# Initialize APScheduler here
+scheduler = APScheduler()
 
 def create_app():
     app = Flask(__name__)
@@ -104,5 +108,9 @@ def create_app():
 
     from app.routes.boarding_manualbooking import boarding_manualbooking_bp 
     app.register_blueprint(boarding_manualbooking_bp, url_prefix="/api/boarding/manual")
+
+    # Start APScheduler after app is created (only once here)
+    scheduler.init_app(app)
+    scheduler.start()
 
     return app

@@ -78,10 +78,6 @@ def build_safe_select(cols_set):
     gender_src = first_existing(cols_set, ["gender", "sex"])
     gender_sql = f"{gender_src} AS gender" if gender_src else "NULL AS gender"
 
-    # profile (e.g., profile picture/url)
-    profile_src = first_existing(cols_set, ["profile", "profile_picture", "avatar_url", "photo_url"])
-    profile_sql = f"{profile_src} AS profile" if profile_src else "'' AS profile"
-
     # created_at
     created_at_src = first_existing(cols_set, ["created_at", "date_created", "createdAt", "created_on", "registered_at"])
     created_at_sql = f"{created_at_src} AS created_at" if created_at_src else "NULL AS created_at"
@@ -123,7 +119,6 @@ def build_safe_select(cols_set):
         age_sql,
         birthday_sql,
         gender_sql,
-        profile_sql,
         created_at_sql,
         platform_sql,
         platform_name_sql,

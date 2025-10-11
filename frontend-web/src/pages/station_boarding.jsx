@@ -4,36 +4,25 @@ import { StationNavbar } from "../components/station_navbar";
 import "./station_boarding.css";
 
 import ManualBookingModal from "../modules/ManualBooking/ManualBookingModal.jsx";
-import PassengerTable from "../modules/PassengerTable.jsx";
+import PassengerTable from "../modules/PassengerTable.jsx"; // Corrected import for PassengerTable
 import ScanButtonModule from "../modules/ScanButtonModule.jsx";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export function Boarding() {
-  // ---- Extract query parameters manually ----
-  const getParams = () => {
-    const sp = new URLSearchParams(window.location.search);
-    return {
-      time: sp.get("time") || "8:40 AM",
-      total: parseInt(sp.get("total") || "30", 10),
-      avail: parseInt(sp.get("avail") || "26", 10), // so Booked 4/30 matches UI
-      booked: parseInt(sp.get("booked") || "4", 10),
-      dir: (sp.get("dir") || "forward").toLowerCase(),
-      station: sp.get("station") || "PUP → Kalawaan",
-      date: sp.get("date") || "",
-    };
-  };
-  
-  const qp = getParams();
+  // State for station and schedule time, to be updated after fetching the data
+  const [station, setStation] = useState("loading...");
+  const [scheduleTime, setScheduleTime] = useState("loading...");
+  const [scheduleTime24, setScheduleTime24] = useState("loading...");
 
-  // ---- scheduleId extraction that works with BrowserRouter AND HashRouter
+  // ---- scheduleId extraction that works with BrowserRouter AND HashRouter ----
   const scheduleId = useMemo(() => {
     try {
-      const hash = window.location.hash || "";              // e.g. "#/station-boarding/ABC123?x=1"
+      const hash = window.location.hash || "";
       const hashPath = hash.startsWith("#") ? hash.slice(1) : hash;
-      const base = hashPath || window.location.pathname || ""; // prefer hash path if present
-      const pathOnly = base.split("?")[0];                  // strip query
-      const parts = pathOnly.split("/").filter(Boolean);    // ["station-boarding","ABC123"]
+      const base = hashPath || window.location.pathname || "";
+      const pathOnly = base.split("?")[0];
+      const parts = pathOnly.split("/").filter(Boolean);
       const last = parts[parts.length - 1] || "";
       const id = decodeURIComponent(last);
       console.debug("[Boarding] scheduleId parsed =", id, "from base =", base);
@@ -53,18 +42,6 @@ export function Boarding() {
   // ref to auto-scroll the current stop into view
   const currentStopRef = useRef(null);
 
-  // ---------------------- existing (demo) passenger table ---------------------
-  const [passengerList, setPassengerList] = useState([
-    { bookingID:"BID009212", userID:"UID002489", qrCodeID:"TC00203", origin:"Escolta", destination:"Guadalupe", departureDate:"2025/06/12", departureTime:"8:00 am", paymentStatus:"P", paidAmount:45.0, paidAt:"8:00 am", bookingStatus:"OB", bookingSource:"MA" },
-    { bookingID:"BID009432", userID:"UID762571", qrCodeID:"TC00204", origin:"Quinta", destination:"Lambingan", departureDate:"2025/06/12", departureTime:"8:22 am", paymentStatus:"P", paidAmount:30.0, paidAt:"8:00 am", bookingStatus:"OB", bookingSource:"MA" },
-    { bookingID:"BID021353", userID:"UID638193", qrCodeID:"TC00445", origin:"Escolta", destination:"Valenzuela", departureDate:"2025/06/12", departureTime:"8:40 am", paymentStatus:"P", paidAmount:40.0, paidAt:"8:10 am", bookingStatus:"CO", bookingSource:"CB" },
-    { bookingID:"BID032212", userID:"UID078263", qrCodeID:"TC08798", origin:"Escolta", destination:"Guadalupe", departureDate:"2025/06/12", departureTime:"8:50 am", paymentStatus:"P", paidAmount:45.0, paidAt:"8:10 am", bookingStatus:"CO", bookingSource:"MA" },
-    { bookingID:"BID024712", userID:"UID012861", qrCodeID:"TC06594", origin:"Lambingan", destination:"Kalawaan", departureDate:"2025/06/12", departureTime:"—", paymentStatus:"PG", paidAmount:38.0, paidAt:"8:38 am", bookingStatus:"PE", bookingSource:"CB" },
-    { bookingID:"BID009123", userID:"UID097260", qrCodeID:"TC09836", origin:"Sta. Ana", destination:"Guadalupe", departureDate:"2025/06/12", departureTime:"—", paymentStatus:"PG", paidAmount:20.0, paidAt:"8:40 am", bookingStatus:"PE", bookingSource:"GM" },
-    { bookingID:"BID012563", userID:"UID897217", qrCodeID:"TC04764", origin:"Lawton", destination:"Hulo", departureDate:"2025/06/12", departureTime:"—", paymentStatus:"F",  paidAmount:0.0,  paidAt:"8:42 am", bookingStatus:"CA", bookingSource:"MA" },
-    { bookingID:"BID322112", userID:"UID212414", qrCodeID:"TC09894", origin:"Escolta", destination:"Quinta", departureDate:"2025/06/12", departureTime:"—", paymentStatus:"P",  paidAmount:30.0, paidAt:"8:00 am", bookingStatus:"DI", bookingSource:"MB" },
-  ]);
-
   const [showManual, setShowManual] = useState(false);
 
   // ---------------------- helpers ----------------------
@@ -73,9 +50,10 @@ export function Boarding() {
     return { Authorization: token ? `Bearer ${token}` : "", "Content-Type": "application/json" };
   };
 
+  // Convert time to 12-hour format (hh:mm AM/PM)
   const to12h = (hhmmssOrDisplay) => {
     if (!hhmmssOrDisplay) return "";
-    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) return hhmmssOrDisplay; // already 12h
+    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) return hhmmssOrDisplay; // Already 12h format
     const [hStr = "0", mStr = "00"] = String(hhmmssOrDisplay).split(":");
     const h = parseInt(hStr, 10) || 0;
     const m = (mStr ?? "00").padStart(2, "0");
@@ -83,6 +61,20 @@ export function Boarding() {
     const h12 = (h % 12) || 12;
     return `${h12}:${m} ${ampm}`;
   };
+
+  // Convert time to 24-hour format (HH:mm:ss), ensuring leading zero for single-digit hours
+const to24h = (hhmmssOrDisplay) => {
+  if (!hhmmssOrDisplay) return "";
+  if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) {
+    const [time, period] = hhmmssOrDisplay.trim().split(" ");
+    let [h, m] = time.split(":").map(Number);
+    if (period.toUpperCase() === "PM" && h !== 12) h += 12;
+    if (period.toUpperCase() === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`; // Pad hour to two digits
+  }
+  return hhmmssOrDisplay; // Already in 24h format
+};
+
 
   // ---------------------- load route card data ----------------------
   useEffect(() => {
@@ -93,8 +85,7 @@ export function Boarding() {
     setLoading(true);
     setError("");
 
-    const dateParam = qp.date || new Date().toISOString().split("T")[0];
-    const url = `${apiUrl}/api/boarding/routecard/${encodeURIComponent(scheduleId)}?date=${encodeURIComponent(dateParam)}`;
+    const url = `${apiUrl}/api/boarding/routecard/${encodeURIComponent(scheduleId)}`;
     console.debug("[Boarding] Fetch routecard:", url);
 
     fetch(url, { headers: tokenHeaders() })
@@ -107,34 +98,38 @@ export function Boarding() {
         console.debug("[Boarding] routecard payload:", payload);
         setScheduleInfo(payload?.schedule_info || null);
         setStops(Array.isArray(payload?.stops) ? payload.stops : []);
+
+        // Set the station and convert scheduleTime to 12-hour and 24-hour formats
+        setStation(payload?.schedule_info?.station_name || "loading...");
+        const depTime = payload?.schedule_info?.departure_time || "loading...";
+        setScheduleTime(to12h(depTime));  // 12-hour format for route card
+        setScheduleTime24(to24h(depTime)); // 24-hour format for passing to PassengerTable
       })
       .catch((e) => setError(e.message || "Failed to load route card"))
       .finally(() => setLoading(false));
-  }, [scheduleId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scheduleId]);
 
   // ---------------------- compute header display ----------------------
   const headerTime = useMemo(() => {
-    const t = scheduleInfo?.departure_time || qp.time;
-    return to12h(t);
-  }, [scheduleInfo, qp.time]);
+    return scheduleTime; // Use the updated scheduleTime state in 12-hour format
+  }, [scheduleTime]);
 
   const headerBoarded = useMemo(() => {
     if (scheduleInfo?.boarded_seats != null) return scheduleInfo.boarded_seats;
-    return Number.isFinite(qp.boarded) ? qp.boarded : Math.max(0, qp.total - qp.avail);
-  }, [scheduleInfo, qp.boarded, qp.total, qp.avail]);
+    return 0;
+  }, [scheduleInfo]);
 
   const headerTotal = useMemo(() => {
-    if (scheduleInfo?.total_seats != null) return scheduleInfo.total_seats;
-    return qp.total;
-  }, [scheduleInfo, qp.total]);
+    return scheduleInfo?.total_seats || 30; // Default total seats
+  }, [scheduleInfo]);
 
   const headerPath = useMemo(() => {
-    const dir = (scheduleInfo?.direction || qp.dir || "forward").toUpperCase();
-    const routeOrStation = scheduleInfo?.route_name || qp.station || "";
+    const dir = (scheduleInfo?.direction || "forward").toUpperCase();
+    const routeOrStation = scheduleInfo?.route_name || station;
     return `${routeOrStation} — ${dir} DIRECTION`;
-  }, [scheduleInfo, qp.dir, qp.station]);
+  }, [scheduleInfo, station]);
 
-  const currentStopName = scheduleInfo?.station_name || qp.station || "";
+  const currentStopName = scheduleInfo?.station_name || station;
   const currentStopOrder = scheduleInfo?.stop_order ?? null;
 
   // auto-scroll the current stop into view when stops or current change
@@ -143,18 +138,6 @@ export function Boarding() {
       currentStopRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [stops, currentStopOrder, currentStopName]);
-
-  // ---------------------- actions for demo table ----------------------
-  const handleAccept = (bookingID) => {
-    setPassengerList((prev) =>
-      prev.map((p) => (p.bookingID === bookingID ? { ...p, bookingStatus: "OB" } : p))
-    );
-  };
-  const handleCancel = (bookingID) => {
-    setPassengerList((prev) =>
-      prev.map((p) => (p.bookingID === bookingID ? { ...p, bookingStatus: "CA" } : p))
-    );
-  };
 
   // ESC closes modals (manual)
   useEffect(() => {
@@ -173,7 +156,6 @@ export function Boarding() {
   };
 
   const stopTimeToDisplay = (s) => {
-    // prefer backend "stop_time", else "time", else empty
     return to12h(s.stop_time || s.time || "");
   };
 
@@ -192,7 +174,7 @@ export function Boarding() {
               <div className="route-card__top">
                 <div className="route-card__path">{headerPath}</div>
                 <div className="route-card__time">
-                  {loading ? "Loading..." : headerTime || "—"}
+                  {loading ? "Loading..." : headerTime || "—"} {/* 12-hour format */}
                 </div>
                 <div className="route-card__boarded">
                   Boarded:{" "}
@@ -268,26 +250,22 @@ export function Boarding() {
 
         {/* Buttons */}
         <section className="actions-bar">
-          <ScanButtonModule passengerList={passengerList} />
+          <ScanButtonModule passengerList={[]} />
           <button className="manual-booking-btn" onClick={() => setShowManual(true)}>
             <span className="btn-icon">📝</span>
             Manual Booking
           </button>
         </section>
 
-        {/* Passenger Table (still demo data for now) */}
-        <PassengerTable rows={passengerList} onAccept={handleAccept} onCancel={handleCancel} />
+        {/* Passenger Table (pass origin and scheduleTime props to PassengerTable) */}
+        <PassengerTable origin={station} scheduleTime={scheduleTime24} /> {/* 24-hour format */}
       </div>
 
       {/* Manual Booking Modal */}
       <ManualBookingModal
         open={showManual}
         onClose={() => setShowManual(false)}
-        existingRows={passengerList}
-        addPassengerRow={(row) => {
-          setPassengerList((prev) => [...prev, row]);
-          setShowManual(false);
-        }}
+        existingRows={[]}
       />
     </div>
   );
