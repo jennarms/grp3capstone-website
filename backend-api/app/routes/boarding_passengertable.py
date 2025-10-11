@@ -37,6 +37,7 @@ def poll_for_new_bookings():
                         
                         print(f"Inserting booking with Booking_ID: {booking[0]}")  # Debugging output
 
+                        # Insert the booking into BoardingDisembarking table
                         cursor.execute("""
                         INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
@@ -52,7 +53,7 @@ def poll_for_new_bookings():
                     cursor.close()
 
             print("Polling completed...")  # Debugging output
-            time.sleep(10)  # Poll every 10 seconds
+            time.sleep(30)  # Poll every 30 seconds
 
         except Exception as e:
             print(f"Error in polling loop: {e}")
@@ -65,7 +66,6 @@ def start_polling(app):
     poll_thread.daemon = True  # Ensure the thread stops when the app stops
     poll_thread.start()
     print("Polling thread started.")  # Debugging output
-
 
 # Start the polling thread when Flask app is running
 def run_polling_with_app_context(app):
@@ -81,8 +81,10 @@ def _get_station_id_by_name(station_name):
         cursor.execute("SELECT Station_ID FROM Station WHERE StationName = %s", (station_name,))
         station_id = cursor.fetchone()
         if station_id:
+            print(f"Found station_id: {station_id[0]}")  # Debugging output
             return station_id[0]
         else:
+            print(f"No station found for {station_name}")  # Debugging output
             return None
     except Exception as e:
         print(f"Error fetching station ID for {station_name}: {e}")
