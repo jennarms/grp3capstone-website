@@ -1,10 +1,15 @@
+/* operations_stationsTab.css */
+
+/* ===== Theme ===== */
 :root {
-  --ops-stn-blue: #0b1a78;
+  --ops-stn-blue: #0b1a78;      /* primary navy */
+  --ops-stn-blue-600: #0a176a;  /* hover/darker */
   --ops-stn-blue-200: #dfe7ff;
   --ops-stn-border: #c8d1e6;
   --ops-stn-text: #0f172a;
 }
 
+/* ===== Page layout ===== */
 .ops-stn-main {
   max-width: 1200px;
   margin-left: 340px;
@@ -29,7 +34,7 @@
   margin-bottom: 12px;
 }
 
-/* Search */
+/* ===== Search ===== */
 .ops-stn-search {
   display: flex;
   align-items: center;
@@ -51,7 +56,7 @@
   color: #111827;
 }
 
-/* Add button */
+/* ===== Add button ===== */
 .ops-stn-add-btn {
   padding: 8px 18px;
   border-radius: 999px;
@@ -65,11 +70,11 @@
 }
 .ops-stn-add-btn:hover { background: var(--ops-stn-blue-200); }
 
-/* Table */
+/* ===== Table ===== */
 .ops-stn-table-wrap {
-  height: 600px;           /* 🔥 fixed height (adjust as you like) */
-  overflow-y: auto;        /* vertical scrollbar if needed */
-  overflow-x: auto;        /* horizontal scrollbar if table is wide */
+  height: 600px;           /* keep existing height */
+  overflow-y: auto;
+  overflow-x: auto;
   border: 1px solid var(--ops-stn-border);
   border-radius: 6px;
   background: #fff;
@@ -77,15 +82,8 @@
   margin-left: -330px;
 }
 
-.ops-stn-table-wrap::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.ops-stn-table-wrap::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
+.ops-stn-table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+.ops-stn-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
 .ops-stn-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 
@@ -114,16 +112,14 @@
 
 .ops-stn-table tbody tr:hover td { background: #f7faff; }
 
-/* clip long text like password/emails */
 .ops-stn-clip { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Actions */
+/* ===== Row actions ===== */
 .ops-stn-th-actions { text-align: center; }
 .ops-stn-actions { display: flex; gap: 8px; justify-content: center; }
 
 .ops-stn-action {
   padding: 6px 12px;
-  font-size: 12px;
   border-radius: 8px;
   border: 2px solid var(--ops-stn-blue);
   background: #fff;
@@ -134,46 +130,63 @@
   width: 100px;
 }
 .ops-stn-action:hover { background: var(--ops-stn-blue-200); }
-
 .ops-stn-delete { border-color: #1e3a8a; color: #1e3a8a; }
 .ops-stn-delete:hover { background: #e8efff; }
 
 .ops-stn-empty { text-align: center; padding: 24px; color: #6b7280; }
 
-/* ====== MODAL (Stations specific) ====== */
+/* ===== Error banner ===== */
+.stn-error-banner {
+  background-color: #ffe8e8;
+  color: #b00020;
+  padding: 8px 12px;
+  margin: 10px 16px 0 16px;
+  border-radius: 10px;
+  border: 1px solid #ffb4b4;
+  text-align: left;
+  font-weight: 700;
+}
+
+/* ===================================================================== */
+/* ============================= MODALS ================================ */
+/* ===================================================================== */
+
+/* Dark overlay (no blur) */
 .stn-modal-overlay-stations {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45); /* darken only */
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
+/* Card (keep original size; only visual polish) */
 .stn-modal-stations {
   background: #fff;
-  padding: 20px;
+  padding: 0 0 12px 0;   /* slightly tighter bottom padding */
   border-radius: 12px;
-  width: 420px;
+  width: 420px;          /* keep your previous width */
   max-width: 90%;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow:
+    0 10px 16px rgba(0,0,0,0.08),
+    0 30px 60px rgba(0,0,0,0.18);
 }
 
+/* Header */
 .stn-modal-header-stations {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  padding: 12px 16px;          /* tighter spacing */
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .stn-modal-title-stations {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ops-stn-blue);
+  font-size: 20px;             /* slightly larger */
+  font-weight: 800;
+  color: #111827;
 }
 
 .stn-close-stations {
@@ -181,101 +194,79 @@
   border: none;
   font-size: 22px;
   cursor: pointer;
-  color: #555;
+  color: #6b7280;
 }
+.stn-close-stations:hover { color: #111827; }
 
+/* Body */
 .stn-modal-body-stations {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;                    /* smaller gaps */
   text-align: left;
+  padding: 12px 16px 0 16px;   /* tighter padding, same height overall */
 }
 
 .stn-modal-body-stations label {
-  font-weight: 600;
-  font-size: 16px;
-  margin-top: 6px;
+  font-weight: 700;
+  font-size: 15px;             /* a bit bigger */
+  margin-top: 2px;
   color: black;
 }
 
-.stn-modal-body-stations input {
-  padding: 8px;
-  border: 1px solid var(--ops-stn-border);
-  border-radius: 6px;
-  font-size: 14px;
+.stn-modal-body-stations input,
+.stn-modal-body-stations select {
+  padding: 10px 12px;          /* slightly tighter */
+  border: 1.5px solid var(--ops-stn-border);
+  border-radius: 12px;
+  font-size: 15px;             /* bigger for readability */
+  background: #fff;
+  color: #111827;
+  outline: none;
 }
 
+.stn-modal-body-stations input:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.stn-modal-body-stations input:focus,
+.stn-modal-body-stations select:focus {
+  border-color: #b9c6ff;
+  box-shadow: 0 0 0 3px rgba(11,26,120,0.15);
+}
+
+/* Footer */
 .stn-modal-actions-stations {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
-  gap: 10px;
+  gap: 10px;                   /* slightly smaller gap */
+  margin-top: 12px;
+  padding: 12px 16px 12px;     /* tighter padding */
 }
 
-.stn-save-btn-stations,
-.stn-cancel-btn-stations,
-.stn-yes-btn-stations {
-  padding: 5px 16px;
-  border-radius: 6px;
-  border: 2px solid var(--ops-stn-blue);
-  background: #fff;
-  color: var(--ops-stn-blue);
-  font-weight: 700;
+/* Buttons (match screenshot: gray outline + navy primary) */
+.stn-btn {
+  padding: 9px 16px;           /* a touch tighter */
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 15px;             /* larger text */
   cursor: pointer;
-  width: 100px;
 }
 
-.stn-save-btn-stations:hover,
-.stn-yes-btn-stations:hover,
-.stn-cancel-btn-stations:hover {
-  background: var(--ops-stn-blue-200);
-}
-
-.stn-cancel-btn-stations {
-  border-color: #6b7280;
-  color: #374151;
-}
-
-.stn-yes-btn-stations {
-  border-color: #1e3a8a;
-  color: #1e3a8a;
-}
-
-.stn-modal-msg-stations {
-  margin: 10px 0;
-  font-size: 15px;
-  color: #374151;
-}
-
-.ops-stn-table-wrap {
-  overflow-y: scroll;       /* ✅ vertical scroll */
-  max-height: 1300px;      /* ✅ fixed height */
-  border: 1px solid var(--ops-stn-border);
-  border-radius: 6px;
+.stn-btnOutline {
   background: #fff;
-  width: 1500px;
-  margin-left: -330px;
+  border: 1.5px solid #d1d5db;
+  color: #111827;
 }
+.stn-btnOutline:hover { background: #f9fafb; }
 
-/* ensure horizontal scroll if table is wider */
-.ops-stn-table-wrap::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.stn-btnPrimary {
+  background: var(--ops-stn-blue);
+  color: #fff;
+  border: 1.5px solid var(--ops-stn-blue);
 }
-
-.ops-stn-table-wrap::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+.stn-btnPrimary:hover {
+  background: var(--ops-stn-blue-600);
+  border-color: var(--ops-stn-blue-600);
 }
-
-.stn-error-banner {
-  background-color: #ffe0e0;
-  color: #b00020;
-  font-weight: 600px;
-  padding: 6px 14px;
-  margin: 0 0 12px 0;
-  border-radius: 6px;
-  text-align: center;
-  border: 1px solid #b00020;
-}
-
