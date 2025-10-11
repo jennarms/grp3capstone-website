@@ -1,3 +1,4 @@
+// StationsTab.jsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
@@ -35,48 +36,56 @@ export function StationsTab() {
     lon: "",
   });
 
+  // success modal (for edit)
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  const getToken = () => {
-    return localStorage.getItem("token") || sessionStorage.getItem("token");
-  };
+  const getToken = () =>
+    localStorage.getItem("token") || sessionStorage.getItem("token");
 
-  const apiRequest = useCallback(async (url, options = {}) => {
-    const token = getToken();
-    const headers = {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    };
+  const apiRequest = useCallback(
+    async (url, options = {}) => {
+      const token = getToken();
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      };
 
-    const response = await fetch(`${apiUrl}${url}`, {
-      ...options,
-      headers,
-    });
+      const response = await fetch(`${apiUrl}${url}`, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: "Request failed",
-      }));
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-
-    return response.json();
-  }, [apiUrl]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          error: "Request failed",
+        }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      return response.json();
+    },
+    [apiUrl]
+  );
 
   const fetchCompanies = useCallback(async () => {
     try {
       const data = await apiRequest("/api/company/");
       setCompanies(data);
-
       setNewStation((prev) => ({
         ...prev,
-        companyId: prev.companyId || data[0]?.companyId || data[0]?.Company_ID || "",
+        companyId:
+          prev.companyId || data[0]?.companyId || data[0]?.Company_ID || "",
       }));
     } catch (err) {
       console.error("Failed to fetch companies:", err);
       setCompanies([{ companyId: "company001", companyName: "Default Company" }]);
-      setNewStation((prev) => ({ ...prev, companyId: prev.companyId || "company001" }));
+      setNewStation((prev) => ({
+        ...prev,
+        companyId: prev.companyId || "company001",
+      }));
     }
   }, [apiRequest]);
 
@@ -102,7 +111,9 @@ export function StationsTab() {
     if (!query.trim()) return rows;
     const q = query.toLowerCase();
     return rows.filter((r) =>
-      (r.stationId + r.companyId + r.stationName + r.email + r.username).toLowerCase().includes(q)
+      (r.stationId + r.companyId + r.stationName + r.email + r.username)
+        .toLowerCase()
+        .includes(q)
     );
   }, [rows, query]);
 
@@ -112,9 +123,27 @@ export function StationsTab() {
   };
 
   const handleAddSave = async () => {
-    const { companyId, stationName, username, email, password, confirmPassword, lat, lon } = newStation;
+    const {
+      companyId,
+      stationName,
+      username,
+      email,
+      password,
+      confirmPassword,
+      lat,
+      lon,
+    } = newStation;
 
-    if (!companyId || !stationName || !username || !email || !password || !confirmPassword || !lat || !lon) {
+    if (
+      !companyId ||
+      !stationName ||
+      !username ||
+      !email ||
+      !password ||
+      !confirmPassword ||
+      !lat ||
+      !lon
+    ) {
       setFormError("All fields are required.");
       return;
     }
@@ -122,8 +151,7 @@ export function StationsTab() {
       setFormError("Passwords do not match.");
       return;
     }
-
-    if (rows.some(station => station.email === email)) {
+    if (rows.some((station) => station.email === email)) {
       setFormError("This email is already used by another station.");
       return;
     }
@@ -159,7 +187,10 @@ export function StationsTab() {
       setShowOtpModal(false);
       setOtpCode("");
       setNewStation({
-        companyId: companies.length > 0 ? (companies[0].companyId || companies[0].Company_ID) : "",
+        companyId:
+          companies.length > 0
+            ? companies[0].companyId || companies[0].Company_ID
+            : "",
         stationName: "",
         username: "",
         email: "",
@@ -196,8 +227,7 @@ export function StationsTab() {
       setFormError("Passwords do not match.");
       return;
     }
-
-    if (emailChanged && rows.some(station => station.email === editStation.email)) {
+    if (emailChanged && rows.some((s) => s.email === editStation.email)) {
       setFormError("This email is already used by another station.");
       return;
     }
@@ -255,7 +285,9 @@ export function StationsTab() {
       setEditStation(null);
 
       await fetchStations();
-      alert("Station updated successfully!");
+
+      setSuccessMessage("Station updated successfully!");
+      setShowSuccessModal(true);
     } catch (err) {
       setFormError(`Failed to update station: ${err.message}`);
     } finally {
@@ -314,15 +346,32 @@ export function StationsTab() {
 
       <main className="ops-stn-main">
         {error && (
-          <div className="stn-error-banner" style={{ margin: '10px 0' }}>
+          <div className="stn-error-banner" style={{ margin: "10px 0" }}>
             {error}
-            <button onClick={() => setError("")} style={{ marginLeft: '10px', background: 'transparent', border: 'none', color: 'white' }}>x</button>
+            <button
+              onClick={() => setError("")}
+              style={{
+                marginLeft: "10px",
+                background: "transparent",
+                border: "none",
+                color: "white",
+              }}
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
           </div>
         )}
 
         <div className="ops-stn-toolbar">
           <label className="ops-stn-search" aria-label="Search stations">
-            <svg className="ops-stn-search-ico" viewBox="0 0 24 24" width="18" height="18">
+            <svg
+              className="ops-stn-search-ico"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              aria-hidden="true"
+            >
               <path d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 001.48-4.23C15.91 6.01 13.41 3.5 10.45 3.5S4.99 6.01 4.99 9.5 7.49 15.5 10.45 15.5c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.25 4.25c.41.41 1.07.41 1.48 0 .41-.41.41-1.07 0-1.48L15.5 14zm-5.05 0C8 14 6 12 6 9.5S8 5 10.45 5s4.45 2 4.45 4.5S12.9 14 10.45 14z" />
             </svg>
             <input
@@ -357,13 +406,13 @@ export function StationsTab() {
             <tbody>
               {loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="9" style={{ textAlign: "center", padding: "20px" }}>
                     Loading stations...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="9" style={{ textAlign: "center", padding: "20px" }}>
                     No stations found
                   </td>
                 </tr>
@@ -379,8 +428,18 @@ export function StationsTab() {
                     <td>{r.lat}</td>
                     <td>{r.lon}</td>
                     <td className="ops-stn-actions">
-                      <button className="ops-stn-action ops-stn-edit" onClick={() => onEdit(r.stationId)}>Edit</button>
-                      <button className="ops-stn-action ops-stn-delete" onClick={() => onDelete(r.stationId)}>Delete</button>
+                      <button
+                        className="ops-stn-action ops-stn-edit"
+                        onClick={() => onEdit(r.stationId)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="ops-stn-action ops-stn-delete"
+                        onClick={() => onDelete(r.stationId)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -392,11 +451,17 @@ export function StationsTab() {
 
       {/* ADD MODAL */}
       {showAddModal && (
-        <div className="stn-modal-overlay-stations">
+        <div className="stn-modal-overlay-stations" role="dialog" aria-modal="true">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Add Station</h3>
-              <button className="stn-close-stations" onClick={() => setShowAddModal(false)}>&times;</button>
+              <button
+                className="stn-close-stations"
+                onClick={() => setShowAddModal(false)}
+                aria-label="Close dialog"
+              >
+                ×
+              </button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -405,53 +470,67 @@ export function StationsTab() {
               <label>Company:</label>
               <select
                 value={newStation.companyId}
-                onChange={(e) => setNewStation({ ...newStation, companyId: e.target.value })}
+                onChange={(e) =>
+                  setNewStation({ ...newStation, companyId: e.target.value })
+                }
                 disabled={loading}
               >
                 <option value="">Select a company...</option>
-                {companies.map(company => (
+                {companies.map((company) => (
                   <option
                     key={company.companyId || company.Company_ID}
                     value={company.companyId || company.Company_ID}
                   >
-                    {company.companyName || company.Company_Name || `Company ${company.companyId || company.Company_ID}`}
+                    {company.companyName ||
+                      company.Company_Name ||
+                      `Company ${company.companyId || company.Company_ID}`}
                   </option>
                 ))}
               </select>
-              
+
               <label>Station Name:</label>
               <input
                 type="text"
                 value={newStation.stationName}
-                onChange={(e) => setNewStation({ ...newStation, stationName: e.target.value })}
+                onChange={(e) =>
+                  setNewStation({ ...newStation, stationName: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Username:</label>
               <input
                 type="text"
                 value={newStation.username}
-                onChange={(e) => setNewStation({ ...newStation, username: e.target.value })}
+                onChange={(e) =>
+                  setNewStation({ ...newStation, username: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Email:</label>
               <input
                 type="email"
                 value={newStation.email}
-                onChange={(e) => setNewStation({ ...newStation, email: e.target.value })}
+                onChange={(e) =>
+                  setNewStation({ ...newStation, email: e.target.value })
+                }
                 disabled={loading}
               />
               <label>New Password:</label>
               <input
                 type="password"
                 value={newStation.password}
-                onChange={(e) => setNewStation({ ...newStation, password: e.target.value })}
+                onChange={(e) =>
+                  setNewStation({ ...newStation, password: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Confirm New Password:</label>
               <input
                 type="password"
                 value={newStation.confirmPassword}
-                onChange={(e) => setNewStation({ ...newStation, confirmPassword: e.target.value })}
+                onChange={(e) =>
+                  setNewStation({ ...newStation, confirmPassword: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Latitude:</label>
@@ -471,9 +550,19 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowAddModal(false)} disabled={loading}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={handleAddSave} disabled={loading}>
-                {loading ? 'Sending OTP...' : 'Save'}
+              <button
+                className="stn-btn stn-btnOutline"
+                onClick={() => setShowAddModal(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={handleAddSave}
+                disabled={loading}
+              >
+                {loading ? "Sending OTP..." : "Save"}
               </button>
             </div>
           </div>
@@ -482,11 +571,13 @@ export function StationsTab() {
 
       {/* OTP VERIFICATION MODAL FOR ADD */}
       {showOtpModal && (
-        <div className="stn-modal-overlay-stations">
+        <div className="stn-modal-overlay-stations" role="dialog" aria-modal="true">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Enter OTP</h3>
-              <button className="stn-close-stations" onClick={() => setShowOtpModal(false)}>&times;</button>
+              <button className="stn-close-stations" onClick={() => setShowOtpModal(false)}>
+                ×
+              </button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -505,9 +596,19 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowOtpModal(false)} disabled={loading}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={confirmAdd} disabled={loading}>
-                                {loading ? 'Creating...' : 'Confirm'}
+              <button
+                className="stn-btn stn-btnOutline"
+                onClick={() => setShowOtpModal(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={confirmAdd}
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Confirm"}
               </button>
             </div>
           </div>
@@ -516,11 +617,13 @@ export function StationsTab() {
 
       {/* EDIT MODAL */}
       {showEditModal && editStation && (
-        <div className="stn-modal-overlay-stations">
+        <div className="stn-modal-overlay-stations" role="dialog" aria-modal="true">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Edit Station</h3>
-              <button className="stn-close-stations" onClick={() => setShowEditModal(false)}>&times;</button>
+              <button className="stn-close-stations" onClick={() => setShowEditModal(false)}>
+                ×
+              </button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -532,7 +635,9 @@ export function StationsTab() {
               <input
                 type="text"
                 value={editStation.stationName}
-                onChange={(e) => setEditStation({ ...editStation, stationName: e.target.value })}
+                onChange={(e) =>
+                  setEditStation({ ...editStation, stationName: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Username:</label>
@@ -560,7 +665,9 @@ export function StationsTab() {
               <input
                 type="password"
                 value={editStation.confirmPassword}
-                onChange={(e) => setEditStation({ ...editStation, confirmPassword: e.target.value })}
+                onChange={(e) =>
+                  setEditStation({ ...editStation, confirmPassword: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Latitude:</label>
@@ -580,9 +687,19 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditModal(false)} disabled={loading}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={handleEditSave} disabled={loading}>
-                {loading ? 'Processing...' : 'Save'}
+              <button
+                className="stn-btn stn-btnOutline"
+                onClick={() => setShowEditModal(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={handleEditSave}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Save"}
               </button>
             </div>
           </div>
@@ -591,11 +708,13 @@ export function StationsTab() {
 
       {/* EDIT OTP MODAL */}
       {showEditOtpModal && (
-        <div className="stn-modal-overlay-stations">
+        <div className="stn-modal-overlay-stations" role="dialog" aria-modal="true">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Enter OTP for Email Change</h3>
-              <button className="stn-close-stations" onClick={() => setShowEditOtpModal(false)}>&times;</button>
+              <button className="stn-close-stations" onClick={() => setShowEditOtpModal(false)}>
+                ×
+              </button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -614,9 +733,19 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowEditOtpModal(false)} disabled={loading}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={confirmEdit} disabled={loading}>
-                {loading ? 'Updating...' : 'Confirm'}
+              <button
+                className="stn-btn stn-btnOutline"
+                onClick={() => setShowEditOtpModal(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={confirmEdit}
+                disabled={loading}
+              >
+                {loading ? "Updating..." : "Confirm"}
               </button>
             </div>
           </div>
@@ -625,11 +754,13 @@ export function StationsTab() {
 
       {/* DELETE MODAL WITH OTP + ADMIN PASSWORD */}
       {showDeleteOtpModal && (
-        <div className="stn-modal-overlay-stations">
+        <div className="stn-modal-overlay-stations" role="dialog" aria-modal="true">
           <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
             <div className="stn-modal-header-stations">
               <h3 className="stn-modal-title-stations">Confirm Deletion</h3>
-              <button className="stn-close-stations" onClick={() => setShowDeleteOtpModal(false)}>&times;</button>
+              <button className="stn-close-stations" onClick={() => setShowDeleteOtpModal(false)}>
+                ×
+              </button>
             </div>
 
             {formError && <div className="stn-error-banner">{formError}</div>}
@@ -658,9 +789,60 @@ export function StationsTab() {
             </div>
 
             <div className="stn-modal-actions-stations">
-              <button className="stn-btn stn-btnOutline" onClick={() => setShowDeleteOtpModal(false)} disabled={loading}>Cancel</button>
-              <button className="stn-btn stn-btnNavy" onClick={confirmDelete} disabled={loading}>
-                {loading ? 'Deleting...' : 'Delete'}
+              <button
+                className="stn-btn stn-btnOutline"
+                onClick={() => setShowDeleteOtpModal(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={confirmDelete}
+                disabled={loading}
+              >
+                {loading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUCCESS CONFIRMATION MODAL */}
+      {showSuccessModal && (
+        <div
+          className="stn-modal-overlay-stations"
+          role="dialog"
+          aria-labelledby="stn-success-title"
+          aria-modal="true"
+          onClick={() => setShowSuccessModal(false)}
+        >
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
+            <div className="stn-modal-header-stations">
+              <h3 id="stn-success-title" className="stn-modal-title-stations">
+                Success
+              </h3>
+              <button
+                className="stn-close-stations"
+                aria-label="Close success dialog"
+                onClick={() => setShowSuccessModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="stn-modal-body-stations">
+              <p style={{ fontSize: 16 }}>
+                {successMessage || "Station updated successfully!"}
+              </p>
+            </div>
+
+            <div className="stn-modal-actions-stations">
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={() => setShowSuccessModal(false)}
+              >
+                OK
               </button>
             </div>
           </div>
@@ -669,4 +851,3 @@ export function StationsTab() {
     </div>
   );
 }
-
