@@ -107,6 +107,7 @@ def convert_to_24hr_format(departure_time):
     except ValueError:
         raise ValueError("Invalid time format, expected 12-hour format with AM/PM")
 
+
 @boarding_manualbooking_bp.route('/create_booking', methods=['POST'])
 def create_booking():
     data = request.get_json()
@@ -129,6 +130,7 @@ def create_booking():
 
         if not user:
             return jsonify({"error": "User does not exist"}), 400  # User not found
+
     except Exception as e:
         print(f"Error occurred during user validation: {str(e)}")
         print(traceback.format_exc())  # Print the full traceback for debugging
@@ -141,12 +143,6 @@ def create_booking():
             return jsonify({"error": "Booking is not allowed on Sundays"}), 400
     except ValueError:
         return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
-
-    # Convert departure time from 12-hour to 24-hour format
-    try:
-        departure_time_24hr = convert_to_24hr_format(departure_time)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
 
     try:
         cur = mysql.connection.cursor()
@@ -169,28 +165,28 @@ def create_booking():
         # Generate a custom Booking_ID using generate_booking_id function
         booking_id = generate_booking_id(cur)
 
-        # Step 2: Create the Booking with Station IDs and 24-hour format time
-        cur.execute(""" 
+        # Step 2: Create the Booking with Station IDs
+        cur.execute("""
             INSERT INTO Booking (Booking_ID, User_ID, origin, destination, departure_date, departure_time, booking_source, payment_status)
             VALUES (%s, %s, %s, %s, %s, %s, 'MB', 'NP')
-        """, (booking_id, user_id, origin_station_id, destination_station_id, departure_date, departure_time_24hr))
+        """, (booking_id, user_id, origin_station_id, destination_station_id, departure_date, departure_time))
         mysql.connection.commit()
 
         # Step 3: Generate QR Code ID
         qrcode_id = generate_qrcode_id(cur)
         print(f"Generated QR Code ID: {qrcode_id}")  # Debugging output
 
-        # Step 4: Insert the QR Code into the QRCode table
-        cur.execute(""" 
+        # Step 4: Insert the QR Code into the QRCode table with explicit UTC conversion to Asia/Manila time zone
+        cur.execute("""
             INSERT INTO QRCode (Booking_ID, User_ID, Qrcode_ID, Generated_at, ExpiresAt, Maximum_Scan)
-            VALUES (%s, %s, %s, NOW(), DATE_ADD(NOW(), INTERVAL 24 HOUR), 2)
+            VALUES (%s, %s, %s, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', 'Asia/Manila'), CONVERT_TZ(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), '+00:00', 'Asia/Manila'), 2)
         """, (booking_id, user_id, qrcode_id))
         mysql.connection.commit()
 
         # Step 5: Update Booking with the generated QR Code ID
-        cur.execute(""" 
-            UPDATE Booking 
-            SET Qrcode_ID = %s 
+        cur.execute("""
+            UPDATE Booking
+            SET Qrcode_ID = %s
             WHERE Booking_ID = %s
         """, (qrcode_id, booking_id))
         mysql.connection.commit()
