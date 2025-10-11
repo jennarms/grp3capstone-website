@@ -18,45 +18,55 @@ export default function PassengerTable({ origin, scheduleTime }) {
     }
   };
 
- const fetchBoardingData = useCallback(async (page) => {
-  setLoading(true);
+  // Function to fetch boarding data
+  const fetchBoardingData = useCallback(async (page) => {
+    setLoading(true);
 
-  console.log(`Origin: ${origin}, Schedule Time: ${scheduleTime}, Query: ${query}`);
+    console.log(`Origin: ${origin}, Schedule Time: ${scheduleTime}, Query: ${query}`);
 
-  if (!origin || !scheduleTime) {
-    console.error("Missing origin or schedule time!");
-    return;
-  }
-
-  // Function to format the schedule time as HH:mm:ss with leading zeroes
-  const formatTime = (time) => {
-    const [h, m] = time.split(":").map(Number);
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
-  };
-
-  try {
-    const params = {
-      page,
-      origin,
-      schedule_time: formatTime(scheduleTime), // Format the schedule time to HH:mm:ss
-    };
-
-    if (query) {
-      params.query = query;
+    if (!origin || !scheduleTime) {
+      console.error("Missing origin or schedule time!");
+      return;
     }
 
-    const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, { params });
-    console.log("API response:", response.data);
+    // Function to format the schedule time as HH:mm:ss with leading zeroes
+    const formatTime = (time) => {
+      const [h, m] = time.split(":").map(Number);
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+    };
 
-    setPassengerData(response.data.boardingData);
-    setTotalPages(response.data.totalPages);
-  } catch (error) {
-    console.error("Error fetching boarding data:", error);
-  } finally {
-    setLoading(false);
-  }
-}, [origin, scheduleTime, query]);
+    try {
+      const params = {
+        page,
+        origin,
+        schedule_time: formatTime(scheduleTime), // Format the schedule time to HH:mm:ss
+      };
 
+      if (query) {
+        params.query = query;
+      }
+
+      const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, { params });
+      console.log("API response:", response.data);
+
+      setPassengerData(response.data.boardingData);
+      setTotalPages(response.data.totalPages);
+    } catch (error) {
+      console.error("Error fetching boarding data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [origin, scheduleTime, query]);
+
+  // Polling for new data every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchBoardingData(currentPage);
+    }, 10000); // Poll every 10 seconds
+
+    // Cleanup the interval on unmount
+    return () => clearInterval(interval);
+  }, [currentPage, fetchBoardingData]);
 
   useEffect(() => {
     console.log('Loading boarding data...');

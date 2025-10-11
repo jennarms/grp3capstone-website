@@ -7,7 +7,7 @@ import "./passengerManagement.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// Columns to render (no passwordHash). Includes platform_name (derived on backend)
+// Columns to render (no profile)
 const columns = [
   "User_ID",
   "username",
@@ -19,7 +19,6 @@ const columns = [
   "age",
   "birthday",
   "gender",
-  "profile",
   "created_at",
   "platform_source", // code: MB/CB/EM/MA
   "platform_name",   // label: Mobile App / Chatbot / Email / Manual
