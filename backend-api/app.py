@@ -1,9 +1,7 @@
-import pymysql
-pymysql.install_as_MySQLdb()  # makes PyMySQL work as MySQLdb
-
+# In app.py (or run.py, where the app is run)
 from app import create_app
 
-app = create_app()
+app = create_app()  # Create the app using create_app()
 
 @app.route('/')
 def home():

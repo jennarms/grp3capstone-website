@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -9,48 +9,54 @@ export default function PassengerTable({ origin, scheduleTime }) {
   const [totalPages, setTotalPages] = useState(0);  // Total number of pages
   const [query, setQuery] = useState("");  // For search functionality
 
+  // Handle actions (accept or cancel)
+  const handleAction = (action, passengerId) => {
+    if (action === "accept") {
+      console.log("Accepted passenger with ID:", passengerId);
+    } else if (action === "cancel") {
+      console.log("Cancelled passenger with ID:", passengerId);
+    }
+  };
+
   // Fetch boarding data from the backend based on current page and query
-  const fetchBoardingData = async (page) => {
+  const fetchBoardingData = useCallback(async (page) => {
+    console.log(`Origin: ${origin}, Schedule Time: ${scheduleTime}`);
+
+    // Validation: Ensure both origin and scheduleTime are provided
+    if (!origin || !scheduleTime) {
+      console.error("Missing origin or schedule time!");
+      return;  // Prevent API call if parameters are missing
+    }
+
     try {
       const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, {
         params: { 
           page, 
           query, 
-          origin,       // Send the selected origin
-          schedule_time: scheduleTime  // Send the selected schedule time
+          origin,       // Pass the origin (station)
+          schedule_time: scheduleTime  // Pass the selected schedule time
         }, 
       });
+
+      console.log("API response:", response.data); // Check the response
 
       setPassengerData(response.data.boardingData);
       setTotalPages(response.data.totalPages);  // Set the total number of pages
     } catch (error) {
       console.error("Error fetching boarding data:", error);
     }
-  };
+  }, [origin, scheduleTime, query]);  // Add dependencies
 
-  // Load data when the page number or query changes
   useEffect(() => {
-    fetchBoardingData(currentPage);
-  }, [currentPage, query]);  // Re-run the effect whenever currentPage or query changes
+    console.log('Loading boarding data...');
+    fetchBoardingData(currentPage);  // Fetch data when the page or query changes
+  }, [currentPage, fetchBoardingData]);
 
-  // Poll every 5 seconds to check for new updates (this will keep fetching new data)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchBoardingData(currentPage);  // Keep fetching data periodically
-    }, 5000); // 5 seconds
-
-    // Clean up the interval when the component unmounts or stops fetching
-    return () => clearInterval(interval);
-  }, [currentPage]);
-
-  // Handle actions like Accept or Cancel
-  const handleAction = (action, passengerId) => {
-    if (action === "accept") {
-      // Handle Accept action
-      console.log("Accepted passenger with ID:", passengerId);
-    } else if (action === "cancel") {
-      // Handle Cancel action
-      console.log("Cancelled passenger with ID:", passengerId);
+  const handlePageChange = (direction) => {
+    if (direction === 'prev' && currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    } else if (direction === 'next' && currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
     }
   };
 
@@ -114,7 +120,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="13">No passengers available.</td> {/* Adjusted colSpan to 13 */}
+                  <td colSpan="13">No passengers available.</td>
                 </tr>
               )}
             </tbody>
@@ -126,14 +132,14 @@ export default function PassengerTable({ origin, scheduleTime }) {
       <div className="pagination">
         <button
           disabled={currentPage === 1}
-          onClick={() => setCurrentPage(currentPage - 1)}
+          onClick={() => handlePageChange('prev')}
         >
           Prev
         </button>
         <span>{currentPage}</span>
         <button
           disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage(currentPage + 1)}
+          onClick={() => handlePageChange('next')}
         >
           Next
         </button>
