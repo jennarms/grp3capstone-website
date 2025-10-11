@@ -6,6 +6,7 @@
   --panel: #ffffff;
 }
 
+
 /* Hug the sidebar and use the full width of the content area */
 .acct-main {
   margin-left: -50px;

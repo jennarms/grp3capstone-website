@@ -4,6 +4,8 @@
   --ring-strong: #c8d0e6;
   --surface: #ffffff;
   --shadow: 0 10px 24px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.05);
+  /* for .btn-danger */
+  --accent-navy: #0a1978;
 }
 
 html, body { overflow-x: hidden; }
@@ -121,8 +123,8 @@ html, body { overflow-x: hidden; }
   border-radius: 16px;
   box-shadow: var(--shadow);
   padding: 16px 18px 18px;
-  width: 1530px;
-  margin-left: -10px;
+  width: 1550px;
+  margin-left: -0px;
   box-sizing: border-box;
   text-align: left;
 }
@@ -242,4 +244,28 @@ html, body { overflow-x: hidden; }
   .ga-page-title{ font-size: 36px; }
   .ga-card-title{ font-size: 26px; }
   .ga-wrap{ height: calc(100vh - 140px); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FORCE-HIDE SCROLLBAR for the announcements list (no HTML changes).
+   Scope to .ga-main so other .ga-list elsewhere keep their scrollbars.
+   ───────────────────────────────────────────────────────────── */
+.ga-main .ga-list{
+  overflow-y: auto;
+  -ms-overflow-style: none !important;    /* IE/old Edge */
+  scrollbar-width: none !important;       /* Firefox */
+  scrollbar-gutter: auto !important;      /* don't reserve gutter space */
+  padding-right: 0 !important;            /* remove the 12px gutter */
+  -webkit-overflow-scrolling: touch;      /* smooth on iOS */
+}
+
+/* Chrome / Safari / new Edge (Blink/WebKit) */
+.ga-main .ga-list::-webkit-scrollbar{
+  width: 0 !important;
+  height: 0 !important;
+}
+.ga-main .ga-list::-webkit-scrollbar-track,
+.ga-main .ga-list::-webkit-scrollbar-thumb{
+  background: transparent !important;
+  border: none !important;
 }

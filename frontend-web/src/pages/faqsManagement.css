@@ -67,7 +67,7 @@
 
 /* ===== Stable table area ===== */
 .table-scroll {
-  height: 520px;
+  height: 720px;
   overflow-y: auto;
 }
 

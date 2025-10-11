@@ -168,16 +168,29 @@ export function Announcement() {
         </div>
       )}
 
-      {/* Feedback Modal */}
+      {/* Feedback Modal — updated to match the Delete modal (same layout + navy button) */}
       {feedback.open && (
-        <div className="ga-modal-overlay" onClick={() => setFeedback({ ...feedback, open: false })}>
-          <div className="ga-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="ga-modal-overlay"
+          onClick={() => setFeedback({ ...feedback, open: false })}
+          aria-hidden="true"
+        >
+          <div
+            className="ga-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fb-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="ga-modal-header">
-              <span className="ga-modal-title">Notice</span>
+              <span className="ga-modal-title" id="fb-title">Notice</span>
             </div>
             <div className="ga-modal-body">{feedback.message}</div>
             <div className="ga-modal-actions">
-              <button className="btn btn-outline" onClick={() => setFeedback({ ...feedback, open: false })}>
+              <button
+                className="btn btn-danger"
+                onClick={() => setFeedback({ ...feedback, open: false })}
+              >
                 OK
               </button>
             </div>
