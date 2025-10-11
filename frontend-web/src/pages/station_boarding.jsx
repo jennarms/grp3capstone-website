@@ -13,6 +13,7 @@ export function Boarding() {
   // State for station and schedule time, to be updated after fetching the data
   const [station, setStation] = useState("loading...");
   const [scheduleTime, setScheduleTime] = useState("loading...");
+  const [scheduleTime24, setScheduleTime24] = useState("loading...");
 
   // ---- scheduleId extraction that works with BrowserRouter AND HashRouter ----
   const scheduleId = useMemo(() => {
@@ -49,9 +50,10 @@ export function Boarding() {
     return { Authorization: token ? `Bearer ${token}` : "", "Content-Type": "application/json" };
   };
 
+  // Convert time to 12-hour format (hh:mm AM/PM)
   const to12h = (hhmmssOrDisplay) => {
     if (!hhmmssOrDisplay) return "";
-    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) return hhmmssOrDisplay; // already 12h
+    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) return hhmmssOrDisplay; // Already 12h format
     const [hStr = "0", mStr = "00"] = String(hhmmssOrDisplay).split(":");
     const h = parseInt(hStr, 10) || 0;
     const m = (mStr ?? "00").padStart(2, "0");
@@ -59,6 +61,20 @@ export function Boarding() {
     const h12 = (h % 12) || 12;
     return `${h12}:${m} ${ampm}`;
   };
+
+  // Convert time to 24-hour format (HH:mm:ss), ensuring leading zero for single-digit hours
+const to24h = (hhmmssOrDisplay) => {
+  if (!hhmmssOrDisplay) return "";
+  if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) {
+    const [time, period] = hhmmssOrDisplay.trim().split(" ");
+    let [h, m] = time.split(":").map(Number);
+    if (period.toUpperCase() === "PM" && h !== 12) h += 12;
+    if (period.toUpperCase() === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`; // Pad hour to two digits
+  }
+  return hhmmssOrDisplay; // Already in 24h format
+};
+
 
   // ---------------------- load route card data ----------------------
   useEffect(() => {
@@ -82,10 +98,12 @@ export function Boarding() {
         console.debug("[Boarding] routecard payload:", payload);
         setScheduleInfo(payload?.schedule_info || null);
         setStops(Array.isArray(payload?.stops) ? payload.stops : []);
-        
-        // Set the station and schedule time from the fetched schedule_info
+
+        // Set the station and convert scheduleTime to 12-hour and 24-hour formats
         setStation(payload?.schedule_info?.station_name || "loading...");
-        setScheduleTime(payload?.schedule_info?.departure_time || "loading...");
+        const depTime = payload?.schedule_info?.departure_time || "loading...";
+        setScheduleTime(to12h(depTime));  // 12-hour format for route card
+        setScheduleTime24(to24h(depTime)); // 24-hour format for passing to PassengerTable
       })
       .catch((e) => setError(e.message || "Failed to load route card"))
       .finally(() => setLoading(false));
@@ -93,7 +111,7 @@ export function Boarding() {
 
   // ---------------------- compute header display ----------------------
   const headerTime = useMemo(() => {
-    return to12h(scheduleTime); // Use the updated scheduleTime state
+    return scheduleTime; // Use the updated scheduleTime state in 12-hour format
   }, [scheduleTime]);
 
   const headerBoarded = useMemo(() => {
@@ -156,7 +174,7 @@ export function Boarding() {
               <div className="route-card__top">
                 <div className="route-card__path">{headerPath}</div>
                 <div className="route-card__time">
-                  {loading ? "Loading..." : headerTime || "—"}
+                  {loading ? "Loading..." : headerTime || "—"} {/* 12-hour format */}
                 </div>
                 <div className="route-card__boarded">
                   Boarded:{" "}
@@ -240,7 +258,7 @@ export function Boarding() {
         </section>
 
         {/* Passenger Table (pass origin and scheduleTime props to PassengerTable) */}
-        <PassengerTable origin={station} scheduleTime={scheduleTime} />
+        <PassengerTable origin={station} scheduleTime={scheduleTime24} /> {/* 24-hour format */}
       </div>
 
       {/* Manual Booking Modal */}
