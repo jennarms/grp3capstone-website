@@ -1,15 +1,37 @@
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Define the API URL from environment variables
 const apiUrl = import.meta.env.VITE_API_URL;
 
-export default function ScanButtonModule() {
+export default function ScanButtonModule({ action }) {  // Receive action as a prop
   const [showScan, setShowScan] = useState(false);
-  const [scanState, setScanState] = useState(null); // "scanning" | "scanned" | "success" | "denied" | null
+  const [scanState, setScanState] = useState(null); // "scanning" | "scanned" | "success" | "denied"
   const [scanResult, setScanResult] = useState(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false); // To toggle the modal
   const inputRef = useRef(""); // Ref to hold the scanned code
+
+  // Memoize handleScan with useCallback to prevent unnecessary re-creations
+  const handleScan = useCallback(async (qrCode) => {
+    try {
+      // Send the action dynamically (boarding or disembarking)
+      const response = await axios.post(`${apiUrl}/api/scan/scan_qrcode`, {
+        QRCode_ID: qrCode,
+        action: action, // Use the action dynamically
+      });
+
+      // If the passenger is found, show the details
+      setScanResult({
+        name: response.data.name,
+        code: response.data.code,
+        from: response.data.from,
+        to: response.data.to,
+      });
+      setScanState("success");
+    } catch (err) {
+      console.error('Scan failed:', err.response?.data || err);
+      setScanState("denied");
+    }
+  }, [action]); // The function will only be recreated if `action` changes
 
   // Handle keyboard input from scanner
   useEffect(() => {
@@ -29,47 +51,24 @@ export default function ScanButtonModule() {
           inputRef.current += e.key; // Add alphanumeric key to the input
         }
 
-          // If the key is 'Enter', process the QR code (this is when the scanner finishes sending the data)
-          if (e.key === "Enter") {
-            const code = inputRef.current.trim();  // Trim any extra whitespace or Enter key
-            inputRef.current = "";  // Reset the input field
-            console.log("Scanned QR Code:", code);  // Log the scanned QR code value
+        // If the key is 'Enter', process the QR code (this is when the scanner finishes sending the data)
+        if (e.key === "Enter") {
+          const code = inputRef.current.trim();  // Trim any extra whitespace or Enter key
+          inputRef.current = "";  // Reset the input field
+          console.log("Scanned QR Code:", code);  // Log the scanned QR code value
 
-            // Remove the "Enter" key if it's in the code
-            const cleanCode = code.replace("Enter", "").trim(); // Remove the 'Enter' part from the scanned code
+          // Remove the "Enter" key if it's in the code
+          const cleanCode = code.replace("Enter", "").trim(); // Remove the 'Enter' part from the scanned code
 
-            // Send QR code to the backend to fetch the passenger details
-            handleScan(cleanCode);
-          }
-        };
+          // Send QR code to the backend to fetch the passenger details
+          handleScan(cleanCode);
+        }
+      };
 
       window.addEventListener("keydown", handleKeyPress);
       return () => window.removeEventListener("keydown", handleKeyPress);
     }
-  }, [showScan, scanState]);
-
-  const handleScan = async (qrCode) => {
-  try {
-    // Add the "boarding" action to the request payload
-    const response = await axios.post(`${apiUrl}/api/scan/scan_qrcode`, {
-      QRCode_ID: qrCode,
-      action: "boarding", // Add the action as "boarding"
-    });
-
-    // If the passenger is found, show the details
-    setScanResult({
-      name: response.data.name,
-      code: response.data.code,
-      from: response.data.from,
-      to: response.data.to,
-    });
-    setScanState("success");
-    setShowDetailsModal(true); // Show the modal after successful scan
-  } catch (err) {
-    console.error('Scan failed:', err.response?.data || err);
-    setScanState("denied");
-  }
-};
+  }, [showScan, scanState, handleScan]);  // Now handleScan is stable and part of the dependency array
 
   return (
     <>
@@ -167,29 +166,6 @@ export default function ScanButtonModule() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal to show scanned QR details */}
-      {showDetailsModal && (
-        <div className="actionbtn-modal-confirm-overlay" onClick={() => setShowDetailsModal(false)}>
-          <div className="actionbtn-modal-confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3>Scanned QR Details</h3>
-            <div className="boarding-modal-sub">
-              <p><strong>Name:</strong> {scanResult?.name}</p>
-              <p><strong>Ticket Code:</strong> {scanResult?.code}</p>
-              <p><strong>From:</strong> {scanResult?.from}</p>
-              <p><strong>Destination:</strong> {scanResult?.to}</p>
-            </div>
-            <div className="boarding-modal-actions">
-              <button
-                className="actionbtn-modal-cancel-btn"
-                onClick={() => setShowDetailsModal(false)}
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}
