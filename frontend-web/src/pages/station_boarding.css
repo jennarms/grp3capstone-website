@@ -65,7 +65,7 @@
   font-weight: 600;
 }
 
-.route-card__boarded {
+.route-card__seats-taken{
   font-size: 28px;
   font-weight: 600;
   justify-self: end;
