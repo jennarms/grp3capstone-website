@@ -36,9 +36,25 @@ export function StationsTab() {
     lon: "",
   });
 
-  // success modal (for edit)
+  // success modal (shared by add, edit, delete)
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  // NEW: info modal for "OTP sent" after clicking Delete
+  const [showDeleteInfoModal, setShowDeleteInfoModal] = useState(false);
+
+  // ===== Password validation & eye toggles =====
+  const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).+$/;
+  const validatePassword = (pwd) =>
+    passwordPattern.test(pwd)
+      ? ""
+      : "Password must include a capital letter, a number, and a special symbol.";
+
+  const [showPwdAdd, setShowPwdAdd] = useState(false);
+  const [showConfirmPwdAdd, setShowConfirmPwdAdd] = useState(false);
+  const [showPwdEdit, setShowPwdEdit] = useState(false);
+  const [showConfirmPwdEdit, setShowConfirmPwdEdit] = useState(false);
+  // =============================================
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -151,6 +167,10 @@ export function StationsTab() {
       setFormError("Passwords do not match.");
       return;
     }
+    if (validatePassword(password)) {
+      setFormError(validatePassword(password));
+      return;
+    }
     if (rows.some((station) => station.email === email)) {
       setFormError("This email is already used by another station.");
       return;
@@ -201,7 +221,10 @@ export function StationsTab() {
       });
 
       await fetchStations();
-      alert(`Station created successfully! ID: ${response.stationId}`);
+
+      // Success modal (Add)
+      setSuccessMessage(`Station created successfully! ID: ${response.stationId}`);
+      setShowSuccessModal(true);
     } catch (err) {
       setFormError(`Failed to create station: ${err.message}`);
     } finally {
@@ -225,6 +248,10 @@ export function StationsTab() {
 
     if (passwordChanged && editStation.password !== editStation.confirmPassword) {
       setFormError("Passwords do not match.");
+      return;
+    }
+    if (passwordChanged && validatePassword(editStation.password)) {
+      setFormError(validatePassword(editStation.password));
       return;
     }
     if (emailChanged && rows.some((s) => s.email === editStation.email)) {
@@ -286,6 +313,7 @@ export function StationsTab() {
 
       await fetchStations();
 
+      // Success modal (Edit)
       setSuccessMessage("Station updated successfully!");
       setShowSuccessModal(true);
     } catch (err) {
@@ -300,8 +328,8 @@ export function StationsTab() {
       setLoading(true);
       await apiRequest(`/api/station/request-delete/${id}`, { method: "POST" });
       setDeleteStationId(id);
-      setShowDeleteOtpModal(true);
-      alert("OTP has been sent to the station email.");
+      // Show info modal first; after OK, we'll open the OTP+Admin modal
+      setShowDeleteInfoModal(true);
     } catch (err) {
       setFormError(`Failed to request delete: ${err.message}`);
     } finally {
@@ -328,7 +356,10 @@ export function StationsTab() {
       setDeleteStationId(null);
 
       await fetchStations();
-      alert("Station deleted successfully!");
+
+      // Success modal (Delete)
+      setSuccessMessage("Station deleted successfully!");
+      setShowSuccessModal(true);
     } catch (err) {
       setFormError(`Failed to delete station: ${err.message}`);
     } finally {
@@ -515,24 +546,72 @@ export function StationsTab() {
                 }
                 disabled={loading}
               />
+
+              {/* Password with eye toggle + hint */}
               <label>New Password:</label>
-              <input
-                type="password"
-                value={newStation.password}
-                onChange={(e) =>
-                  setNewStation({ ...newStation, password: e.target.value })
-                }
-                disabled={loading}
-              />
+              <div className="stn-input-with-eye">
+                <input
+                  type={showPwdAdd ? "text" : "password"}
+                  value={newStation.password}
+                  onChange={(e) =>
+                    setNewStation({ ...newStation, password: e.target.value })
+                  }
+                  disabled={loading}
+                  aria-invalid={
+                    !!newStation.password && !!validatePassword(newStation.password)
+                  }
+                  aria-describedby="add-password-hint"
+                />
+                <button
+                  type="button"
+                  className="stn-eye-btn"
+                  onClick={() => setShowPwdAdd((v) => !v)}
+                  aria-label={showPwdAdd ? "Hide password" : "Show password"}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M12 5c-5 0-9 5-9 7s4 7 9 7 9-5 9-7-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                  </svg>
+                </button>
+              </div>
+              {newStation.password && validatePassword(newStation.password) && (
+                <small id="add-password-hint" className="stn-help-error">
+                  {validatePassword(newStation.password)}
+                </small>
+              )}
+
               <label>Confirm New Password:</label>
-              <input
-                type="password"
-                value={newStation.confirmPassword}
-                onChange={(e) =>
-                  setNewStation({ ...newStation, confirmPassword: e.target.value })
-                }
-                disabled={loading}
-              />
+              <div className="stn-input-with-eye">
+                <input
+                  type={showConfirmPwdAdd ? "text" : "password"}
+                  value={newStation.confirmPassword}
+                  onChange={(e) =>
+                    setNewStation({ ...newStation, confirmPassword: e.target.value })
+                  }
+                  disabled={loading}
+                  aria-invalid={
+                    !!newStation.confirmPassword &&
+                    newStation.confirmPassword !== newStation.password
+                  }
+                  aria-describedby="add-confirm-hint"
+                />
+                <button
+                  type="button"
+                  className="stn-eye-btn"
+                  onClick={() => setShowConfirmPwdAdd((v) => !v)}
+                  aria-label={showConfirmPwdAdd ? "Hide password" : "Show password"}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M12 5c-5 0-9 5-9 7s4 7 9 7 9-5 9-7-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                  </svg>
+                </button>
+              </div>
+              {newStation.confirmPassword &&
+                newStation.confirmPassword !== newStation.password && (
+                  <small id="add-confirm-hint" className="stn-help-error">
+                    Passwords do not match.
+                  </small>
+                )}
+
               <label>Latitude:</label>
               <input
                 type="text"
@@ -654,22 +733,78 @@ export function StationsTab() {
                 onChange={(e) => setEditStation({ ...editStation, email: e.target.value })}
                 disabled={loading}
               />
+
+              {/* New Password controls */}
               <label>New Password:</label>
-              <input
-                type="password"
-                value={editStation.password}
-                onChange={(e) => setEditStation({ ...editStation, password: e.target.value })}
-                disabled={loading}
-              />
+              <div className="stn-input-with-eye">
+                <input
+                  type={showPwdEdit ? "text" : "password"}
+                  value={editStation.password}
+                  onChange={(e) =>
+                    setEditStation({ ...editStation, password: e.target.value })
+                  }
+                  disabled={loading}
+                  aria-invalid={
+                    !!editStation.password && !!validatePassword(editStation.password)
+                  }
+                  aria-describedby="edit-password-hint"
+                  placeholder="Leave blank to keep current password"
+                />
+                <button
+                  type="button"
+                  className="stn-eye-btn"
+                  onClick={() => setShowPwdEdit((v) => !v)}
+                  aria-label={showPwdEdit ? "Hide password" : "Show password"}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M12 5c-5 0-9 5-9 7s4 7 9 7 9-5 9-7-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                  </svg>
+                </button>
+              </div>
+              {editStation.password && validatePassword(editStation.password) && (
+                <small id="edit-password-hint" className="stn-help-error">
+                  {validatePassword(editStation.password)}
+                </small>
+              )}
+
               <label>Confirm New Password:</label>
-              <input
-                type="password"
-                value={editStation.confirmPassword}
-                onChange={(e) =>
-                  setEditStation({ ...editStation, confirmPassword: e.target.value })
-                }
-                disabled={loading}
-              />
+              <div className="stn-input-with-eye">
+                <input
+                  type={showConfirmPwdEdit ? "text" : "password"}
+                  value={editStation.confirmPassword}
+                  onChange={(e) =>
+                    setEditStation({
+                      ...editStation,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  disabled={loading}
+                  aria-invalid={
+                    !!editStation.confirmPassword &&
+                    editStation.confirmPassword !== editStation.password
+                  }
+                  aria-describedby="edit-confirm-hint"
+                  placeholder="Leave blank to keep current password"
+                />
+                <button
+                  type="button"
+                  className="stn-eye-btn"
+                  onClick={() => setShowConfirmPwdEdit((v) => !v)}
+                  aria-label={showConfirmPwdEdit ? "Hide password" : "Show password"}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M12 5c-5 0-9 5-9 7s4 7 9 7 9-5 9-7-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                  </svg>
+                </button>
+              </div>
+              {editStation.confirmPassword &&
+                editStation.confirmPassword !== editStation.password && (
+                  <small id="edit-confirm-hint" className="stn-help-error">
+                    Passwords do not match.
+                  </small>
+                )}
+              {/* END new password controls */}
+
               <label>Latitude:</label>
               <input
                 type="text"
@@ -752,6 +887,56 @@ export function StationsTab() {
         </div>
       )}
 
+      {/* DELETE INFO MODAL: "OTP sent" */}
+      {showDeleteInfoModal && (
+        <div
+          className="stn-modal-overlay-stations"
+          role="dialog"
+          aria-labelledby="stn-delete-info-title"
+          aria-modal="true"
+          onClick={() => {
+            setShowDeleteInfoModal(false);
+            setShowDeleteOtpModal(true);
+          }}
+        >
+          <div className="stn-modal-stations" onClick={(e) => e.stopPropagation()}>
+            <div className="stn-modal-header-stations">
+              <h3 id="stn-delete-info-title" className="stn-modal-title-stations">
+                OTP Sent
+              </h3>
+              <button
+                className="stn-close-stations"
+                aria-label="Close info dialog"
+                onClick={() => {
+                  setShowDeleteInfoModal(false);
+                  setShowDeleteOtpModal(true);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="stn-modal-body-stations">
+              <p style={{ fontSize: 16 }}>
+                An OTP has been sent to your email. Please check your inbox and enter it to confirm deletion.
+              </p>
+            </div>
+
+            <div className="stn-modal-actions-stations">
+              <button
+                className="stn-btn stn-btnPrimary"
+                onClick={() => {
+                  setShowDeleteInfoModal(false);
+                  setShowDeleteOtpModal(true);
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DELETE MODAL WITH OTP + ADMIN PASSWORD */}
       {showDeleteOtpModal && (
         <div className="stn-modal-overlay-stations" role="dialog" aria-modal="true">
@@ -808,7 +993,7 @@ export function StationsTab() {
         </div>
       )}
 
-      {/* SUCCESS CONFIRMATION MODAL */}
+      {/* SUCCESS CONFIRMATION MODAL (shared by Add, Edit, Delete) */}
       {showSuccessModal && (
         <div
           className="stn-modal-overlay-stations"
@@ -833,7 +1018,7 @@ export function StationsTab() {
 
             <div className="stn-modal-body-stations">
               <p style={{ fontSize: 16 }}>
-                {successMessage || "Station updated successfully!"}
+                {successMessage || "Operation completed successfully!"}
               </p>
             </div>
 
