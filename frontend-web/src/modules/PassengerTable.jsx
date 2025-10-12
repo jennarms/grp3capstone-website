@@ -14,6 +14,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalAction, setModalAction] = useState(null); // 'accept' or 'cancel'
   const [selectedPassenger, setSelectedPassenger] = useState(null);
+  const [modalMessage, setModalMessage] = useState(""); // For custom message in modal
 
   const handleAction = async (action, passengerId, qrcodeId) => {
     try {
@@ -33,7 +34,6 @@ export default function PassengerTable({ origin, scheduleTime }) {
             : passenger
         )
       );
-
     } catch (error) {
       console.error("Error updating passenger status and QR Code:", error);
     } finally {
@@ -42,7 +42,16 @@ export default function PassengerTable({ origin, scheduleTime }) {
   };
 
   const openModal = (action, passenger) => {
-    setModalAction(action);
+    if (action === 'accept' && passenger.status === 'B') {
+      setModalMessage("This passenger is already boarded. Cannot board again.");
+      setModalAction(null);
+    } else if (action === 'cancel' && passenger.status === 'B') {
+      setModalMessage("You cannot cancel boarded passengers.");
+      setModalAction(null);
+    } else {
+      setModalMessage(`Are you sure you want to ${action} this passenger?`);
+      setModalAction(action);
+    }
     setSelectedPassenger(passenger);
     setModalVisible(true);
   };
@@ -51,6 +60,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
     setModalVisible(false);
     setModalAction(null);
     setSelectedPassenger(null);
+    setModalMessage(""); // Clear message when modal is closed
   };
 
   const confirmModalAction = () => {
@@ -172,11 +182,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
         <div className="actionbtn-modal-confirm-overlay">
           <div className="actionbtn-modal-confirm-box">
             <h3>{modalAction === 'accept' ? 'Confirm Accept' : 'Confirm Cancel'}</h3>
-            <p>
-              {modalAction === 'accept'
-                ? 'You are marking this passenger as boarded.'
-                : 'You are marking this passenger as cancelled. This action is permanent!'}
-            </p>
+            <p>{modalMessage}</p>
             <div className="actionbtn-modal-confirm-buttons">
               <button className="actionbtn-modal-cancel-btn" onClick={closeModal}>Cancel</button>
               <button className="actionbtn-modal-yes-btn" onClick={confirmModalAction}>Yes</button>

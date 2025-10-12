@@ -195,6 +195,7 @@ def get_boarding_details():
 # =======================
 # UPDATE PASSENGER STATUS: ACCEPT (B) or CANCEL (C)
 # =======================
+
 @boarding_passengertable_bp.route('/update_passenger_status_and_qrcode', methods=['POST'])
 def update_passenger_status_and_qrcode():
     data = request.get_json()
@@ -208,18 +209,47 @@ def update_passenger_status_and_qrcode():
         if not bd_id or not action or not qrcode_id:
             return jsonify({"error": "BD_ID, action, and Qrcode_ID are required"}), 400
 
-        status = 'B' if action == 'accept' else 'C'
-
-        # Update BoardingDisembarking
+        # Get the current status of the passenger
         cursor.execute("""
-            UPDATE BoardingDisembarking
-            SET status = %s
-            WHERE BD_ID = %s
-        """, (status, bd_id))
+            SELECT status FROM BoardingDisembarking WHERE BD_ID = %s
+        """, (bd_id,))
+        bd = cursor.fetchone()
 
-        # Update Qrcode
+        if not bd:
+            return jsonify({"error": "Passenger not found"}), 404
+
+        current_status = bd[0]
+
+        # Handle 'accept' action (boarding)
+        if action == 'accept':
+            if current_status == 'B':  # If the status is already 'B', prevent boarding again
+                return jsonify({"error": "Passenger is already boarded"}), 400
+            status = 'B'  # Set status to 'B' (boarded)
+            boarding_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current timestamp
+
+            # Update BoardingDisembarking
+            cursor.execute("""
+                UPDATE BoardingDisembarking
+                SET status = %s, boarding_time = %s
+                WHERE BD_ID = %s
+            """, (status, boarding_time, bd_id))
+
+        # Handle 'cancel' action (cancellation)
+        elif action == 'cancel':
+            if current_status == 'B':  # If the status is 'B' (boarded), prevent cancellation
+                return jsonify({"error": "You cannot cancel boarded passengers"}), 400
+            status = 'C'  # Set status to 'C' (cancelled)
+
+            # Update BoardingDisembarking
+            cursor.execute("""
+                UPDATE BoardingDisembarking
+                SET status = %s
+                WHERE BD_ID = %s
+            """, (status, bd_id))
+
+        # Update QRCode based on action
         if action == 'cancel':
-            from datetime import datetime
+            # If cancel, set ExpiresAt and reset Maximum_Scan
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             cursor.execute("""
                 UPDATE QRCode
@@ -227,13 +257,16 @@ def update_passenger_status_and_qrcode():
                 WHERE Qrcode_ID = %s
             """, (now, qrcode_id))
         else:  # accept
+            # If accept, decrease the Maximum_Scan
             cursor.execute("""
                 UPDATE QRCode
                 SET Maximum_Scan = Maximum_Scan - 1
                 WHERE Qrcode_ID = %s
             """, (qrcode_id,))
 
+        # Commit changes to the database
         mysql.connection.commit()
+
         return jsonify({"message": "Passenger status and QR Code updated successfully"}), 200
 
     except Exception as e:
@@ -243,4 +276,4 @@ def update_passenger_status_and_qrcode():
         return jsonify({"error": str(e)}), 500
 
     finally:
-        cursor.close()  
+        cursor.close()

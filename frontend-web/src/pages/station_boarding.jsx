@@ -5,7 +5,7 @@ import "./station_boarding.css";
 
 import ManualBookingModal from "../modules/ManualBooking/ManualBookingModal.jsx";
 import PassengerTable from "../modules/PassengerTable.jsx"; // Corrected import for PassengerTable
-import ScanButtonModule from "../modules/ScanButtonModule.jsx";
+import ScanButtonModule from "../modules/ScanButtonModule.jsx"; // ScanButtonModule import
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -63,18 +63,17 @@ export function Boarding() {
   };
 
   // Convert time to 24-hour format (HH:mm:ss), ensuring leading zero for single-digit hours
-const to24h = (hhmmssOrDisplay) => {
-  if (!hhmmssOrDisplay) return "";
-  if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) {
-    const [time, period] = hhmmssOrDisplay.trim().split(" ");
-    let [h, m] = time.split(":").map(Number);
-    if (period.toUpperCase() === "PM" && h !== 12) h += 12;
-    if (period.toUpperCase() === "AM" && h === 12) h = 0;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`; // Pad hour to two digits
-  }
-  return hhmmssOrDisplay; // Already in 24h format
-};
-
+  const to24h = (hhmmssOrDisplay) => {
+    if (!hhmmssOrDisplay) return "";
+    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) {
+      const [time, period] = hhmmssOrDisplay.trim().split(" ");
+      let [h, m] = time.split(":").map(Number);
+      if (period.toUpperCase() === "PM" && h !== 12) h += 12;
+      if (period.toUpperCase() === "AM" && h === 12) h = 0;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`; // Pad hour to two digits
+    }
+    return hhmmssOrDisplay; // Already in 24h format
+  };
 
   // ---------------------- load route card data ----------------------
   useEffect(() => {
@@ -250,7 +249,7 @@ const to24h = (hhmmssOrDisplay) => {
 
         {/* Buttons */}
         <section className="actions-bar">
-          <ScanButtonModule passengerList={[]} />
+          <ScanButtonModule action="boarding" /> {/* Pass the boarding action */}
           <button className="manual-booking-btn" onClick={() => setShowManual(true)}>
             <span className="btn-icon">📝</span>
             Manual Booking
