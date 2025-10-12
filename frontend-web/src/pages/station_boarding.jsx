@@ -113,8 +113,9 @@ export function Boarding() {
     return scheduleTime; // Use the updated scheduleTime state in 12-hour format
   }, [scheduleTime]);
 
-  const headerBoarded = useMemo(() => {
-    if (scheduleInfo?.boarded_seats != null) return scheduleInfo.boarded_seats;
+  const headerSeatsTaken = useMemo(() => {
+    // Make sure to access 'seats_taken' directly from the API response.
+    if (scheduleInfo?.seats_taken != null) return scheduleInfo.seats_taken;
     return 0;
   }, [scheduleInfo]);
 
@@ -146,14 +147,7 @@ export function Boarding() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showManual]);
 
-  // render a status per stop relative to current stop
-  const stopStatus = (stopOrder) => {
-    if (currentStopOrder == null) return "";
-    if (stopOrder < currentStopOrder) return "Departed";
-    if (stopOrder === currentStopOrder) return "Arrived";
-    return "Approaching";
-  };
-
+  // Remove status per stop relative to current stop
   const stopTimeToDisplay = (s) => {
     return to12h(s.stop_time || s.time || "");
   };
@@ -175,10 +169,10 @@ export function Boarding() {
                 <div className="route-card__time">
                   {loading ? "Loading..." : headerTime || "—"} {/* 12-hour format */}
                 </div>
-                <div className="route-card__boarded">
-                  Boarded:{" "}
+                <div className="route-card__seats-taken">
+                  Number of Seats Taken:{" "}
                   <strong>
-                    {loading ? "…" : headerBoarded}/{loading ? "…" : headerTotal}
+                    {loading ? "…" : headerSeatsTaken}/{loading ? "…" : headerTotal}
                   </strong>
                 </div>
               </div>
@@ -203,7 +197,6 @@ export function Boarding() {
                     const isCurrent =
                       (s.station_name || "").toLowerCase() === (currentStopName || "").toLowerCase();
                     const timeStr = stopTimeToDisplay(s) || "—";
-                    const statusStr = stopStatus(Number(s.stop_order ?? 0));
                     return (
                       <div
                         className={"stop-row" + (isCurrent ? " is-current" : "")}
@@ -220,14 +213,13 @@ export function Boarding() {
                                 height="18"
                                 aria-hidden="true"
                               >
-                                <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                                <path d="M12 2a7 7 0 0 0-7 7c0 oad5 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
                               </svg>
                             </span>
                           ) : null}
                         </span>
                         <span className="stop-name">{s.station_name}</span>
                         <span className="stop-time">{timeStr}</span>
-                        <span className="status">{statusStr}</span>
                       </div>
                     );
                   })
