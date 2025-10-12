@@ -35,15 +35,20 @@ function Stars({ value = 0, max = 5 }) {
 
 export function Feedback() {
   const [items, setItems] = useState([]);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("all");  // Initially set to 'all'
   const [settings, setSettings] = useState({ enabled: false, message: "" });
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
   useEffect(() => {
+    let filterUrl = `${apiUrl}/api/feedback`;
+    if (filter !== "all") {
+      filterUrl += `?category=${filter}`;
+    }
+
     axios
-      .get(`${apiUrl}/api/feedback/`)
+      .get(filterUrl)
       .then((res) => {
         setItems(
           res.data.map((f) => ({
@@ -69,29 +74,33 @@ export function Feedback() {
         });
       })
       .catch((err) => console.error("Failed to load settings:", err));
-  }, []);
+  }, [filter]);  // Fetch data every time the filter changes
 
-  const filtered = useMemo(
-    () => items.filter((i) => (filter === "all" ? true : i.category === filter)),
-    [items, filter]
-  );
+  // We no longer need to filter the items again in this step since it's handled by the backend.
+  const filtered = useMemo(() => items, [items]);
 
   const onDelete = (id) => {
     setPendingDeleteId(id);
     setConfirmDeleteOpen(true);
   };
-  const confirmDelete = () => {
-    if (pendingDeleteId != null) {
-      axios
-        .delete(`${apiUrl}/api/feedback/${pendingDeleteId}`)
-        .then(() =>
-          setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId))
-        )
-        .catch((err) => console.error("Delete failed:", err));
-    }
-    setConfirmDeleteOpen(false);
-    setPendingDeleteId(null);
-  };
+
+const confirmDelete = () => {
+  if (pendingDeleteId != null) {
+    // Make the delete request without the token
+    axios
+      .delete(`${apiUrl}/api/feedback/${pendingDeleteId}`)
+      .then(() => {
+        setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId));
+      })
+      .catch((err) => {
+        console.error("Delete failed:", err);
+      });
+  }
+  setConfirmDeleteOpen(false);
+  setPendingDeleteId(null);
+};
+
+
   const cancelDelete = () => {
     setConfirmDeleteOpen(false);
     setPendingDeleteId(null);
@@ -110,14 +119,14 @@ export function Feedback() {
             <select
               className="fb-filter"
               value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              onChange={(e) => setFilter(e.target.value)}  // Set the filter state
               aria-label="Sort by category"
             >
               <option value="all">All categories</option>
-              <option value="Complaint">Complaint</option>
-              <option value="Compliment">Compliment</option>
-              <option value="Suggestion">Suggestion</option>
-              <option value="Inquiry">Inquiry</option>
+              <option value="CN">Complaint</option>
+              <option value="CO">Compliment</option>
+              <option value="SU">Suggestion</option>
+              <option value="IN">Inquiry</option>
             </select>
 
             <Link className="fb-settings" to="/feedback/settings">

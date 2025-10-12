@@ -1,53 +1,85 @@
+import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 
-export default function ScanButtonModule({ passengerList, onScanSuccess }) {
+// Define the API URL from environment variables
+const apiUrl = import.meta.env.VITE_API_URL;
+
+export default function ScanButtonModule() {
   const [showScan, setShowScan] = useState(false);
-  const [scanState, setScanState] = useState(null); // "scanning" | "success" | "denied" | null
+  const [scanState, setScanState] = useState(null); // "scanning" | "scanned" | "success" | "denied" | null
   const [scanResult, setScanResult] = useState(null);
-  const inputRef = useRef("");
+  const [showDetailsModal, setShowDetailsModal] = useState(false); // To toggle the modal
+  const inputRef = useRef(""); // Ref to hold the scanned code
 
   // Handle keyboard input from scanner
   useEffect(() => {
-    if (!showScan || scanState !== "scanning") return;
+    if (showScan && scanState === "scanning") {
+      const handleKeyPress = (e) => {
+        console.log(`Key pressed: ${e.key}`);  // Log every key pressed by scanner
 
-    const handleKeyPress = (e) => {
-      if (e.key === "Enter") {
-        const code = inputRef.current.trim();
-        inputRef.current = "";
+        // Ignore Shift, Control, Meta, Alt, CapsLock, and other special keys
+        const ignoredKeys = ['Shift', 'Control', 'Meta', 'Alt', 'CapsLock', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
-        const passenger = passengerList.find(p => p.qrCodeID === code);
-        if (passenger) {
-          setScanResult({
-            name: passenger.name,
-            code: passenger.qrCodeID,
-            from: passenger.origin,
-            to: passenger.destination,
-          });
-          setScanState("success");
-          onScanSuccess?.(passenger); // callback to backend
-        } else {
-          // QR code not found
-          setScanResult({ code });
-          setScanState("denied");
+        // If the key is in the ignored keys, just return
+        if (ignoredKeys.includes(e.key)) return;
+
+        // If the key is alphanumeric, add it to the input
+        const alphanumericRegex = /^[a-z0-9]+$/i; // Regular expression for alphanumeric characters
+        if (alphanumericRegex.test(e.key)) {
+          inputRef.current += e.key; // Add alphanumeric key to the input
         }
-      } else {
-        inputRef.current += e.key;
-      }
-    };
 
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [showScan, scanState, passengerList, onScanSuccess]);
+          // If the key is 'Enter', process the QR code (this is when the scanner finishes sending the data)
+          if (e.key === "Enter") {
+            const code = inputRef.current.trim();  // Trim any extra whitespace or Enter key
+            inputRef.current = "";  // Reset the input field
+            console.log("Scanned QR Code:", code);  // Log the scanned QR code value
+
+            // Remove the "Enter" key if it's in the code
+            const cleanCode = code.replace("Enter", "").trim(); // Remove the 'Enter' part from the scanned code
+
+            // Send QR code to the backend to fetch the passenger details
+            handleScan(cleanCode);
+          }
+        };
+
+      window.addEventListener("keydown", handleKeyPress);
+      return () => window.removeEventListener("keydown", handleKeyPress);
+    }
+  }, [showScan, scanState]);
+
+  const handleScan = async (qrCode) => {
+  try {
+    // Add the "boarding" action to the request payload
+    const response = await axios.post(`${apiUrl}/api/scan/scan_qrcode`, {
+      QRCode_ID: qrCode,
+      action: "boarding", // Add the action as "boarding"
+    });
+
+    // If the passenger is found, show the details
+    setScanResult({
+      name: response.data.name,
+      code: response.data.code,
+      from: response.data.from,
+      to: response.data.to,
+    });
+    setScanState("success");
+    setShowDetailsModal(true); // Show the modal after successful scan
+  } catch (err) {
+    console.error('Scan failed:', err.response?.data || err);
+    setScanState("denied");
+  }
+};
 
   return (
     <>
       <button
         className="scan-btn"
         onClick={() => {
-          setShowScan(true);
-          setScanState("scanning");
-          setScanResult(null);
-          inputRef.current = "";
+          setShowScan(true);  // Open modal
+          setScanState("scanning");  // Set state to scanning
+          setScanResult(null);  // Reset scan result
+          inputRef.current = "";  // Reset the scanned code input
         }}
       >
         <span className="btn-icon">💻</span>
@@ -92,6 +124,13 @@ export default function ScanButtonModule({ passengerList, onScanSuccess }) {
               </>
             )}
 
+            {scanState === "scanned" && (
+              <>
+                <p className="boarding-scan-sub">Scanned QR: {scanResult?.code}</p>
+                <p className="boarding-scan-hint">Processing...</p>
+              </>
+            )}
+
             {scanState === "success" && (
               <>
                 <h4 className="boarding-scan-confirm">Passenger Confirmed 🎉</h4>
@@ -128,7 +167,29 @@ export default function ScanButtonModule({ passengerList, onScanSuccess }) {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
 
+      {/* Modal to show scanned QR details */}
+      {showDetailsModal && (
+        <div className="actionbtn-modal-confirm-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="actionbtn-modal-confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Scanned QR Details</h3>
+            <div className="boarding-modal-sub">
+              <p><strong>Name:</strong> {scanResult?.name}</p>
+              <p><strong>Ticket Code:</strong> {scanResult?.code}</p>
+              <p><strong>From:</strong> {scanResult?.from}</p>
+              <p><strong>Destination:</strong> {scanResult?.to}</p>
+            </div>
+            <div className="boarding-modal-actions">
+              <button
+                className="actionbtn-modal-cancel-btn"
+                onClick={() => setShowDetailsModal(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
