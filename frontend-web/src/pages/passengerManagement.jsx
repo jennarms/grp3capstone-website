@@ -20,8 +20,8 @@ const columns = [
   "birthday",
   "gender",
   "created_at",
-  "platform_source", // code: MB/CB/EM/MA
-  "platform_name",   // label: Mobile App / Chatbot / Email / Manual
+  "platform_source", 
+  "platform_name",  
   "messenger_psid",
 ];
 
@@ -31,7 +31,7 @@ const idOf = (v) => String(v ?? "");
 export function Passenger() {
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState("");
-  const [platform, setPlatform] = useState("all"); // 'all' | 'MB' | 'CB' | 'EM' | 'MA'
+  const [platform, setPlatform] = useState("all"); 
   const [checked, setChecked] = useState(new Set()); // Set<string>
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
@@ -176,10 +176,10 @@ export function Passenger() {
               aria-label="Filter by platform"
             >
               <option value="all">All Platforms</option>
-              <option value="MB">Mobile App</option>
+              <option value="MA">Mobile App</option>
               <option value="CB">Chatbot</option>
               <option value="EM">Email</option>
-              <option value="MA">Manual</option>
+              <option value="MB">Manual Booking</option>
             </select>
           </div>
 
