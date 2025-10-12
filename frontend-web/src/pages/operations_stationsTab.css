@@ -270,3 +270,48 @@
   background: var(--ops-stn-blue-600);
   border-color: var(--ops-stn-blue-600);
 }
+
+/* ===== NEW: password input with eye toggle & inline error hint ===== */
+.stn-input-with-eye {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.stn-input-with-eye input {
+  width: 100%;
+  padding-right: 40px; /* space for the eye button */
+}
+
+/* Eye button: remove any border/outline */
+.stn-eye-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;          /* no border */
+  outline: none;         /* no outline */
+  box-shadow: none;      /* no shadow ring */
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+.stn-eye-btn:hover { opacity: 1; }
+.stn-eye-btn:focus,
+.stn-eye-btn:focus-visible,
+.stn-eye-btn:active {
+  outline: none;
+  box-shadow: none;
+  border: none;
+}
+
+.stn-help-error {
+  margin-top: 4px;
+  color: #b00020;
+  font-weight: 700;
+  font-size: 12px;
+}
