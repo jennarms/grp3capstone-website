@@ -171,13 +171,14 @@ def get_passengers():
 # DELETE /api/users/<user_id>
 # -------------------------
 @passenger_bp.route("/<user_id>", methods=["DELETE"])
-@jwt_required()
 def delete_passenger(user_id):
-    current_user = get_jwt_identity()
     cur = mysql.connection.cursor()
     try:
         cur.execute("DELETE FROM Users WHERE User_ID = %s", (user_id,))
         mysql.connection.commit()
-        return jsonify({"message": f"User {user_id} deleted successfully by {current_user}."}), 200
+        return jsonify({"message": f"User {user_id} deleted successfully."}), 200
+    except Exception as e:
+        # Error handling
+        return jsonify({"message": f"Error deleting user {user_id}: {str(e)}"}), 500
     finally:
         cur.close()

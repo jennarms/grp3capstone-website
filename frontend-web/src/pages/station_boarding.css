@@ -446,3 +446,82 @@
     background: #fff !important;
   }
 }
+
+/* Action Button Modal Styles */
+.actionbtn-modal-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.actionbtn-modal-confirm-box {
+  background: white;
+  padding: 20px 30px;
+  border-radius: 12px;
+  border-width: 2px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 500px;
+}
+
+.actionbtn-modal-confirm-box h3 {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.actionbtn-modal-confirm-box p {
+  font-size: 20px;
+}
+
+.actionbtn-modal-confirm-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.actionbtn-modal-cancel-btn,
+.actionbtn-modal-yes-btn {
+  padding: 8px 22px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.actionbtn-modal-cancel-btn {
+  background-color: #ccc;
+  color: #333;
+}
+
+.actionbtn-modal-yes-btn {
+  background-color: #000c6f;
+  color: white;
+}
+
+/* Optional: style the action buttons in the table */
+.actionbtn {
+  padding: 6px 14px;
+  margin: 2px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  color: white;
+}
+
+.actionbtn:nth-child(1) { /* Accept button */
+  background-color: #1a8f00;
+}
+
+.actionbtn:nth-child(2) { /* Cancel button */
+  background-color: #d50000;
+}
