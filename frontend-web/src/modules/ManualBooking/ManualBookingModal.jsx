@@ -8,6 +8,19 @@ import QrCode from "./QrCode.jsx";
 // API URL from environment variable
 const apiUrl = import.meta.env.VITE_API_URL;
 
+// Function to convert 12-hour time to 24-hour time format
+const convertTo24HourFormat = (time12hr) => {
+  const [time, modifier] = time12hr.split(' ');
+  let [hours, minutes] = time.split(':');
+  if (modifier === 'PM' && hours !== '12') {
+    hours = (parseInt(hours) + 12).toString();
+  }
+  if (modifier === 'AM' && hours === '12') {
+    hours = '00';
+  }
+  return `${hours}:${minutes}`;
+};
+
 export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
   const [step, setStep] = useState(1);
   const [manualData, setManualData] = useState({
@@ -85,6 +98,9 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     console.log("Passenger Info to register:", passengerInfo);  // Log passenger info before sending
 
     try {
+      // Convert departure time to 24-hour format
+      const departureTime24hr = convertTo24HourFormat(manualData.departureTime);
+
       // Register user if not exists
       const userResponse = await axios.post(`${apiUrl}/api/boarding/manual/register_user`, {
         first_name: passengerInfo.firstName,
@@ -93,7 +109,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
         contact_number: passengerInfo.contactNumber,
         age: passengerInfo.age,
         gender: passengerInfo.gender,
-        email: passengerInfo.email, 
+        email: passengerInfo.email,
         platform_source: passengerInfo.platformSource,
       });
 
@@ -111,7 +127,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
         origin: manualData.origin,
         destination: manualData.destination,
         departure_date: manualData.departureDate,
-        departure_time: manualData.departureTime,
+        departure_time: departureTime24hr,  // Use the 24-hour time here
       });
 
       // Save booking details
@@ -120,7 +136,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
         origin: manualData.origin,
         destination: manualData.destination,
         departure_date: manualData.departureDate,
-        departure_time: manualData.departureTime,
+        departure_time: departureTime24hr,  // Use the 24-hour time here
       });
 
       console.log("Booking Response:", bookingResponse.data);  // Log booking response
