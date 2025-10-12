@@ -1,4 +1,3 @@
-// passengerManagement.jsx
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
@@ -25,13 +24,13 @@ const columns = [
   "messenger_psid",
 ];
 
-// normalize any id (number/string/null) to a stable string
+// Normalize any id (number/string/null) to a stable string
 const idOf = (v) => String(v ?? "");
 
 export function Passenger() {
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState("");
-  const [platform, setPlatform] = useState("all"); 
+  const [platform, setPlatform] = useState("all");
   const [checked, setChecked] = useState(new Set()); // Set<string>
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
@@ -59,7 +58,7 @@ export function Passenger() {
   // Fetch passengers
   const fetchPassengers = useCallback(async () => {
     try {
-      const params = { platform }; // add date_from/date_to when you have UI
+      const params = { platform }; // Add date_from/date_to when you have UI
       // if (dateFrom) params.date_from = dateFrom;
       // if (dateTo) params.date_to = dateTo;
 
@@ -86,25 +85,26 @@ export function Passenger() {
 
   // Delete selected passengers (optimistic UI + sync)
   const deletePassengers = async () => {
-    const ids = Array.from(checked); // string[]
-    if (ids.length === 0) return;
+    const ids = Array.from(checked); // string[] of selected passengers' IDs
+    if (ids.length === 0) return; // If no passengers selected, do nothing
 
-    // Optimistic: remove from UI immediately
+    // Optimistic UI: remove from UI immediately
     setRows((prev) => prev.filter((r) => !ids.includes(idOf(r.User_ID))));
-    setChecked(new Set());
-    setShowConfirmDelete(false);
+    setChecked(new Set());  // Clear selected checkboxes
+    setShowConfirmDelete(false);  // Close the confirmation modal
 
     // Sync with server
     try {
+      // Send a DELETE request for each selected passenger ID
       await Promise.all(ids.map((id) => axios.delete(`${apiUrl}/api/users/${id}`)));
     } catch (error) {
       console.error("Some deletes failed:", error);
-      // Fallback: re-fetch to ensure consistency
+      // Fallback: re-fetch the data to ensure consistency if the delete fails
       fetchPassengers();
       return;
     }
 
-    // Optional final sync
+    // Optional: Final sync (re-fetching the data after successful delete)
     fetchPassengers();
   };
 
