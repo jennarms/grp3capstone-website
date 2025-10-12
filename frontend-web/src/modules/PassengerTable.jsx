@@ -103,6 +103,56 @@ export default function PassengerTable({ origin, scheduleTime }) {
     else if (direction === 'next' && currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
+  // Function to compare the departure date with the current date
+  const isDateExpired = (departureDate) => {
+    const today = new Date();
+    const departure = new Date(departureDate);
+
+    // Set the time to 00:00 to only compare the dates
+    today.setHours(0, 0, 0, 0);
+    departure.setHours(0, 0, 0, 0);
+
+    // If the departure date is older than today, return true
+    return departure < today;
+  };
+
+  // Filter out passengers where departure_date has passed by more than 1 day
+  const filterPassengerData = passengerData.filter((passenger) => {
+    return !isDateExpired(passenger.departure_date); // Only show those that are not expired
+  });
+
+  // Function to normalize and search by all fields (convert all values to strings for search)
+  const normalizeValue = (value) => {
+    // If the value is a Date, convert it to a string (e.g., 'YYYY-MM-DD')
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+    }
+    return String(value || "").toLowerCase(); // Convert to string for non-date values
+  };
+
+  // Function to filter passengers based on search query (check each column individually)
+  const filterBySearchQuery = (data, query) => {
+    const queryLower = query.toLowerCase(); // Make the search case-insensitive
+    return data.filter((passenger) => {
+      return (
+        normalizeValue(passenger.BD_ID).includes(queryLower) ||
+        normalizeValue(passenger.Booking_ID).includes(queryLower) ||
+        normalizeValue(passenger.User_ID).includes(queryLower) ||
+        normalizeValue(passenger.boarding_time).includes(queryLower) ||
+        normalizeValue(passenger.disembarking_time).includes(queryLower) ||
+        normalizeValue(passenger.status).includes(queryLower) ||
+        normalizeValue(passenger.Qrcode_ID).includes(queryLower) ||
+        normalizeValue(passenger.Schedule_ID).includes(queryLower) ||
+        normalizeValue(passenger.origin).includes(queryLower) ||
+        normalizeValue(passenger.destination).includes(queryLower) ||
+        normalizeValue(passenger.departure_date).includes(queryLower) ||
+        normalizeValue(passenger.departure_time).includes(queryLower)
+      );
+    });
+  };
+
+  const filteredData = filterBySearchQuery(filterPassengerData, query);
+
   return (
     <>
       <section className="passenger-head-section">
@@ -123,7 +173,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
         <div className="table-wrapper">
           {loading ? (
             <div className="loading-message">Loading data...</div>
-          ) : passengerData.length === 0 ? (
+          ) : filteredData.length === 0 ? (
             <div className="no-data-message">No passengers available.</div>
           ) : (
             <table className="passenger-list-table">
@@ -145,7 +195,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
                 </tr>
               </thead>
               <tbody>
-                {passengerData.map((passenger) => (
+                {filteredData.map((passenger) => (
                   <tr key={passenger.BD_ID}>
                     <td>{passenger.BD_ID}</td>
                     <td>{passenger.Booking_ID}</td>
