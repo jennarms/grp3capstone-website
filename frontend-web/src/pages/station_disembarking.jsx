@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { StationNavbar } from "../components/station_navbar";
 import { LogoutButton } from "../components/logout_button";
+import { StationNavbar } from "../components/station_navbar";
 import "./station_disembarking.css";
-// ⬇️ added
-import { useSearchParams } from "react-router-dom";
 
 function MagnifierSVG() {
   return (
@@ -13,34 +11,10 @@ function MagnifierSVG() {
     </svg>
   );
 }
-function LocationPinSVG() {
-  return (
-    <span className="dm-pin" aria-label="Current stop" title="Current stop">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2c-3.314 0-6 2.686-6 6 0 4.418 5.03 10.246 5.246 10.5a1 1 0 0 0 1.508 0C12.97 18.246 18 12.418 18 8c0-3.314-2.686-6-6-6zm0 8.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
-      </svg>
-    </span>
-  );
-}
 
 export function Disembarking() {
-  // ⬇️ added: read params from the clicked "View" button
-  const [sp] = useSearchParams();
-  const fromParam = (sp.get("from") || "").toLowerCase();        // "kalawaan" | "escolta"
-  const timeParam = sp.get("time") || "8:40 AM";
-  const bookedParam = parseInt(sp.get("booked") || "6", 10);
-  const capacityParam = parseInt(sp.get("capacity") || "30", 10);
-
   const [tripInfo] = useState({
-    route: fromParam === "escolta" ? "Escolta → PUP" : "PUP → Kalawaan",
-    departTime: timeParam,
-    booked: { count: bookedParam, capacity: capacityParam },
-    stops: [
-      { name: "Quinta", time: "8:22 AM", status: "Departed" },
-      { name: "PUP", time: timeParam, status: "Arrived", pin: true },
-      { name: "Sta - Ana", time: "8:55 AM", status: "Approaching" },
-      { name: "Lambingan", time: "9:00 AM", status: "Approaching" },
-    ],
+    route: "Escolta", // Route is hardcoded to "Escolta"
   });
 
   const [rows, setRows] = useState([]);
@@ -50,18 +24,14 @@ export function Disembarking() {
   const [targetRow, setTargetRow] = useState(null);
 
   const [toast, setToast] = useState(null);
-  const [scanOpen, setScanOpen] = useState(false); // 🔹 new state
+  const [scanOpen, setScanOpen] = useState(false);
 
+  // Temporary placeholder data
   useEffect(() => {
     setRows([
-      { id: 1, payment_status: "P", payment_amount: 45.0, paid_at: "8:00 am", booking_status: "OB", booking_source: "MA", disembarked: false },
-      { id: 2, payment_status: "P", payment_amount: 30.0, paid_at: "8:00 am", booking_status: "OB", booking_source: "MA", disembarked: false },
-      { id: 3, payment_status: "P", payment_amount: 40.0, paid_at: "8:10 am", booking_status: "OB", booking_source: "CB", disembarked: false },
-      { id: 4, payment_status: "P", payment_amount: 45.0, paid_at: "8:10 am", booking_status: "OB", booking_source: "MA", disembarked: false },
-      { id: 5, payment_status: "PG", payment_amount: 38.0, paid_at: "8:38 am", booking_status: "OB", booking_source: "CB", disembarked: false },
-      { id: 6, payment_status: "PG", payment_amount: 20.0, paid_at: "8:40 am", booking_status: "OB", booking_source: "GM", disembarked: false },
-      { id: 7, payment_status: "F", payment_amount: 0.0, paid_at: "8:42 am", booking_status: "CA", booking_source: "MA", disembarked: false },
-      { id: 8, payment_status: "P", payment_amount: 30.0, paid_at: "8:00 am", booking_status: "DI", booking_source: "MB", disembarked: true },
+      { BD_ID: 25, Booking_ID: "BK000001", User_ID: "UID010", boarding_time: "2025-10-12 16:55:56", disembarking_time: null, status: "B", Qrcode_ID: "QR000001", Schedule_ID: "NoSchedule", origin: "ST0001", destination: "ST0005", departure_date: "2025-10-13", departure_time: "17:00:00" },
+      { BD_ID: 26, Booking_ID: "BK000002", User_ID: "UID011", boarding_time: "2025-10-12 16:55:47", disembarking_time: null, status: "B", Qrcode_ID: "QR000002", Schedule_ID: "NoSchedule", origin: "ST0001", destination: "ST0009", departure_date: "2025-10-13", departure_time: "17:00:00" },
+      { BD_ID: 27, Booking_ID: "BK000003", User_ID: "UID012", boarding_time: null, disembarking_time: null, status: "P", Qrcode_ID: "QR000003", Schedule_ID: "NoSchedule", origin: "ST0001", destination: "ST0008", departure_date: "2025-10-13", departure_time: "08:15:00" },
     ]);
   }, []);
 
@@ -69,7 +39,7 @@ export function Disembarking() {
     const s = q.trim().toLowerCase();
     if (!s) return rows;
     return rows.filter((r) =>
-      [r.payment_status, r.payment_amount, r.paid_at, r.booking_status, r.booking_source, r.disembarked ? "disembarked" : ""]
+      [r.Booking_ID, r.User_ID, r.status, r.Qrcode_ID, r.origin, r.destination, r.departure_date, r.departure_time]
         .join(" ")
         .toLowerCase()
         .includes(s)
@@ -102,24 +72,10 @@ export function Disembarking() {
         <h1 className="dm-title">Disembarking Management</h1>
         <LogoutButton />
 
-        {/* Trip Header */}
+        {/* Only displaying the route name */}
         <section className="dm-tripcard">
           <div className="dm-tripcard-head">
-            <div className="dm-tripcard-route">{tripInfo.route}</div>
-            <div className="dm-tripcard-time">{tripInfo.departTime}</div>
-            <div className="dm-tripcard-booked">
-              Booked: <strong>{tripInfo.booked.count}/{tripInfo.booked.capacity}</strong>
-            </div>
-          </div>
-          <div className="dm-tripcard-divider" />
-          <div className="dm-tripcard-body">
-            {tripInfo.stops.map((s, i) => (
-              <div className="dm-stoprow" key={i}>
-                <div className="dm-stopname">{s.pin ? <LocationPinSVG /> : null}{s.name}</div>
-                <div className="dm-stoptime">{s.time}</div>
-                <div className="dm-stopstatus">{s.status}</div>
-              </div>
-            ))}
+            <div className="dm-tripcard-route">{tripInfo.route}</div> {/* Display route name */}
           </div>
         </section>
 
@@ -149,36 +105,36 @@ export function Disembarking() {
             <table className="dm-table">
               <thead>
                 <tr>
-                  <th>payment_status</th>
-                  <th>payment_amount</th>
-                  <th>paid_at</th>
-                  <th>booking_status</th>
-                  <th>booking_source</th>
-                  <th>action</th>
+                  <th>BD_ID</th>
+                  <th>Booking_ID</th>
+                  <th>User_ID</th>
+                  <th>Boarding Time</th>
+                  <th>Disembarking Time</th>
+                  <th>Status</th>
+                  <th>Qrcode_ID</th>
+                  <th>Schedule_ID</th>
+                  <th>Origin</th>
+                  <th>Destination</th>
+                  <th>Departure Date</th>
+                  <th>Departure Time</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.payment_status}</td>
-                    <td>{r.payment_amount.toFixed(2)}</td>
-                    <td>{r.paid_at}</td>
-                    <td>
-                      <span
-                        className={`dm-status ${
-                          r.booking_status === "OB"
-                            ? "dm-status--ok"
-                            : r.booking_status === "CA"
-                            ? "dm-status--bad"
-                            : r.booking_status === "DI"
-                            ? "dm-status--warn"
-                            : ""
-                        }`}
-                      >
-                        {r.booking_status}
-                      </span>
-                    </td>
-                    <td>{r.booking_source}</td>
+                  <tr key={r.BD_ID}>
+                    <td>{r.BD_ID}</td>
+                    <td>{r.Booking_ID}</td>
+                    <td>{r.User_ID}</td>
+                    <td>{r.boarding_time || '—'}</td>
+                    <td>{r.disembarking_time || '—'}</td>
+                    <td>{r.status || '—'}</td>
+                    <td>{r.Qrcode_ID || '—'}</td>
+                    <td>{r.Schedule_ID || '—'}</td>
+                    <td>{r.origin || '—'}</td>
+                    <td>{r.destination || '—'}</td>
+                    <td>{r.departure_date || '—'}</td>
+                    <td>{r.departure_time || '—'}</td>
                     <td>
                       <button
                         className={`dm-pill ${r.disembarked ? "dm-pill--done" : "dm-pill--primary"}`}
@@ -192,7 +148,7 @@ export function Disembarking() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="dm-empty">No passengers match “{q}”.</td>
+                    <td colSpan={12} className="dm-empty">No passengers match “{q}”.</td>
                   </tr>
                 )}
               </tbody>
