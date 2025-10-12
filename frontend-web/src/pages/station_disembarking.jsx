@@ -180,11 +180,7 @@ export function Disembarking() {
               <h3>Scan Passenger QR Code</h3>
               <p className="dm-sub">Please place the passenger’s QR code in front of the scanner device.</p>
               <div className="dm-hero-circle">
-                <img
-                  src="/scanner.jpg" // replace with your scanner image path
-                  alt="Scanner device"
-                  style={{ width: "180px", height: "180px", borderRadius: "50%" }}
-                />
+                📷
               </div>
               <p className="dm-status">Currently scanning...</p>
               <p className="dm-hint">If scanning doesn't work, use manual.</p>
