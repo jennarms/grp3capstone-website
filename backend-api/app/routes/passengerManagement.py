@@ -88,10 +88,10 @@ def build_safe_select(cols_set):
     if platform_src:
         platform_name_sql = (
             "CASE {ps} "
-            "  WHEN 'MB' THEN 'Mobile App' "
+            "  WHEN 'MA' THEN 'Mobile App' "
             "  WHEN 'CB' THEN 'Chatbot' "
             "  WHEN 'EM' THEN 'Email' "
-            "  WHEN 'MA' THEN 'Manual' "
+            "  WHEN 'MB' THEN 'Manual' "
             "  ELSE 'Unknown' "
             "END AS platform_name"
         ).format(ps=platform_src)
