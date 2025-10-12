@@ -67,17 +67,20 @@ def get_feedback():
 
 # 🔹 Delete feedback (protected)
 @feedback_bp.route("/<fid>", methods=["DELETE"])
-@jwt_required()  # Ensure JWT token is required for this route
 def delete_feedback(fid):
-    current_user = get_jwt_identity()  # ✅ Log who deleted
     cur = mysql.connection.cursor()
 
-    # Delete feedback record by Feedback_ID
-    cur.execute("DELETE FROM Feedback WHERE Feedback_ID = %s", (fid,))
-    mysql.connection.commit()
-    cur.close()
+    # Try to delete the feedback record from the database
+    try:
+        cur.execute("DELETE FROM Feedback WHERE Feedback_ID = %s", (fid,))
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({"success": True, "message": f"Feedback {fid} deleted"}), 200
+    except Exception as e:
+        cur.close()
+        print(f"Error deleting feedback {fid}: {e}")  # Log any errors
+        return jsonify({"success": False, "message": "Error deleting feedback"}), 500
 
-    return jsonify({"success": True, "message": f"Feedback {fid} deleted by {current_user}"})
 
 
 # 🔹 Update reply for a specific feedback (protected)

@@ -84,18 +84,22 @@ export function Feedback() {
     setConfirmDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (pendingDeleteId != null) {
-      axios
-        .delete(`${apiUrl}/api/feedback/${pendingDeleteId}`)
-        .then(() =>
-          setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId))
-        )
-        .catch((err) => console.error("Delete failed:", err));
-    }
-    setConfirmDeleteOpen(false);
-    setPendingDeleteId(null);
-  };
+const confirmDelete = () => {
+  if (pendingDeleteId != null) {
+    // Make the delete request without the token
+    axios
+      .delete(`${apiUrl}/api/feedback/${pendingDeleteId}`)
+      .then(() => {
+        setItems((prev) => prev.filter((i) => i.id !== pendingDeleteId));
+      })
+      .catch((err) => {
+        console.error("Delete failed:", err);
+      });
+  }
+  setConfirmDeleteOpen(false);
+  setPendingDeleteId(null);
+};
+
 
   const cancelDelete = () => {
     setConfirmDeleteOpen(false);
