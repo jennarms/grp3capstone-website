@@ -4,11 +4,15 @@ import { useCallback, useEffect, useState } from 'react';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function DisembarkPassengerTable({ destination }) {
-  const [passengerData, setPassengerData] = useState([]);  // Ensure it's initialized as an empty array
+  const [passengerData, setPassengerData] = useState([]);  // Initialize as an empty array
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPassenger, setSelectedPassenger] = useState(null);
 
   // Fetching disembarking data based on destination
   const fetchDisembarkingData = useCallback(async (page) => {
@@ -18,9 +22,11 @@ export default function DisembarkPassengerTable({ destination }) {
     try {
       const params = { page, destination }; // Pass destination to filter passengers
       if (query) params.query = query;
+
       const response = await axios.get(`${apiUrl}/api/passengertable/get_disembarking_details`, { params });
 
-      // Use the response to set passenger data
+      console.log("Fetched Disembarking Data:", response.data);  // Debugging: Check the fetched data
+
       if (response.data && Array.isArray(response.data.boardingData)) {
         setPassengerData(response.data.boardingData);
         setTotalPages(response.data.totalPages);
@@ -35,7 +41,9 @@ export default function DisembarkPassengerTable({ destination }) {
     }
   }, [destination, query]);
 
-  useEffect(() => { fetchDisembarkingData(currentPage); }, [currentPage, fetchDisembarkingData]);
+  useEffect(() => { 
+    fetchDisembarkingData(currentPage); 
+  }, [currentPage, fetchDisembarkingData]);
 
   useEffect(() => {
     const interval = setInterval(() => { fetchDisembarkingData(currentPage); }, 10000);
@@ -47,25 +55,39 @@ export default function DisembarkPassengerTable({ destination }) {
     else if (direction === 'next' && currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  const handleDisembark = async (passengerId, qrcodeId) => {
+  // Open the modal for disembarking
+  const openModal = (passenger) => {
+    setSelectedPassenger(passenger);
+    setModalVisible(true);
+  };
+
+  // Close the modal
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedPassenger(null);
+  };
+
+  // Handle the disembark action
+  const handleDisembark = async () => {
     try {
+      if (!selectedPassenger) return;
+
       const response = await axios.post(`${apiUrl}/api/passengertable/update_passenger_status_and_qrcode`, {
-        BD_ID: passengerId,
-        action: 'accept',  // Mark as disembark (boarded)
-        Qrcode_ID: qrcodeId,
+        BD_ID: selectedPassenger.BD_ID,
+        action: 'disembark',  // Mark as disembark (disembarked)
+        Qrcode_ID: selectedPassenger.Qrcode_ID,
       });
 
       console.log("Response:", response);  // Debugging: Check what is returned from the backend
 
-      // Check if the response contains a message
       if (response.data && response.data.message) {
         console.log(response.data.message);  // Log the success message
 
         // Update passenger status locally
         setPassengerData(prevData =>
           prevData.map(passenger =>
-            passenger.BD_ID === passengerId
-              ? { ...passenger, status: 'D' }  // Change status to Disembarked
+            passenger.BD_ID === selectedPassenger.BD_ID
+              ? { ...passenger, status: 'D', disembarking_time: response.data.message }  // Change status to Disembarked
               : passenger
           )
         );
@@ -74,6 +96,8 @@ export default function DisembarkPassengerTable({ destination }) {
       }
     } catch (error) {
       console.error("Error updating passenger status:", error);
+    } finally {
+      closeModal();
     }
   };
 
@@ -134,7 +158,13 @@ export default function DisembarkPassengerTable({ destination }) {
                     <td>{passenger.departure_date || '—'}</td>
                     <td>{passenger.departure_time || '—'}</td>
                     <td>
-                      <button className="actionbtn" onClick={() => handleDisembark(passenger.BD_ID, passenger.Qrcode_ID)}>Mark as Disembark</button>
+                      {passenger.status === 'B' ? ( // Only show button if status is 'B' (Boarded)
+                        <button className="actionbtn" onClick={() => openModal(passenger)}>
+                          Mark as Disembark
+                        </button>
+                      ) : (
+                        <span>Already Disembarked</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -149,6 +179,20 @@ export default function DisembarkPassengerTable({ destination }) {
         <span>{currentPage}</span>
         <button disabled={currentPage === totalPages} onClick={() => handlePageChange('next')}>Next</button>
       </div>
+
+      {/* Confirmation Modal */}
+      {modalVisible && (
+        <div className="actionbtn-modal-confirm-overlay">
+          <div className="actionbtn-modal-confirm-box">
+            <h3>Confirm Disembark</h3>
+            <p>Are you sure you want to disembark this passenger?</p>
+            <div className="actionbtn-modal-confirm-buttons">
+              <button className="actionbtn-modal-cancel-btn" onClick={closeModal}>Cancel</button>
+              <button className="actionbtn-modal-yes-btn" onClick={handleDisembark}>Yes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

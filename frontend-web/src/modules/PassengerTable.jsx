@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function PassengerTable({ origin, scheduleTime }) {
-  const [passengerData, setPassengerData] = useState([]);
+  const [passengerData, setPassengerData] = useState([]); 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [query, setQuery] = useState("");
@@ -210,8 +210,16 @@ export default function PassengerTable({ origin, scheduleTime }) {
                     <td>{passenger.departure_date || '—'}</td>
                     <td>{passenger.departure_time || '—'}</td>
                     <td>
-                      <button className="actionbtn" onClick={() => openModal('accept', passenger)}>Accept</button>
-                      <button className="actionbtn" onClick={() => openModal('cancel', passenger)}>Cancel</button>
+                      {passenger.status === 'B' ? ( // If status is Boarded (B)
+                        <span>Already Boarded</span> // Replace button with text for boarded passengers
+                      ) : passenger.status === 'C' ? ( // If status is Cancelled (C)
+                        <span>Already Cancelled</span> // Replace button with text for cancelled passengers
+                      ) : (
+                        <>
+                          <button className="actionbtn" onClick={() => openModal('accept', passenger)}>Accept</button>
+                          <button className="actionbtn" onClick={() => openModal('cancel', passenger)}>Cancel</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
