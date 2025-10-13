@@ -1,0 +1,92 @@
+/* Namespaced with .sbm- to avoid colliding with station_boarding.css */
+
+/* Trigger button */
+.sbm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.1rem;
+    border: none;
+    border-radius: 12px;
+    background: #0a1970;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(11, 27, 94, 0.2);
+    font-size: 18px;
+  }
+  .sbm-btn:active { transform: translateY(1px); }
+  .sbm-btn-icon { font-size: 22px; }
+  
+  /* Backdrop */
+  .sbm-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 24, 40, 0.45);
+    display: grid;
+    place-items: center;
+    z-index: 4000; /* above the page UI */
+  }
+  
+  /* Card */
+  .sbm-card {
+    width: min(820px, 92vw);
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px 24px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    transform: translateX(0);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  .sbm-card--left { transform: translateX(-6px); }
+  
+  /* Typography */
+  .sbm-title { font-size: 40px; font-weight: 800; margin: 0 0 6px; color: #111; }
+  .sbm-sub { margin: 0 0 16px; color: #374151; font-size: 18px; }
+  .sbm-hint { color: #4b5563; margin: 2px 0; }
+  
+  /* Illustration circle */
+  .sbm-illustration {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    margin: 8px auto 8px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    font-size: 64px;
+    color: #0a1970;
+  }
+  
+  /* Actions */
+  .sbm-actions { display: flex; justify-content: center; margin-top: 16px; gap: 10px; }
+  .sbm-close {
+    padding: 10px 24px;
+    background: #0a1970;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  
+  /* Success / Denied */
+  .sbm-confirm { font-size: 22px; font-weight: 800; margin: 6px 0 12px; color: #027a48; text-align: left; }
+  .sbm-denied  { font-size: 22px; font-weight: 800; margin: 6px 0 12px; color: #b42318; text-align: left; }
+  
+  .sbm-details {
+    margin: 6px auto 0;
+    max-width: 520px;
+    font-size: 18px;
+    line-height: 1.55;
+    text-align: left;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .sbm-line { margin: 0 0 8px; }
+  .sbm-details strong { font-weight: 800; }
+  

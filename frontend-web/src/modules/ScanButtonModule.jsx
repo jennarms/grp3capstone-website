@@ -1,167 +1,253 @@
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
+import "./ScanButtonModule.css"; // ← separate stylesheet just for this component
 
-// Define the API URL from environment variables
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl =
+  (import.meta?.env && import.meta.env.VITE_API_URL) ||
+  (typeof process !== "undefined" && process.env?.VITE_API_URL) ||
+  "";
 
-export default function ScanButtonModule({ action }) {  // Receive action as a prop
-  const [showScan, setShowScan] = useState(false);
-  const [scanState, setScanState] = useState(null); // "scanning" | "scanned" | "success" | "denied"
-  const [scanResult, setScanResult] = useState(null);
-  const inputRef = useRef(""); // Ref to hold the scanned code
+// Idle gap (ms) for scanners that don't send Enter
+const SCAN_IDLE_MS = 120;
 
-  // Memoize handleScan with useCallback to prevent unnecessary re-creations
-  const handleScan = useCallback(async (qrCode) => {
-    try {
-      // Send the action dynamically (boarding or disembarking)
-      const response = await axios.post(`${apiUrl}/api/scan/scan_qrcode`, {
-        QRCode_ID: qrCode,
-        action: action, // Use the action dynamically
-      });
+export default function ScanButtonModule({ action = "boarding" }) {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState(null); // "scanning" | "scanned" | "success" | "denied"
+  const [result, setResult] = useState(null); // { name, code, from, to }
 
-      // If the passenger is found, show the details
-      setScanResult({
-        name: response.data.name,
-        code: response.data.code,
-        from: response.data.from,
-        to: response.data.to,
-      });
-      setScanState("success");
-    } catch (err) {
-      console.error('Scan failed:', err.response?.data || err);
-      setScanState("denied");
+  const bufferRef = useRef("");      // live keystroke buffer
+  const idleTimerRef = useRef(null); // idle timer for no-Enter scanners
+  const isMountedRef = useRef(false);
+
+  // ---------------- helpers ----------------
+
+  const resetAll = useCallback(() => {
+    bufferRef.current = "";
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
     }
-  }, [action]); // The function will only be recreated if `action` changes
+    setResult(null);
+    setStatus(null);
+  }, []);
 
-  // Handle keyboard input from scanner
+  const closeModal = useCallback(() => {
+    setOpen(false);
+    resetAll();
+  }, [resetAll]);
+
+  // Commit the buffer as a single scan
+  const commitScan = useCallback((raw) => {
+    const code = (raw ?? bufferRef.current).trim();
+    bufferRef.current = "";
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+    if (!code) return;
+
+    setStatus("scanned"); // show "Processing…"
+    handleScan(code);
+  }, []); // stable
+
+  // Call backend
+  const handleScan = useCallback(
+    async (qrCode) => {
+      try {
+        const resp = await axios.post(`${apiUrl}/api/scan/scan_qrcode`, {
+          QRCode_ID: qrCode,
+          action,
+        });
+
+        if (!isMountedRef.current) return;
+        setResult({
+          name: resp?.data?.name ?? "",
+          code: resp?.data?.code ?? qrCode,
+          from: resp?.data?.from ?? "",
+          to: resp?.data?.to ?? "",
+        });
+        setStatus("success");
+      } catch (err) {
+        if (!isMountedRef.current) return;
+        setResult((prev) => ({
+          ...(prev ?? {}),
+          code: (prev?.code ?? qrCode) || "—",
+        }));
+        setStatus("denied");
+        // eslint-disable-next-line no-console
+        console.error("Scan failed:", err?.response?.data ?? err);
+      }
+    },
+    [action]
+  );
+
+  // ---------------- lifecycle/events ----------------
+
   useEffect(() => {
-    if (showScan && scanState === "scanning") {
-      const handleKeyPress = (e) => {
-        console.log(`Key pressed: ${e.key}`);  // Log every key pressed by scanner
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-        // Ignore Shift, Control, Meta, Alt, CapsLock, and other special keys
-        const ignoredKeys = ['Shift', 'Control', 'Meta', 'Alt', 'CapsLock', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+  useEffect(() => {
+    if (!(open && status === "scanning")) return;
 
-        // If the key is in the ignored keys, just return
-        if (ignoredKeys.includes(e.key)) return;
+    const ignored = new Set([
+      "Shift",
+      "Control",
+      "Meta",
+      "Alt",
+      "CapsLock",
+      "Tab",
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+    ]);
+    const singleAlphaNum = /^[a-z0-9]$/i;
 
-        // If the key is alphanumeric, add it to the input
-        const alphanumericRegex = /^[a-z0-9]+$/i; // Regular expression for alphanumeric characters
-        if (alphanumericRegex.test(e.key)) {
-          inputRef.current += e.key; // Add alphanumeric key to the input
-        }
+    const onKeyDown = (e) => {
+      // ESC closes the modal
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeModal();
+        return;
+      }
 
-        // If the key is 'Enter', process the QR code (this is when the scanner finishes sending the data)
-        if (e.key === "Enter") {
-          const code = inputRef.current.trim();  // Trim any extra whitespace or Enter key
-          inputRef.current = "";  // Reset the input field
-          console.log("Scanned QR Code:", code);  // Log the scanned QR code value
+      if (ignored.has(e.key)) return;
 
-          // Remove the "Enter" key if it's in the code
-          const cleanCode = code.replace("Enter", "").trim(); // Remove the 'Enter' part from the scanned code
+      // End-of-scan: many scanners send Enter or NumpadEnter
+      if (e.key === "Enter" || e.code === "NumpadEnter") {
+        e.preventDefault();
+        commitScan();
+        return;
+      }
 
-          // Send QR code to the backend to fetch the passenger details
-          handleScan(cleanCode);
-        }
-      };
+      // Typical HID scanners emit single printable chars quickly
+      if (singleAlphaNum.test(e.key)) {
+        bufferRef.current += e.key;
+      }
 
-      window.addEventListener("keydown", handleKeyPress);
-      return () => window.removeEventListener("keydown", handleKeyPress);
-    }
-  }, [showScan, scanState, handleScan]);  // Now handleScan is stable and part of the dependency array
+      // If no Enter arrives, commit after short idle pause
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => commitScan(), SCAN_IDLE_MS);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
+  }, [open, status, commitScan, closeModal]);
+
+  // ---------------- UI ----------------
 
   return (
     <>
       <button
-        className="scan-btn"
+        className="sbm-btn" // ← namespaced button
         onClick={() => {
-          setShowScan(true);  // Open modal
-          setScanState("scanning");  // Set state to scanning
-          setScanResult(null);  // Reset scan result
-          inputRef.current = "";  // Reset the scanned code input
+          setOpen(true);
+          setStatus("scanning");
+          setResult(null);
+          bufferRef.current = "";
+          if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current);
+            idleTimerRef.current = null;
+          }
         }}
+        aria-label="Scan passenger QR code"
       >
-        <span className="btn-icon">💻</span>
+        <span className="sbm-btn-icon" aria-hidden="true">💻</span>
         Scan
       </button>
 
-      {showScan && (
+      {open && (
         <div
-          className="boarding-modal-backdrop"
-          onClick={() => {
-            setShowScan(false);
-            setScanState(null);
-            setScanResult(null);
-          }}
+          className="sbm-backdrop" // ← namespaced backdrop
+          onClick={closeModal}
           aria-hidden="true"
         >
           <div
-            className={"boarding-scan-card" + ((scanState === "success" || scanState === "denied") ? " boarding-scan--left" : "")}
+            className={
+              "sbm-card" + // ← namespaced card
+              (status === "success" || status === "denied" ? " sbm-card--left" : "")
+            }
             role="dialog"
             aria-modal="true"
-            aria-labelledby="scanTitle"
+            aria-labelledby="sbm-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="scanTitle" className="boarding-scan-title">Scan Passenger QR Code</h3>
+            <h3 id="sbm-title" className="sbm-title">
+              Scan Passenger QR Code
+            </h3>
 
-            {scanState === "scanning" && (
+            {status === "scanning" && (
               <>
-                <p className="boarding-scan-sub">Please scan the passenger’s QR code using the scanner device.</p>
-                <div className="boarding-scan-illustration" aria-hidden="true">📷</div>
-                <p className="boarding-scan-hint">Waiting for QR code...</p>
-                <div className="boarding-scan-actions">
-                  <button
-                    className="boarding-scan-close"
-                    onClick={() => {
-                      setShowScan(false);
-                      setScanState(null);
-                    }}
-                  >
+                <p className="sbm-sub">
+                  Please scan the passenger’s QR code using the scanner device.
+                </p>
+                <div className="sbm-illustration" aria-hidden="true">📷</div>
+                <p className="sbm-hint">Waiting for QR code…</p>
+                <div className="sbm-actions">
+                  <button className="sbm-close" onClick={closeModal}>
                     Close
                   </button>
                 </div>
               </>
             )}
 
-            {scanState === "scanned" && (
+            {status === "scanned" && (
               <>
-                <p className="boarding-scan-sub">Scanned QR: {scanResult?.code}</p>
-                <p className="boarding-scan-hint">Processing...</p>
+                <p className="sbm-sub">
+                  Scanned QR:{" "}
+                  <strong>
+                    {(result?.code ?? bufferRef.current) || "…"}
+                  </strong>
+                </p>
+                <p className="sbm-hint">Processing…</p>
               </>
             )}
 
-            {scanState === "success" && (
+            {status === "success" && (
               <>
-                <h4 className="boarding-scan-confirm">Passenger Confirmed 🎉</h4>
-                <div className="boarding-scan-details">
-                  {scanResult?.name && <div className="boarding-scan-line"><strong>{scanResult.name}</strong></div>}
-                  <div className="boarding-scan-line">Ticket Code: <strong>{scanResult?.code || "—"}</strong></div>
-                  <div className="boarding-scan-line">From: {scanResult?.from || "—"}</div>
-                  <div className="boarding-scan-line">Destination: {scanResult?.to || "—"}</div>
+                <h4 className="sbm-confirm">Passenger Confirmed 🎉</h4>
+                <div className="sbm-details">
+                  {result?.name && (
+                    <div className="sbm-line">
+                      <strong>{result.name}</strong>
+                    </div>
+                  )}
+                  <div className="sbm-line">
+                    Ticket Code: <strong>{result?.code || "—"}</strong>
+                  </div>
+                  <div className="sbm-line">From: {result?.from || "—"}</div>
+                  <div className="sbm-line">Destination: {result?.to || "—"}</div>
                 </div>
               </>
             )}
 
-            {scanState === "denied" && (
+            {status === "denied" && (
               <>
-                <h4 className="boarding-scan-denied">QR Denied ❌</h4>
-                <div className="boarding-scan-details">
-                  <div className="boarding-scan-line">Scanned Code: <strong>{scanResult?.code || "—"}</strong></div>
-                  <div className="boarding-scan-line">This QR code is invalid or not found in the system.</div>
+                <h4 className="sbm-denied">QR Denied ❌</h4>
+                <div className="sbm-details">
+                  <div className="sbm-line">
+                    Scanned Code: <strong>{result?.code || "—"}</strong>
+                  </div>
+                  <div className="sbm-line">
+                    This QR code is invalid or not found in the system.
+                  </div>
                 </div>
               </>
             )}
 
-            {(scanState === "success" || scanState === "denied") && (
-              <div className="boarding-scan-actions">
-                <button
-                  className="boarding-scan-close"
-                  onClick={() => {
-                    setShowScan(false);
-                    setScanState(null);
-                    setScanResult(null);
-                  }}
-                >
+            {(status === "success" || status === "denied") && (
+              <div className="sbm-actions">
+                <button className="sbm-close" onClick={closeModal}>
                   Close
                 </button>
               </div>

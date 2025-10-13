@@ -1,0 +1,205 @@
+/* ---------- Header / Search ---------- */
+.passenger-head-section { margin-top: 6px; }
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.table-header h3 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+}
+
+/* Search */
+.table-search { position: relative; width: 300px; }
+.table-search-input {
+  width: 100%;
+  border: 2px solid #999;
+  border-radius: 24px;
+  padding: 8px 14px;
+  font-size: 14px;
+  background: #fff;
+  outline: none;
+}
+.table-search-input::placeholder { color: #888; }
+
+/* ---------- Table container ---------- */
+.boarding-table-section {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #d0d5dd;
+  max-height: 370px;
+  overflow-y: auto;
+  overflow-x: auto;
+  width: 1550px;
+  background: #fff;
+}
+.table-wrapper { width: 100%; overflow: visible; }
+
+/* Scrollbars */
+.boarding-table-section::-webkit-scrollbar { height: 10px; width: 10px; }
+.boarding-table-section::-webkit-scrollbar-track { background: #f1f1f1; }
+.boarding-table-section::-webkit-scrollbar-thumb { background: #999; border-radius: 4px; }
+.boarding-table-section::-webkit-scrollbar-thumb:hover { background: #666; }
+.boarding-table-section { scrollbar-width: thin; scrollbar-color: #999 #f1f1f1; }
+
+/* ---------- Table ---------- */
+.passenger-list-table {
+  width: max-content;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.passenger-list-table th,
+.passenger-list-table td {
+  padding: 10px 12px;
+  text-align: center;
+  border: 1px solid #000;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.passenger-list-table th {
+  background: #ccddff;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Loading / empty states */
+.loading-message,
+.no-data-message {
+  padding: 16px;
+  color: #475467;
+}
+
+/* ---------- Status badges ---------- */
+.status-badge {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.status-ob { color: #16a34a; } /* Boarded */
+.status-co { color: #2563eb; } /* Confirmed */
+.status-pe { color: #6b7280; } /* Pending */
+.status-ca { color: #dc2626; } /* Cancelled */
+.status-di { color: #d97706; } /* Disembarked */
+.muted    { color: #9ca3af; }
+
+/* ---------- Actions column (navy buttons) ---------- */
+.action-cell {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.actionbtn {
+  padding: 6px 14px;
+  margin: 2px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  color: #fff;
+  background-color: #0a1970; /* navy */
+  transition: filter 0.15s ease, transform 0.02s ease;
+}
+
+.actionbtn:hover { filter: brightness(1.06); }
+.actionbtn:active { transform: translateY(1px); }
+
+.actionbtn[disabled],
+.actionbtn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Ensure both buttons stay navy even if nth-child rules exist elsewhere */
+.actionbtn:nth-child(1),
+.actionbtn:nth-child(2) {
+  background-color: #0a1970 !important;
+}
+
+/* ---------- Pagination ---------- */
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+.pagination button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---------- Confirm Modal ---------- */
+.actionbtn-modal-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.5);
+  display: grid;
+  place-items: center;
+  z-index: 4000;
+}
+
+.actionbtn-modal-confirm-box {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 12px;
+  border-width: 2px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  text-align: center;
+  width: min(500px, 92vw);
+}
+
+.actionbtn-modal-confirm-box h3 {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.actionbtn-modal-confirm-box p {
+  font-size: 20px;
+  margin: 0;
+}
+
+.actionbtn-modal-confirm-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.actionbtn-modal-cancel-btn,
+.actionbtn-modal-yes-btn {
+  padding: 8px 22px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.actionbtn-modal-cancel-btn {
+  background-color: #ccc;
+  color: #333;
+}
+
+.actionbtn-modal-yes-btn {
+  background-color: #000c6f;
+  color: #fff;
+}
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 1200px) {
+  .boarding-table-section { width: 100%; }
+  .table-search { width: 220px; }
+}
+
+@media (max-width: 768px) {
+  .table-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .table-search { width: 100%; }
+}
