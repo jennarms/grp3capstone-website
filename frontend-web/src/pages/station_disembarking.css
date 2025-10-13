@@ -2,7 +2,7 @@
 .dm-shell { display: grid; grid-template-columns: 260px 1fr; height: 600px; }
 
 /* center all main content to the same width as Boarding */
-.dm-main { padding: 28px 0 36px; width: 1500px; margin-left: -500px; margin-top: -90px; }
+.dm-main { padding: 28px 0 36px;width: 1500px; margin-left: -500px; margin-top: -90px; }
 .dm-headerbar, .dm-tripcard, .dm-action-row, .dm-list-head, .dm-table-section {
   width: 1520px;
   margin: 0 auto;
@@ -132,8 +132,7 @@
 
 /* let the table grow wider than the frame */
 .dm-table {
-  table-layout: auto; /* Allow columns to auto adjust based on content */
-  width: 100%;
+  width:1500px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 14px;
@@ -166,21 +165,25 @@
 .dm-table tbody tr:nth-child(even) td { background: #f8fafc; }
 .dm-table tbody tr:hover td { background: #f3f6ff; }
 
-.dm-table th, .dm-table td { /* Let columns auto fit based on the content */
-  padding: 10px;
-  min-width: 50px; /* Minimum width to avoid overly narrow columns */
-}
+/* sensible column minimums */
+.dm-table th:nth-child(1), .dm-table td:nth-child(1) { min-width: 160px; }
+.dm-table th:nth-child(2), .dm-table td:nth-child(2) { min-width: 160px; }
+.dm-table th:nth-child(3), .dm-table td:nth-child(3) { min-width: 140px; }
+.dm-table th:nth-child(4), .dm-table td:nth-child(4) { min-width: 140px; }
+.dm-table th:nth-child(5), .dm-table td:nth-child(5) { min-width: 160px; }
+.dm-table th:nth-child(6), .dm-table td:nth-child(6) { min-width: 160px; }
+
+/* status chips in table */
+.dm-status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 550; font-size: 16px; }
+.dm-status--ok   { color:#0f5132; background:#d1f7df; border-color:#a6e7bf; }
+.dm-status--bad  { color:#842029; background:#f8d7da; border-color:#f1aeb5; }
+.dm-status--warn { color:#7a4a00; background:#ffe7c2; border-color:#ffd596; }
 
 /* action pills */
 .dm-pill { padding: 8px 12px; border-radius: 999px; border: 0; cursor: pointer; font-weight: 700; }
 .dm-pill--primary { background:#0b63f6; color:#fff; }
 .dm-pill--primary:hover { filter: brightness(1.05); }
 .dm-pill--done { background:#F4B400; color:#2f2a00; border:1px solid #E0A800; }
-
-.dm-status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 550; font-size: 16px; }
-.dm-status--ok   { color:#0f5132; background:#d1f7df; border-color:#a6e7bf; }
-.dm-status--bad  { color:#842029; background:#f8d7da; border-color:#f1aeb5; }
-.dm-status--warn { color:#7a4a00; background:#ffe7c2; border-color:#ffd596; }
 
 /* ===== responsive ===== */
 @media (max-width: 1200px) { .dm-search-wrap { width: 280px; } }
@@ -235,7 +238,6 @@
   background:#f3f4f6;
   border:1px solid #e5e7eb;
   display:grid; place-items:center;
-  font-size: 64px;
 }
 
 .dm-hero-camera{ width:48px; height:48px; color:#334155; }
@@ -247,3 +249,63 @@
 .dm-btn{ appearance:none; border:0; padding:10px 22px; font-weight:700; border-radius:999px; cursor:pointer; }
 .dm-btn-primary{ background:#0b2a7a; color:#fff; }
 .dm-modal-close{ min-width:120px; }
+
+/* ===== Top centered SUCCESS toast ===== */
+.dm-toast-wrap{
+  position:fixed; top:18px; left:0; right:0;
+  display:flex; justify-content:center;
+  z-index:70; pointer-events:none;
+}
+.dm-toast{
+  background:#F4B400; color:#1b1b1b;
+  border-radius:18px; padding:16px 26px;
+  min-width:520px; max-width:90vw;
+  box-shadow:0 10px 28px rgba(0,0,0,.25);
+  text-align:center;
+}
+.dm-toast-title{ font-weight:800; font-size:24px; margin-bottom:4px; }
+.dm-toast-body{ font-size:14px; }
+
+/* ===== Manual Disembark Confirm Modal ===== */
+.dm-confirm-backdrop{ position:fixed; inset:0; background:rgba(17,24,39,.55); display:flex; align-items:center; justify-content:center; z-index:90; }
+.dm-confirm{ width:min(720px, 92vw); background:#fff; border-radius:10px; box-shadow:0 25px 60px rgba(0,0,0,.35); padding:22px 24px; }
+.dm-confirm-header{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.dm-qmark{ width:30px; height:30px; line-height:30px; border-radius:50%; background:#111827; color:#fff; font-weight:800; text-align:center; font-size:18px; }
+.dm-confirm h3{ font-weight:800; font-size:22px; margin:0; color:#111827; }
+.dm-confirm-body{ color:#374151; margin:10px 2px 18px; font-size:15px; }
+.dm-confirm-actions{ display:flex; justify-content:flex-end; gap:12px; }
+.dm-btn{ border-radius:10px; padding:5px 18px; font-weight:700; border:0; cursor:pointer; width: 150px; }
+.dm-btn-ghost{ background:#e5e7eb; color:#111827; }
+.dm-btn-ghost:hover{ filter:brightness(0.98); }
+.dm-btn-warn{ background:#F4B400; color:#2b2100; border:1px solid #f3d466; }
+.dm-btn-warn:hover{ filter:brightness(0.98); }
+.dm-btn:active{ transform: translateY(1px); }
+
+/* ===== Unified Scrollbar for Boarding + Disembarking tables ===== */
+.boarding-table-section,
+.dm-table-frame {
+  scrollbar-width: thin;              /* Firefox */
+  scrollbar-color: #999 #f1f1f1;      /* Firefox */
+}
+
+.boarding-table-section::-webkit-scrollbar,
+.dm-table-frame::-webkit-scrollbar {
+  height: 10px;   /* horizontal scrollbar */
+  width: 10px;    /* vertical scrollbar */
+}
+
+.boarding-table-section::-webkit-scrollbar-track,
+.dm-table-frame::-webkit-scrollbar-track {
+  background: #f1f1f1;   /* light gray track */
+}
+
+.boarding-table-section::-webkit-scrollbar-thumb,
+.dm-table-frame::-webkit-scrollbar-thumb {
+  background: #999;      /* medium gray thumb */
+  border-radius: 4px;
+}
+
+.boarding-table-section::-webkit-scrollbar-thumb:hover,
+.dm-table-frame::-webkit-scrollbar-thumb:hover {
+  background: #666;      /* darker gray on hover */
+}

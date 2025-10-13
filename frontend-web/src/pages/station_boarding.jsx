@@ -4,8 +4,8 @@ import { StationNavbar } from "../components/station_navbar";
 import "./station_boarding.css";
 
 import ManualBookingModal from "../modules/ManualBooking/ManualBookingModal.jsx";
-import PassengerTable from "../modules/PassengerTable.jsx"; // Corrected import for PassengerTable
-import ScanButtonModule from "../modules/ScanButtonModule.jsx"; // ScanButtonModule import
+import PassengerTable from "../modules/PassengerTable.jsx";
+import ScanButtonModule from "../modules/ScanButtonModule.jsx";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -16,7 +16,7 @@ export function Boarding() {
   const [seatsTaken, setSeatsTaken] = useState(0); // State for seats taken count
   const [error, setError] = useState("");
 
-  // ---- scheduleId extraction that works with BrowserRouter AND HashRouter ----
+  // Works with BrowserRouter & HashRouter
   const scheduleId = useMemo(() => {
     try {
       const hash = window.location.hash || "";
@@ -34,14 +34,11 @@ export function Boarding() {
     }
   }, []); // Schedule ID based on the URL
 
-  // ---------------------- server data for the route card ----------------------
   const [loading, setLoading] = useState(false);
   const [scheduleInfo, setScheduleInfo] = useState(null);
   const [stops, setStops] = useState([]);
 
-  // ref to auto-scroll the current stop into view
   const currentStopRef = useRef(null);
-
   const [showManual, setShowManual] = useState(false);
 
   const tokenHeaders = () => {
@@ -49,10 +46,9 @@ export function Boarding() {
     return { Authorization: token ? `Bearer ${token}` : "", "Content-Type": "application/json" };
   };
 
-  // Convert time to 12-hour format (hh:mm AM/PM)
   const to12h = (hhmmssOrDisplay) => {
     if (!hhmmssOrDisplay) return "";
-    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) return hhmmssOrDisplay; // Already 12h format
+    if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) return hhmmssOrDisplay;
     const [hStr = "0", mStr = "00"] = String(hhmmssOrDisplay).split(":");
     const h = parseInt(hStr, 10) || 0;
     const m = (mStr ?? "00").padStart(2, "0");
@@ -61,7 +57,6 @@ export function Boarding() {
     return `${h12}:${m} ${ampm}`;
   };
 
-  // Convert time to 24-hour format (HH:mm:ss), ensuring leading zero for single-digit hours
   const to24h = (hhmmssOrDisplay) => {
     if (!hhmmssOrDisplay) return "";
     if (/[AP]M$/i.test(hhmmssOrDisplay.trim())) {
@@ -69,12 +64,11 @@ export function Boarding() {
       let [h, m] = time.split(":").map(Number);
       if (period.toUpperCase() === "PM" && h !== 12) h += 12;
       if (period.toUpperCase() === "AM" && h === 12) h = 0;
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`; // Pad hour to two digits
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
     }
-    return hhmmssOrDisplay; // Already in 24h format
+    return hhmmssOrDisplay;
   };
 
-  // ---------------------- load route card data ----------------------
   useEffect(() => {
     if (!scheduleId) {
       setError("Missing scheduleId in URL. If using HashRouter, ensure path looks like #/station-boarding/<id>");
@@ -97,9 +91,9 @@ export function Boarding() {
         setScheduleInfo(payload?.schedule_info || null);
         setStops(Array.isArray(payload?.stops) ? payload.stops : []);
 
-        // Set the station and convert scheduleTime to 12-hour and 24-hour formats
         setStation(payload?.schedule_info?.station_name || "loading...");
         const depTime = payload?.schedule_info?.departure_time || "loading...";
+<<<<<<< HEAD
         setScheduleTime(to12h(depTime));  // 12-hour format for route card
         setScheduleTime24(to24h(depTime)); // 24-hour format for passing to PassengerTable
 
@@ -122,17 +116,19 @@ export function Boarding() {
             })
             .catch((err) => setError(err.message || "Failed to load seats data"));
         }
+=======
+        setScheduleTime(to12h(depTime));
+        setScheduleTime24(to24h(depTime));
+>>>>>>> 4a6772b2fc104735643b05d1f78699957899767c
       })
       .catch((e) => setError(e.message || "Failed to load route card"))
       .finally(() => setLoading(false));
   }, [scheduleId]);
 
-  // ---------------------- compute header display ----------------------
-  const headerTime = useMemo(() => {
-    return scheduleTime; // Use the updated scheduleTime state in 12-hour format
-  }, [scheduleTime]);
+  const headerTime = useMemo(() => scheduleTime, [scheduleTime]);
 
   const headerSeatsTaken = useMemo(() => {
+<<<<<<< HEAD
     console.log("Rendering with seats_taken:", seatsTaken);  // Log state value to confirm it's correct
     return seatsTaken != null ? seatsTaken : 0;
   }, [seatsTaken]);
@@ -140,6 +136,13 @@ export function Boarding() {
   useEffect(() => {
     console.log("Seats Taken updated:", seatsTaken); // Log to check if the state changes
   }, [seatsTaken]);
+=======
+    if (scheduleInfo?.seats_taken != null) return scheduleInfo.seats_taken;
+    return 0;
+  }, [scheduleInfo]);
+
+  const headerTotal = useMemo(() => scheduleInfo?.total_seats || 30, [scheduleInfo]);
+>>>>>>> 4a6772b2fc104735643b05d1f78699957899767c
 
   const headerPath = useMemo(() => {
     const dir = (scheduleInfo?.direction || "forward").toUpperCase();
@@ -149,14 +152,12 @@ export function Boarding() {
   const currentStopName = scheduleInfo?.station_name || station;
   const currentStopOrder = scheduleInfo?.stop_order ?? null;
 
-  // auto-scroll the current stop into view when stops or current change
   useEffect(() => {
     if (currentStopRef.current) {
       currentStopRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [stops, currentStopOrder, currentStopName]);
 
-  // ESC closes modals (manual)
   useEffect(() => {
     if (!showManual) return;
     const onKey = (e) => e.key === "Escape" && setShowManual(false);
@@ -164,17 +165,13 @@ export function Boarding() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showManual]);
 
-  // Remove status per stop relative to current stop
-  const stopTimeToDisplay = (s) => {
-    return to12h(s.stop_time || s.time || "");
-  };
+  const stopTimeToDisplay = (s) => to12h(s.stop_time || s.time || "");
 
   return (
     <div className="boarding-landing-container">
       <StationNavbar />
 
       <div className="main-content">
-        {/* Header with schedule box */}
         <header className="main-header">
           <div className="boarding-header-info">
             <h1>Boarding Management</h1>
@@ -184,7 +181,7 @@ export function Boarding() {
               <div className="route-card__top">
                 <div className="route-card__path">{headerPath}</div>
                 <div className="route-card__time">
-                  {loading ? "Loading..." : headerTime || "—"} {/* 12-hour format */}
+                  {loading ? "Loading..." : headerTime || "—"}
                 </div>
                 <div className="route-card__seats-taken">
                   Number of Seats Taken:{" "}
@@ -230,7 +227,8 @@ export function Boarding() {
                                 height="18"
                                 aria-hidden="true"
                               >
-                                <path d="M12 2a7 7 0 0 0-7 7c0 oad5 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                                {/* fixed path */}
+                                <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
                               </svg>
                             </span>
                           ) : null}
@@ -256,21 +254,30 @@ export function Boarding() {
           <LogoutButton />
         </header>
 
-        {/* Buttons */}
+        {/* Actions */}
         <section className="actions-bar">
-          <ScanButtonModule action="boarding" /> {/* Pass the boarding action */}
-          <button className="manual-booking-btn" onClick={() => setShowManual(true)}>
+          <ScanButtonModule action="boarding" />
+          {/* make this the same navy style */}
+          <button className="scan-btn" onClick={() => setShowManual(true)}>
             <span className="btn-icon">📝</span>
             Manual Booking
           </button>
         </section>
 
-        {/* Passenger Table (pass origin and scheduleTime props to PassengerTable) */}
-        <PassengerTable origin={station} scheduleTime={scheduleTime24} /> {/* 24-hour format */}
+        {/* Passenger Table */}
+        <PassengerTable origin={station} scheduleTime={scheduleTime24} />
       </div>
 
+<<<<<<< HEAD
       {/* Manual Booking Modal */}
       <ManualBookingModal open={showManual} onClose={() => setShowManual(false)} existingRows={[]} />
+=======
+      <ManualBookingModal
+        open={showManual}
+        onClose={() => setShowManual(false)}
+        existingRows={[]}
+      />
+>>>>>>> 4a6772b2fc104735643b05d1f78699957899767c
     </div>
   );
 }
