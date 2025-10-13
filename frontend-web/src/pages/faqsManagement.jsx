@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HeaderButton } from '../components/headerButton';
 import { Navbar } from '../components/navBar';
-import './FaqsManagement.css';
+import './faqsManagement.css';
 
 export function FAQs() {
   const [search, setSearch] = useState('');
