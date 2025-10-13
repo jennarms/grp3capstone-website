@@ -93,7 +93,6 @@ export function Boarding() {
 
         setStation(payload?.schedule_info?.station_name || "loading...");
         const depTime = payload?.schedule_info?.departure_time || "loading...";
-<<<<<<< HEAD
         setScheduleTime(to12h(depTime));  // 12-hour format for route card
         setScheduleTime24(to24h(depTime)); // 24-hour format for passing to PassengerTable
 
@@ -116,10 +115,6 @@ export function Boarding() {
             })
             .catch((err) => setError(err.message || "Failed to load seats data"));
         }
-=======
-        setScheduleTime(to12h(depTime));
-        setScheduleTime24(to24h(depTime));
->>>>>>> 4a6772b2fc104735643b05d1f78699957899767c
       })
       .catch((e) => setError(e.message || "Failed to load route card"))
       .finally(() => setLoading(false));
@@ -128,7 +123,6 @@ export function Boarding() {
   const headerTime = useMemo(() => scheduleTime, [scheduleTime]);
 
   const headerSeatsTaken = useMemo(() => {
-<<<<<<< HEAD
     console.log("Rendering with seats_taken:", seatsTaken);  // Log state value to confirm it's correct
     return seatsTaken != null ? seatsTaken : 0;
   }, [seatsTaken]);
@@ -136,13 +130,6 @@ export function Boarding() {
   useEffect(() => {
     console.log("Seats Taken updated:", seatsTaken); // Log to check if the state changes
   }, [seatsTaken]);
-=======
-    if (scheduleInfo?.seats_taken != null) return scheduleInfo.seats_taken;
-    return 0;
-  }, [scheduleInfo]);
-
-  const headerTotal = useMemo(() => scheduleInfo?.total_seats || 30, [scheduleInfo]);
->>>>>>> 4a6772b2fc104735643b05d1f78699957899767c
 
   const headerPath = useMemo(() => {
     const dir = (scheduleInfo?.direction || "forward").toUpperCase();
@@ -268,16 +255,8 @@ export function Boarding() {
         <PassengerTable origin={station} scheduleTime={scheduleTime24} />
       </div>
 
-<<<<<<< HEAD
       {/* Manual Booking Modal */}
       <ManualBookingModal open={showManual} onClose={() => setShowManual(false)} existingRows={[]} />
-=======
-      <ManualBookingModal
-        open={showManual}
-        onClose={() => setShowManual(false)}
-        existingRows={[]}
-      />
->>>>>>> 4a6772b2fc104735643b05d1f78699957899767c
     </div>
   );
 }
