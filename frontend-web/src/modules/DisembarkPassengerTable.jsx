@@ -10,65 +10,6 @@ export default function DisembarkPassengerTable({ destination }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Modal state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalAction, setModalAction] = useState(null); // 'accept' or 'cancel'
-  const [selectedPassenger, setSelectedPassenger] = useState(null);
-  const [modalMessage, setModalMessage] = useState(""); // For custom message in modal
-
-  const handleAction = async (action, passengerId, qrcodeId) => {
-    try {
-      const response = await axios.post(`${apiUrl}/api/passengertable/update_passenger_status_and_qrcode`, {
-        BD_ID: passengerId,
-        action: action,
-        Qrcode_ID: qrcodeId,
-      });
-
-      console.log(response.data.message);
-
-      // Update passenger status locally
-      setPassengerData(prevData =>
-        prevData.map(passenger =>
-          passenger.BD_ID === passengerId
-            ? { ...passenger, status: action === 'accept' ? 'B' : 'C' }
-            : passenger
-        )
-      );
-    } catch (error) {
-      console.error("Error updating passenger status and QR Code:", error);
-    } finally {
-      closeModal();
-    }
-  };
-
-  const openModal = (action, passenger) => {
-    if (action === 'accept' && passenger.status === 'B') {
-      setModalMessage("This passenger is already boarded. Cannot board again.");
-      setModalAction(null);
-    } else if (action === 'cancel' && passenger.status === 'B') {
-      setModalMessage("You cannot cancel boarded passengers.");
-      setModalAction(null);
-    } else {
-      setModalMessage(`Are you sure you want to ${action} this passenger?`);
-      setModalAction(action);
-    }
-    setSelectedPassenger(passenger);
-    setModalVisible(true);
-  };
-
-  const closeModal = () => {
-    setModalVisible(false);
-    setModalAction(null);
-    setSelectedPassenger(null);
-    setModalMessage(""); // Clear message when modal is closed
-  };
-
-  const confirmModalAction = () => {
-    if (selectedPassenger && modalAction) {
-      handleAction(modalAction, selectedPassenger.BD_ID, selectedPassenger.Qrcode_ID);
-    }
-  };
-
   // Fetching disembarking data based on destination
   const fetchDisembarkingData = useCallback(async (page) => {
     if (!destination) return;
@@ -79,19 +20,16 @@ export default function DisembarkPassengerTable({ destination }) {
       if (query) params.query = query;
       const response = await axios.get(`${apiUrl}/api/passengertable/get_disembarking_details`, { params });
 
-      console.log('API Response:', response.data);  // Debugging: Log the full response to inspect structure
-
-      // Check if the response contains the expected data
+      // Use the response to set passenger data
       if (response.data && Array.isArray(response.data.boardingData)) {
-        setPassengerData(response.data.boardingData); // Set the passenger data correctly
+        setPassengerData(response.data.boardingData);
         setTotalPages(response.data.totalPages);
       } else {
-        console.error("Invalid API response structure:", response.data);
-        setPassengerData([]); // Set empty array if the data structure is invalid
+        setPassengerData([]); // Set empty array if data is invalid
       }
     } catch (error) {
       console.error("Error fetching disembarking data:", error);
-      setPassengerData([]); // Set empty array on error
+      setPassengerData([]); // Handle error and reset data
     } finally {
       setLoading(false);
     }
@@ -109,20 +47,35 @@ export default function DisembarkPassengerTable({ destination }) {
     else if (direction === 'next' && currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // Function to compare the departure date with the current date
-  const isDateExpired = (departureDate) => {
-    const today = new Date();
-    const departure = new Date(departureDate);
+  const handleDisembark = async (passengerId, qrcodeId) => {
+    try {
+      const response = await axios.post(`${apiUrl}/api/passengertable/update_passenger_status_and_qrcode`, {
+        BD_ID: passengerId,
+        action: 'accept',  // Mark as disembark (boarded)
+        Qrcode_ID: qrcodeId,
+      });
 
-    // Set the time to 00:00 to only compare the dates
-    today.setHours(0, 0, 0, 0);
-    departure.setHours(0, 0, 0, 0);
+      console.log("Response:", response);  // Debugging: Check what is returned from the backend
 
-    // If the departure date is older than today, return true
-    return departure < today;
+      // Check if the response contains a message
+      if (response.data && response.data.message) {
+        console.log(response.data.message);  // Log the success message
+
+        // Update passenger status locally
+        setPassengerData(prevData =>
+          prevData.map(passenger =>
+            passenger.BD_ID === passengerId
+              ? { ...passenger, status: 'D' }  // Change status to Disembarked
+              : passenger
+          )
+        );
+      } else {
+        console.error("No message returned from the server");
+      }
+    } catch (error) {
+      console.error("Error updating passenger status:", error);
+    }
   };
-
-  const filteredData = passengerData.filter((passenger) => !isDateExpired(passenger.departure_date)); // Only show passengers that are not expired
 
   return (
     <>
@@ -144,7 +97,7 @@ export default function DisembarkPassengerTable({ destination }) {
         <div className="table-wrapper">
           {loading ? (
             <div className="loading-message">Loading data...</div>
-          ) : filteredData.length === 0 ? (
+          ) : passengerData.length === 0 ? (
             <div className="no-data-message">No passengers available.</div>
           ) : (
             <table className="passenger-list-table">
@@ -166,7 +119,7 @@ export default function DisembarkPassengerTable({ destination }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((passenger) => (
+                {passengerData.map((passenger) => (
                   <tr key={passenger.BD_ID}>
                     <td>{passenger.BD_ID}</td>
                     <td>{passenger.Booking_ID}</td>
@@ -181,8 +134,7 @@ export default function DisembarkPassengerTable({ destination }) {
                     <td>{passenger.departure_date || '—'}</td>
                     <td>{passenger.departure_time || '—'}</td>
                     <td>
-                      <button className="actionbtn" onClick={() => openModal('accept', passenger)}>Accept</button>
-                      <button className="actionbtn" onClick={() => openModal('cancel', passenger)}>Cancel</button>
+                      <button className="actionbtn" onClick={() => handleDisembark(passenger.BD_ID, passenger.Qrcode_ID)}>Mark as Disembark</button>
                     </td>
                   </tr>
                 ))}
@@ -197,20 +149,6 @@ export default function DisembarkPassengerTable({ destination }) {
         <span>{currentPage}</span>
         <button disabled={currentPage === totalPages} onClick={() => handlePageChange('next')}>Next</button>
       </div>
-
-      {/* Modal */}
-      {modalVisible && (
-        <div className="actionbtn-modal-confirm-overlay">
-          <div className="actionbtn-modal-confirm-box">
-            <h3>{modalAction === 'accept' ? 'Confirm Accept' : 'Confirm Cancel'}</h3>
-            <p>{modalMessage}</p>
-            <div className="actionbtn-modal-confirm-buttons">
-              <button className="actionbtn-modal-cancel-btn" onClick={closeModal}>Cancel</button>
-              <button className="actionbtn-modal-yes-btn" onClick={confirmModalAction}>Yes</button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

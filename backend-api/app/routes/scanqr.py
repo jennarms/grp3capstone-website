@@ -20,7 +20,7 @@ def scan_qrcode():
 
     cursor = mysql.connection.cursor()
     try:
-        # Check if QR exists in BoardingDisembarking for boarding (status 'P')
+        # Check if QR exists in BoardingDisembarking for boarding (status 'P' or 'B')
         cursor.execute("""
             SELECT BD_ID, status, User_ID, Schedule_ID, origin, destination
             FROM BoardingDisembarking 
@@ -69,6 +69,9 @@ def scan_qrcode():
 
         # Handle Disembarking action
         elif action == 'disembarking':
+            if status == 'D':  # If status is already 'D', it means already disembarked
+                return jsonify({"error": "QR Code has already been disembarked"}), 400
+
             if status != 'B':  # If status isn't 'B', it's not boarded, can't disembark
                 return jsonify({"error": "QR Code is not boarded yet or already disembarked"}), 400
 
@@ -83,7 +86,7 @@ def scan_qrcode():
             cursor.execute("""
                 UPDATE Qrcode
                 SET ExpiresAt = %s, Maximum_Scan = 0
-                WHERE Qrcode_ID=%s
+                WHERE QRCode_ID=%s
             """, (now, qr_id))
 
             message = "Passenger disembarked successfully"

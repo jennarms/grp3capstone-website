@@ -7,7 +7,7 @@ from datetime import datetime
 import traceback
 
 # Initialize the Blueprint
-boarding_passengertable_bp = Blueprint('boarding_passengertable_bp', __name__)
+passengertable_bp = Blueprint('bassengertable_bp', __name__)
 
 # =======================
 # POLLING, INSERTION, AND STATUS UPDATE IN ONE FUNCTION
@@ -91,7 +91,7 @@ def _get_station_id_by_name(station_name):
     finally:
         cursor.close()
 
-@boarding_passengertable_bp.route('/get_boarding_details', methods=['GET'])
+@passengertable_bp.route('/get_boarding_details', methods=['GET'])
 def get_boarding_details():
     origin_name = request.args.get('origin')
     schedule_time = request.args.get('schedule_time').strip()
@@ -192,11 +192,119 @@ def get_boarding_details():
         'currentPage': page
     })
 
+@passengertable_bp.route('/get_disembarking_details', methods=['GET'])
+def get_disembarking_details():
+    destination_name = request.args.get('destination')  # Get destination from the query parameters
+    page = int(request.args.get('page', 1))  # Default to page 1 if not provided
+    query = request.args.get('query', '')  # Optional query to search by Booking_ID or User_ID
+
+    if not destination_name:
+        return jsonify({'error': 'Destination (station_name) is required'}), 400
+
+    # Fetch the station_id based on the destination name
+    station_id = _get_station_id_by_name(destination_name)
+    if not station_id:
+        return jsonify({'error': 'Invalid station name'}), 400
+
+    records_per_page = 10  # Limit results per page
+    offset = (page - 1) * records_per_page  # Calculate offset for pagination
+
+    try:
+        # Count query to get the total number of passengers for the destination
+        count_query = """
+        SELECT COUNT(*) 
+        FROM BoardingDisembarking
+        WHERE destination = %s
+          AND status = 'B'  # Only show boarded passengers
+          AND departure_date >= CURDATE()  # Ensure passengers have a departure date of today or later
+        """
+
+        cursor = mysql.connection.cursor()
+        cursor.execute(count_query, (destination_name,))
+        total_records = cursor.fetchone()[0]
+        cursor.close()
+
+        # If no records found, return empty data
+        if total_records == 0:
+            return jsonify({'boardingData': [], 'totalPages': 0, 'currentPage': page})
+
+    except Exception as e:
+        print(f"Error during count query: {e}")
+        return jsonify({'error': 'Database query failed'}), 500
+
+    # Calculate total pages for pagination
+    total_pages = ceil(total_records / records_per_page)
+
+    try:
+        # Fetch passenger details based on destination, status = 'B', and today's date
+        search_query = """
+        SELECT 
+            bd.BD_ID, 
+            bd.Booking_ID, 
+            bd.User_ID, 
+            bd.boarding_time, 
+            bd.disembarking_time, 
+            bd.status,
+            bd.Qrcode_ID, 
+            bd.Schedule_ID, 
+            bd.origin, 
+            bd.destination, 
+            bd.departure_date, 
+            bd.departure_time
+        FROM BoardingDisembarking bd
+        WHERE bd.destination = %s
+          AND bd.status = 'B'  # Only show boarded passengers
+          AND bd.departure_date >= CURDATE()  # Ensure departure date is today or later
+        """
+
+        if query:
+            search_query += " AND (bd.Booking_ID LIKE %s OR bd.User_ID LIKE %s)"  # Add search filter if query provided
+
+        search_query += " ORDER BY bd.departure_date DESC, bd.departure_time DESC LIMIT %s OFFSET %s"  # Pagination
+
+        cursor = mysql.connection.cursor()
+        params = [destination_name]
+        if query:
+            params.extend([f"%{query}%", f"%{query}%"])
+
+        cursor.execute(search_query, params + [records_per_page, offset])
+        passengers = cursor.fetchall()
+        cursor.close()
+
+        # Format the fetched passenger data
+        passenger_data = []
+        for passenger in passengers:
+            passenger_data.append({
+                'BD_ID': passenger[0],
+                'Booking_ID': passenger[1],
+                'User_ID': passenger[2],
+                'boarding_time': str(passenger[3]) if passenger[3] else "N/A",
+                'disembarking_time': str(passenger[4]) if passenger[4] else "N/A",
+                'status': passenger[5],
+                'Qrcode_ID': passenger[6],
+                'Schedule_ID': passenger[7],
+                'origin': passenger[8],
+                'destination': passenger[9],
+                'departure_date': passenger[10],
+                'departure_time': str(passenger[11]) if passenger[11] else "N/A"
+            })
+
+    except Exception as e:
+        print(f"Error during fetching passengers: {e}")
+        return jsonify({'error': 'Database query failed'}), 500
+
+    # Return the data in the required structure
+    return jsonify({
+        'boardingData': passenger_data,
+        'totalPages': total_pages,
+        'currentPage': page
+    })
+
 # =======================
 # UPDATE PASSENGER STATUS: ACCEPT (B) or CANCEL (C)
 # =======================
 
-@boarding_passengertable_bp.route('/update_passenger_status_and_qrcode', methods=['POST'])
+@passengertable_bp.route('/update_passenger_status_and_qrcode', methods=['POST'])
 def update_passenger_status_and_qrcode():
     data = request.get_json()
     bd_id = data.get('BD_ID')
@@ -277,103 +385,3 @@ def update_passenger_status_and_qrcode():
 
     finally:
         cursor.close()
-
-
-
-@boarding_passengertable_bp.route('/get_disembarking_details', methods=['GET'])
-def get_disembarking_details():
-    destination_name = request.args.get('destination')  # Instead of origin, we use destination
-    page = int(request.args.get('page', 1))  # Default to page 1 if not provided
-    query = request.args.get('query', '')
-
-    if not destination_name:
-        return jsonify({'error': 'Destination (station_name) is required'}), 400
-
-    # Fetch the station_id based on the destination name (instead of origin name)
-    station_id = _get_station_id_by_name(destination_name)
-    if not station_id:
-        return jsonify({'error': 'Invalid station name'}), 400
-
-    records_per_page = 10
-    offset = (page - 1) * records_per_page
-
-    try:
-        count_query = """
-        SELECT COUNT(*) 
-        FROM BoardingDisembarking
-        WHERE destination = %s
-        """
-
-        cursor = mysql.connection.cursor()
-        cursor.execute(count_query, (destination_name,))
-        total_records = cursor.fetchone()[0]
-        cursor.close()
-
-        if total_records == 0:
-            return jsonify({'boardingData': [], 'totalPages': 0, 'currentPage': page})
-
-    except Exception as e:
-        print(f"Error during count query: {e}")
-        return jsonify({'error': 'Database query failed'}), 500
-
-    total_pages = ceil(total_records / records_per_page)
-
-    try:
-        search_query = """
-        SELECT 
-            bd.BD_ID, 
-            bd.Booking_ID, 
-            bd.User_ID, 
-            bd.boarding_time, 
-            bd.disembarking_time, 
-            bd.status,
-            bd.Qrcode_ID, 
-            bd.Schedule_ID, 
-            bd.origin, 
-            bd.destination, 
-            bd.departure_date, 
-            bd.departure_time
-        FROM BoardingDisembarking bd
-        WHERE bd.destination = %s
-        """
-
-        if query:
-            search_query += " AND (bd.Booking_ID LIKE %s OR bd.User_ID LIKE %s)"
-
-        search_query += " ORDER BY bd.departure_date DESC, bd.departure_time DESC LIMIT %s OFFSET %s"
-
-        cursor = mysql.connection.cursor()
-        params = [destination_name]
-        if query:
-            params.extend([f"%{query}%", f"%{query}%"])
-
-        cursor.execute(search_query, params + [records_per_page, offset])
-        passengers = cursor.fetchall()
-        cursor.close()
-
-        passenger_data = []
-        for passenger in passengers:
-            passenger_data.append({
-                'BD_ID': passenger[0],
-                'Booking_ID': passenger[1],
-                'User_ID': passenger[2],
-                'boarding_time': str(passenger[3]) if passenger[3] else "N/A",
-                'disembarking_time': str(passenger[4]) if passenger[4] else "N/A",
-                'status': passenger[5],
-                'Qrcode_ID': passenger[6],
-                'Schedule_ID': passenger[7],
-                'origin': passenger[8],
-                'destination': passenger[9],
-                'departure_date': passenger[10],
-                'departure_time': str(passenger[11]) if passenger[11] else "N/A"
-            })
-
-    except Exception as e:
-        print(f"Error during fetching passengers: {e}")
-        return jsonify({'error': 'Database query failed'}), 500
-
-    return jsonify({
-        'boardingData': passenger_data,
-        'totalPages': total_pages,
-        'currentPage': page
-    })
