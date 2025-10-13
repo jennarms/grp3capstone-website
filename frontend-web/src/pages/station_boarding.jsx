@@ -10,10 +10,11 @@ import ScanButtonModule from "../modules/ScanButtonModule.jsx"; // ScanButtonMod
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export function Boarding() {
-  // State for station and schedule time, to be updated after fetching the data
   const [station, setStation] = useState("loading...");
   const [scheduleTime, setScheduleTime] = useState("loading...");
   const [scheduleTime24, setScheduleTime24] = useState("loading...");
+  const [seatsTaken, setSeatsTaken] = useState(0); // State for seats taken count
+  const [error, setError] = useState("");
 
   // ---- scheduleId extraction that works with BrowserRouter AND HashRouter ----
   const scheduleId = useMemo(() => {
@@ -31,11 +32,10 @@ export function Boarding() {
       console.warn("[Boarding] scheduleId parse failed:", e);
       return "";
     }
-  }, []);
+  }, []); // Schedule ID based on the URL
 
   // ---------------------- server data for the route card ----------------------
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [scheduleInfo, setScheduleInfo] = useState(null);
   const [stops, setStops] = useState([]);
 
@@ -44,7 +44,6 @@ export function Boarding() {
 
   const [showManual, setShowManual] = useState(false);
 
-  // ---------------------- helpers ----------------------
   const tokenHeaders = () => {
     const token = localStorage.getItem("token");
     return { Authorization: token ? `Bearer ${token}` : "", "Content-Type": "application/json" };
@@ -103,6 +102,26 @@ export function Boarding() {
         const depTime = payload?.schedule_info?.departure_time || "loading...";
         setScheduleTime(to12h(depTime));  // 12-hour format for route card
         setScheduleTime24(to24h(depTime)); // 24-hour format for passing to PassengerTable
+
+        // Fetch seats taken data for the given schedule and update state
+        const { date, origin, departure_time } = payload?.schedule_info || {};
+        if (date && origin && departure_time) {
+          const seatsUrl = `${apiUrl}/api/boarding/count-seats-taken?date=${date}&origin=${origin}&departure_time=${departure_time}&schedule_id=${scheduleId}`;
+          console.log("Seats URL:", seatsUrl); // Log to confirm URL is correct
+
+          fetch(seatsUrl, { headers: tokenHeaders() })
+            .then((res) => res.json())
+            .then((data) => {
+              console.log("Seats taken API response:", data);  // Log the response to check if it's valid
+              if (data.seats_taken !== undefined) {
+                setSeatsTaken(data.seats_taken);  // Update state with correct value
+                console.log("Seats taken state updated to:", data.seats_taken);  // Ensure it's set correctly
+              } else {
+                console.error("Invalid response data for seats_taken");
+              }
+            })
+            .catch((err) => setError(err.message || "Failed to load seats data"));
+        }
       })
       .catch((e) => setError(e.message || "Failed to load route card"))
       .finally(() => setLoading(false));
@@ -114,20 +133,18 @@ export function Boarding() {
   }, [scheduleTime]);
 
   const headerSeatsTaken = useMemo(() => {
-    // Make sure to access 'seats_taken' directly from the API response.
-    if (scheduleInfo?.seats_taken != null) return scheduleInfo.seats_taken;
-    return 0;
-  }, [scheduleInfo]);
+    console.log("Rendering with seats_taken:", seatsTaken);  // Log state value to confirm it's correct
+    return seatsTaken != null ? seatsTaken : 0;
+  }, [seatsTaken]);
 
-  const headerTotal = useMemo(() => {
-    return scheduleInfo?.total_seats || 30; // Default total seats
-  }, [scheduleInfo]);
+  useEffect(() => {
+    console.log("Seats Taken updated:", seatsTaken); // Log to check if the state changes
+  }, [seatsTaken]);
 
   const headerPath = useMemo(() => {
     const dir = (scheduleInfo?.direction || "forward").toUpperCase();
-    const routeOrStation = scheduleInfo?.route_name || station;
-    return `${routeOrStation} — ${dir} DIRECTION`;
-  }, [scheduleInfo, station]);
+    return `${station} — ${dir} DIRECTION`;
+  }, [station, scheduleInfo?.direction]);
 
   const currentStopName = scheduleInfo?.station_name || station;
   const currentStopOrder = scheduleInfo?.stop_order ?? null;
@@ -172,7 +189,7 @@ export function Boarding() {
                 <div className="route-card__seats-taken">
                   Number of Seats Taken:{" "}
                   <strong>
-                    {loading ? "…" : headerSeatsTaken}/{loading ? "…" : headerTotal}
+                    {loading ? "…" : headerSeatsTaken}/{loading ? "…" : scheduleInfo?.total_seats}
                   </strong>
                 </div>
               </div>
@@ -192,7 +209,7 @@ export function Boarding() {
                   </div>
                 )}
 
-                {!error && !loading && (stops.length ? (
+                {!error && !loading && stops.length ? (
                   stops.map((s) => {
                     const isCurrent =
                       (s.station_name || "").toLowerCase() === (currentStopName || "").toLowerCase();
@@ -230,7 +247,7 @@ export function Boarding() {
                       the backend is returning <code>stop_time</code> per stop.
                     </span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
             {/* END ROUTE CARD */}
@@ -253,11 +270,7 @@ export function Boarding() {
       </div>
 
       {/* Manual Booking Modal */}
-      <ManualBookingModal
-        open={showManual}
-        onClose={() => setShowManual(false)}
-        existingRows={[]}
-      />
+      <ManualBookingModal open={showManual} onClose={() => setShowManual(false)} existingRows={[]} />
     </div>
   );
 }
