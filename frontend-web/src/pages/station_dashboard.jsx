@@ -3,8 +3,7 @@ import "./station_dashboard.css";
 
 import { StationNavbar } from "../components/station_navbar";
 import { LogoutButton } from "../components/logout_button";
-
-const apiUrl = import.meta.env.VITE_API_URL;
+import { dashboardService } from "../services/api"; // ✅ ADDED
 
 function StationDashboard() {
   const [forwardSchedules, setForwardSchedules] = useState([]);
@@ -35,39 +34,18 @@ function StationDashboard() {
       "Bring a valid ID to claim.",
     ]},
     { title: "System Update", body: [
-      "We’ve improved seat availability syncing across stations.",
+      "We've improved seat availability syncing across stations.",
       "Report any glitches via the Help menu.",
     ]},
   ];
-
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
-    return {
-      Authorization: token ? `Bearer ${token}` : "",
-      "Content-Type": "application/json",
-    };
-  };
 
   const fetchBoardingSchedules = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
-        `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(selectedDate)}`,
-        { headers: getAuthHeaders() }
-      );
+      // ✅ UPDATED: Using API service instead of direct fetch
+      const data = await dashboardService.getBoardingSchedules(selectedDate);
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        const msg = body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
-        setError(msg);
-        setForwardSchedules([]);
-        setReverseSchedules([]);
-        setTotals({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
-        return;
-      }
-
-      const data = await res.json();
       const f = Array.isArray(data.forward_schedules) ? data.forward_schedules : [];
       const r = Array.isArray(data.reverse_schedules) ? data.reverse_schedules : [];
 
@@ -81,7 +59,7 @@ function StationDashboard() {
       const ts = typeof data.total_schedules === "number" ? data.total_schedules : tf + tr;
       setTotals({ total_forward: tf, total_reverse: tr, total_schedules: ts });
     } catch (e) {
-      setError(`Network error: ${e.message}`);
+      setError(e.message);
       setForwardSchedules([]);
       setReverseSchedules([]);
       setTotals({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
