@@ -5,6 +5,18 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)  # Enable CORS
 
+@app.route('/')
+def home():
+    return jsonify({
+        'message': 'Flask backend is running!',
+        'status': 'OK', 
+        'timestamp': datetime.utcnow().isoformat(),
+        'endpoints': {
+            'health_check': '/api/healthz',
+            'users': '/api/users'
+        }
+    })
+    
 @app.route('/api/healthz', methods=['GET'])
 def health_check():
     return jsonify({
