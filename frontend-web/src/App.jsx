@@ -83,7 +83,8 @@ function CatchAllRedirect() {
 }
 
 function App() {
-  // Optional: one-time backend health check
+  // Health check removed temporarily - will be restored when backend is deployed
+  /*
   useEffect(() => {
     const API = import.meta.env.VITE_API_URL;
     if (!API) {
@@ -100,6 +101,7 @@ function App() {
       .then((data) => console.log("healthz:", data))
       .catch((err) => console.error("healthz error:", err));
   }, []);
+  */
 
   return (
     <Router>
