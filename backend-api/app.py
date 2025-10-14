@@ -1,29 +1,22 @@
-# app.py
-import os
-from app import create_app
+from flask import Flask, jsonify
+from flask_cors import CORS
+from datetime import datetime
 
-app = create_app()
+app = Flask(__name__)
+CORS(app)  # Enable CORS
 
-# Optional: simple root for quick sanity
-@app.route("/")
-def home():
-    return "Backend is running!"
+@app.route('/api/healthz', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'OK',
+        'timestamp': datetime.utcnow().isoformat(),
+        'service': 'flask-backend'
+    }), 200
 
-if __name__ == "__main__":
-    # --- DEV ONLY: start your legacy polling thread locally ---
-    # In production (Gunicorn on Render), DO NOT start threads here; use APScheduler or a worker.
-    from threading import Thread
-    from app.routes.boarding_passengertable import poll_for_new_bookings
+# Your existing routes below...
+@app.route('/api/users')
+def get_users():
+    return jsonify({'users': []})
 
-    def start_polling():
-        with app.app_context():
-            # NOTE: If poll_for_new_bookings is an infinite loop, this will block forever.
-            # That's fine for a dev thread, but in prod use APScheduler or a worker service.
-            poll_for_new_bookings()
-
-    thread = Thread(target=start_polling, daemon=True)
-    thread.start()
-
-    # Bind to PORT (Render sets this in env). Default to 5000 locally.
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
