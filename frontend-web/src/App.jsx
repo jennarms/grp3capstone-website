@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useEffect } from "react";
 import {
   HashRouter as Router,
@@ -5,7 +6,6 @@ import {
   Route,
   Navigate,
   Outlet,
-  useLocation,
 } from "react-router-dom";
 import "./App.css";
 
@@ -34,40 +34,51 @@ import { StationSOS } from "./pages/station_sos";
 import { UI } from "./pages/uiCustomization";
 import { SOSTestPage } from "./pages/SOSTestPage";
 
-/* SOS */
+/* Providers & banners */
 import { SOSProvider } from "./sos/SOSContext";
 import GlobalSOSBanner from "./sos/GlobalSOSBanner";
-
-/* Broadcast */
 import { BroadcastProvider } from "./broadcast/BroadcastProvider";
 import GlobalBroadcastBanner from "./broadcast/GlobalBroadcastBanner";
 
-/** Gate + global providers for non-login, authenticated routes */
-function ProtectedShell() {
-  const location = useLocation();
-  const userId =
+/* ---------- auth util (no hooks) ---------- */
+function getAuthUserId() {
+  return (
     localStorage.getItem("admin_id") ||
     localStorage.getItem("admin_name") ||
-    "";
+    ""
+  );
+}
 
-  const isAuthed = Boolean(userId);
-  const onLogin = location.pathname === "/" || location.pathname === "/login";
+/* Public routes only when NOT authed */
+function PublicOnly({ children }) {
+  const userId = getAuthUserId();
+  if (userId) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
 
-  // Always allow rendering of the public login routes
-  if (onLogin) return <Outlet />;
+/* Protected routes with providers/banners */
+function RequireAuth() {
+  const userId = getAuthUserId();
+  if (!userId) return <Navigate to="/login" replace />;
 
-  // Block everything else when not authenticated
-  if (!isAuthed) return <Navigate to="/login" replace />;
-
-  // Authenticated area with providers + global banners
   return (
     <BroadcastProvider userId={userId}>
-      <SOSProvider enabled>
+      <SOSProvider enabled={true}>
         <GlobalBroadcastBanner />
         <GlobalSOSBanner />
         <Outlet />
       </SOSProvider>
     </BroadcastProvider>
+  );
+}
+
+/* Catch-all redirect that respects auth */
+function CatchAllRedirect() {
+  const userId = getAuthUserId();
+  return userId ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/login" replace />
   );
 }
 
@@ -93,12 +104,26 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public */}
-        <Route index element={<Login />} />
-        <Route path="/login" element={<Login />} />
+        {/* Public (visible only when NOT authed) */}
+        <Route
+          index
+          element={
+            <PublicOnly>
+              <Login />
+            </PublicOnly>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicOnly>
+              <Login />
+            </PublicOnly>
+          }
+        />
 
-        {/* Protected (wrapped by shell) */}
-        <Route element={<ProtectedShell />}>
+        {/* Protected (must be authed; providers included) */}
+        <Route element={<RequireAuth />}>
           <Route path="/faqs" element={<FAQs />} />
           <Route path="/edit" element={<Edit />} />
           <Route path="/announcement" element={<Announcement />} />
@@ -123,8 +148,8 @@ function App() {
           <Route path="/sostest" element={<SOSTestPage />} />
         </Route>
 
-        {/* Catch-all → login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Catch-all */}
+        <Route path="*" element={<CatchAllRedirect />} />
       </Routes>
     </Router>
   );
