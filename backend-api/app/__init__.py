@@ -109,6 +109,9 @@ def create_app():
     from app.routes.boarding_manualbooking import boarding_manualbooking_bp 
     app.register_blueprint(boarding_manualbooking_bp, url_prefix="/api/boarding/manual")
 
+    from app.routes.generatereport import generatereport_bp
+    app.register_blueprint(generatereport_bp, url_prefix="/api/generatereport")
+
     # Start APScheduler after app is created (only once here)
     scheduler.init_app(app)
     scheduler.start()
