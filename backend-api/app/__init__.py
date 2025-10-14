@@ -25,7 +25,7 @@ def create_app():
     # ✅ Allow CORS for React frontend (both localhost + 127.0.0.1 just in case)
     CORS(
         app,
-        resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://grp3capstone-website-1.onrender.com"]}},
+        resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
         supports_credentials=True
     )
 
