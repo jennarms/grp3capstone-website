@@ -1,40 +1,48 @@
-// App.jsx
-import { HashRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
 import React, { useEffect } from "react";
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+} from "react-router-dom";
 import "./App.css";
 
-// ✅ ADD ALL MISSING IMPORTS
-// Pages
-import Login from "./pages/Login";
-import FAQs from "./pages/FAQs";
-import Edit from "./pages/Edit";
-import Announcement from "./pages/Announcement";
-import Broadcast from "./pages/Broadcast";
-import Passenger from "./pages/Passenger";
-import Feedback from "./pages/Feedback";
-import FeedbackSettings from "./pages/FeedbackSettings";
-import AccountSettings from "./pages/AccountSettings";
-import Report from "./pages/Report";
-import UI from "./pages/UICustomization";
-import VehicleTab from "./pages/operations/VehicleTab";
-import StationsTab from "./pages/operations/StationsTab";
-import RoutesTab from "./pages/operations/RoutesTab";
-import SchedulesTab from "./pages/operations/SchedulesTab";
-import FaresTab from "./pages/operations/FaresTab";
-import StationDashboard from "./pages/StationDashboard";
-import BoardingLandingPage from "./pages/BoardingLandingPage";
-import Boarding from "./pages/Boarding";
-import DisembarkingLandingPage from "./pages/DisembarkingLandingPage";
-import Disembarking from "./pages/Disembarking";
-import StationSOS from "./pages/StationSOS";
-import SOSTestPage from "./pages/SOSTestPage";
+/* Pages */
+import { AccountSettings } from "./pages/accountSettings";
+import { Broadcast } from "./pages/broadcastChannel";
+import { Edit } from "./pages/editAccount";
+import { FAQs } from "./pages/faqsManagement";
+import { Feedback } from "./pages/feedback";
+import { FeedbackSettings } from "./pages/feedbackSettings";
+import { Announcement } from "./pages/generalAnnouncement";
+import { Login } from "./pages/login";
+import FaresTab from "./pages/operations_faresTab";
+import { RoutesTab } from "./pages/operations_routesTab";
+import { SchedulesTab } from "./pages/operations_schedulesTab";
+import { StationsTab } from "./pages/operations_stationsTab";
+import VehicleTab from "./pages/operations_vehicleTab";
+import { Passenger } from "./pages/passengerManagement";
+import { Report } from "./pages/reportGeneration";
+import { Boarding } from "./pages/station_boarding";
+import { BoardingLandingPage } from "./pages/station_boardingLanding";
+import { StationDashboard } from "./pages/station_dashboard";
+import { Disembarking } from "./pages/station_disembarking";
+import { DisembarkingLandingPage } from "./pages/station_disembarkingLanding";
+import { StationSOS } from "./pages/station_sos";
+import { UI } from "./pages/uiCustomization";
+import { SOSTestPage } from "./pages/SOSTestPage";
 
-// Providers and Components
-import { BroadcastProvider } from "./context/BroadcastContext";
-import { SOSProvider } from "./context/SOSContext";
-import GlobalBroadcastBanner from "./components/GlobalBroadcastBanner";
-import GlobalSOSBanner from "./components/GlobalSOSBanner";
+/* SOS */
+import { SOSProvider } from "./sos/SOSContext";
+import GlobalSOSBanner from "./sos/GlobalSOSBanner";
 
+/* Broadcast */
+import { BroadcastProvider } from "./broadcast/BroadcastProvider";
+import GlobalBroadcastBanner from "./broadcast/GlobalBroadcastBanner";
+
+/** Gate + global providers for non-login, authenticated routes */
 function ProtectedShell() {
   const location = useLocation();
   const userId =
@@ -42,14 +50,19 @@ function ProtectedShell() {
     localStorage.getItem("admin_name") ||
     "";
 
-  const onLogin = location.pathname === "/" || location.pathname === "/login";
   const isAuthed = Boolean(userId);
+  const onLogin = location.pathname === "/" || location.pathname === "/login";
 
-  if (onLogin || !isAuthed) return <Outlet />;
+  // Always allow rendering of the public login routes
+  if (onLogin) return <Outlet />;
 
+  // Block everything else when not authenticated
+  if (!isAuthed) return <Navigate to="/login" replace />;
+
+  // Authenticated area with providers + global banners
   return (
     <BroadcastProvider userId={userId}>
-      <SOSProvider enabled={true}>
+      <SOSProvider enabled>
         <GlobalBroadcastBanner />
         <GlobalSOSBanner />
         <Outlet />
@@ -59,12 +72,13 @@ function ProtectedShell() {
 }
 
 function App() {
-  // ✅ one-time backend health check when the app mounts
+  // Optional: one-time backend health check
   useEffect(() => {
     const API = import.meta.env.VITE_API_URL;
-    console.log("VITE_API_URL =", API);
     if (!API) {
-      console.error("VITE_API_URL is undefined. Set it in Render → Static Site → Environment.");
+      console.error(
+        "VITE_API_URL is undefined. Set it in your hosting environment."
+      );
       return;
     }
     fetch(`${API}/api/healthz`)
@@ -79,9 +93,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        {/* Public */}
+        <Route index element={<Login />} />
+        <Route path="/login" element={<Login />} />
+
+        {/* Protected (wrapped by shell) */}
         <Route element={<ProtectedShell />}>
-          {/* ✨ keep ALL your existing routes exactly as they are */}
           <Route path="/faqs" element={<FAQs />} />
           <Route path="/edit" element={<Edit />} />
           <Route path="/announcement" element={<Announcement />} />
@@ -105,6 +122,9 @@ function App() {
           <Route path="/stationsos" element={<StationSOS />} />
           <Route path="/sostest" element={<SOSTestPage />} />
         </Route>
+
+        {/* Catch-all → login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );
