@@ -1,5 +1,5 @@
 from app import create_app
-from app.routes.boarding_passengertable import poll_for_new_bookings  # Import polling function
+from app.routes.passengertable import poll_for_new_bookings  # Import polling function
 from threading import Thread
 
 app = create_app()

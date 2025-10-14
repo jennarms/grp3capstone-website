@@ -167,7 +167,7 @@ def create_booking():
 
         # Step 2: Create the Booking with Station IDs
         cur.execute("""
-            INSERT INTO Booking (Booking_ID, User_ID, origin, destination, departure_date, departure_time, Schedule_ID, booking_source, payment_status)
+            INSERT INTO Booking (Booking_ID, User_ID, origin, destination, departure_date, departure_time, booking_source, payment_status)
             VALUES (%s, %s, %s, %s, %s, %s, 'MB', 'NP')
         """, (booking_id, user_id, origin_station_id, destination_station_id, departure_date, departure_time))
         mysql.connection.commit()

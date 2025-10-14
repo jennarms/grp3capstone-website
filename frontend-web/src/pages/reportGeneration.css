@@ -161,10 +161,11 @@
 
 .rg-charts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: 1fr; /* Stack the charts vertically */
+  gap: 30px; /* Adjust the gap between the charts */
   margin-top: 16px;
 }
+
 .chart-card {
   background: var(--panel);
   border: 1px solid var(--stroke);
@@ -172,15 +173,18 @@
   box-shadow: var(--shadow);
   padding: 10px 12px;
 }
+
 .chart-title {
   margin: 0 0 6px;
   font-size: 16px;
   font-weight: 800;
   color: #000;
 }
+
 .chart-body {
   height: 270px;
 }
+
 .chart-span-2 {
   grid-column: span 2;
 }

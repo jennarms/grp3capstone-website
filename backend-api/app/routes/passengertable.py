@@ -7,7 +7,7 @@ from datetime import datetime
 import traceback
 
 # Initialize the Blueprint
-boarding_passengertable_bp = Blueprint('boarding_passengertable_bp', __name__)
+passengertable_bp = Blueprint('bassengertable_bp', __name__)
 
 # =======================
 # POLLING, INSERTION, AND STATUS UPDATE IN ONE FUNCTION
@@ -35,17 +35,27 @@ def poll_for_new_bookings():
                     # Step 2: Insert each new booking into BoardingDisembarking with status 'P'
                     for booking in new_bookings:
                         schedule_id = booking[3] if booking[3] is not None else "NoSchedule"
-                        
-                        print(f"Inserting booking with Booking_ID: {booking[0]}")  # Debugging output
 
+                        # Check if the booking already exists in BoardingDisembarking
                         cursor.execute("""
-                        INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
-                        """, (booking[0], booking[1], booking[2], schedule_id, booking[4], booking[5], booking[6], booking[7]))
+                        SELECT COUNT(*) 
+                        FROM BoardingDisembarking
+                        WHERE Booking_ID = %s
+                        """, (booking[0],))
+                        existing_record_count = cursor.fetchone()[0]
 
-                        mysql.connection.commit()
+                        if existing_record_count == 0:  # Only insert if the record doesn't already exist
+                            print(f"Inserting booking with Booking_ID: {booking[0]}")  # Debugging output
 
-                        print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                            cursor.execute("""
+                            INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
+                            """, (booking[0], booking[1], booking[2], schedule_id, booking[4], booking[5], booking[6], booking[7]))
+
+                            mysql.connection.commit()
+                            print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                        else:
+                            print(f"Booking with Booking_ID: {booking[0]} already exists in BoardingDisembarking.")  # Debugging output
 
                 except Exception as e:
                     print(f"Error in database operations: {e}")
@@ -57,6 +67,7 @@ def poll_for_new_bookings():
 
         except Exception as e:
             print(f"Error in polling loop: {e}")
+
 
 # Start polling in a separate thread when app starts
 def start_polling(app):
@@ -91,7 +102,7 @@ def _get_station_id_by_name(station_name):
     finally:
         cursor.close()
 
-@boarding_passengertable_bp.route('/get_boarding_details', methods=['GET'])
+@passengertable_bp.route('/get_boarding_details', methods=['GET'])
 def get_boarding_details():
     origin_name = request.args.get('origin')
     schedule_time = request.args.get('schedule_time').strip()
@@ -140,7 +151,7 @@ def get_boarding_details():
             bd.boarding_time, 
             bd.disembarking_time, 
             bd.status,
-            bd.Qrcode_ID, 
+            bd.QRCode_ID, 
             bd.Schedule_ID, 
             bd.origin, 
             bd.destination, 
@@ -191,124 +202,39 @@ def get_boarding_details():
         'totalPages': total_pages,
         'currentPage': page
     })
-
-# =======================
-# UPDATE PASSENGER STATUS: ACCEPT (B) or CANCEL (C)
-# =======================
-
-@boarding_passengertable_bp.route('/update_passenger_status_and_qrcode', methods=['POST'])
-def update_passenger_status_and_qrcode():
-    data = request.get_json()
-    bd_id = data.get('BD_ID')
-    action = data.get('action')  # 'accept' or 'cancel'
-    qrcode_id = data.get('Qrcode_ID')
-
-    cursor = mysql.connection.cursor()
-
-    try:
-        if not bd_id or not action or not qrcode_id:
-            return jsonify({"error": "BD_ID, action, and Qrcode_ID are required"}), 400
-
-        # Get the current status of the passenger
-        cursor.execute("""
-            SELECT status FROM BoardingDisembarking WHERE BD_ID = %s
-        """, (bd_id,))
-        bd = cursor.fetchone()
-
-        if not bd:
-            return jsonify({"error": "Passenger not found"}), 404
-
-        current_status = bd[0]
-
-        # Handle 'accept' action (boarding)
-        if action == 'accept':
-            if current_status == 'B':  # If the status is already 'B', prevent boarding again
-                return jsonify({"error": "Passenger is already boarded"}), 400
-            status = 'B'  # Set status to 'B' (boarded)
-            boarding_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current timestamp
-
-            # Update BoardingDisembarking
-            cursor.execute("""
-                UPDATE BoardingDisembarking
-                SET status = %s, boarding_time = %s
-                WHERE BD_ID = %s
-            """, (status, boarding_time, bd_id))
-
-        # Handle 'cancel' action (cancellation)
-        elif action == 'cancel':
-            if current_status == 'B':  # If the status is 'B' (boarded), prevent cancellation
-                return jsonify({"error": "You cannot cancel boarded passengers"}), 400
-            status = 'C'  # Set status to 'C' (cancelled)
-
-            # Update BoardingDisembarking
-            cursor.execute("""
-                UPDATE BoardingDisembarking
-                SET status = %s
-                WHERE BD_ID = %s
-            """, (status, bd_id))
-
-        # Update QRCode based on action
-        if action == 'cancel':
-            # If cancel, set ExpiresAt and reset Maximum_Scan
-            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            cursor.execute("""
-                UPDATE QRCode
-                SET ExpiresAt = %s, Maximum_Scan = 0
-                WHERE Qrcode_ID = %s
-            """, (now, qrcode_id))
-        else:  # accept
-            # If accept, decrease the Maximum_Scan
-            cursor.execute("""
-                UPDATE QRCode
-                SET Maximum_Scan = Maximum_Scan - 1
-                WHERE Qrcode_ID = %s
-            """, (qrcode_id,))
-
-        # Commit changes to the database
-        mysql.connection.commit()
-
-        return jsonify({"message": "Passenger status and QR Code updated successfully"}), 200
-
-    except Exception as e:
-        mysql.connection.rollback()
-        print("=== Exception in update_passenger_status_and_qrcode ===")
-        traceback.print_exc()  # This prints the full stack trace in console
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        cursor.close()
-
-
-
-@boarding_passengertable_bp.route('/get_disembarking_details', methods=['GET'])
+@passengertable_bp.route('/get_disembarking_details', methods=['GET'])
 def get_disembarking_details():
-    destination_name = request.args.get('destination')  # Instead of origin, we use destination
+    destination_name = request.args.get('destination')  # Get destination from the query parameters
+    print(f"Destination Name: {destination_name}")  # Debugging output
+
     page = int(request.args.get('page', 1))  # Default to page 1 if not provided
-    query = request.args.get('query', '')
+    query = request.args.get('query', '')  # Optional query to search by Booking_ID or User_ID
 
     if not destination_name:
         return jsonify({'error': 'Destination (station_name) is required'}), 400
 
-    # Fetch the station_id based on the destination name (instead of origin name)
+    # Fetch the station_id based on the destination name
     station_id = _get_station_id_by_name(destination_name)
     if not station_id:
         return jsonify({'error': 'Invalid station name'}), 400
 
-    records_per_page = 10
-    offset = (page - 1) * records_per_page
+    records_per_page = 10  # Limit results per page
+    offset = (page - 1) * records_per_page  # Calculate offset for pagination
 
     try:
+        # Count query to get the total number of passengers for the destination (compare by station_id)
         count_query = """
         SELECT COUNT(*) 
         FROM BoardingDisembarking
         WHERE destination = %s
-        """
+        """  # 'destination' is a station_id, not a name
 
         cursor = mysql.connection.cursor()
-        cursor.execute(count_query, (destination_name,))
+        cursor.execute(count_query, (station_id,))  # Use station_id to search for matching destination
         total_records = cursor.fetchone()[0]
         cursor.close()
 
+        # If no records found, return empty data
         if total_records == 0:
             return jsonify({'boardingData': [], 'totalPages': 0, 'currentPage': page})
 
@@ -316,9 +242,11 @@ def get_disembarking_details():
         print(f"Error during count query: {e}")
         return jsonify({'error': 'Database query failed'}), 500
 
+    # Calculate total pages for pagination
     total_pages = ceil(total_records / records_per_page)
 
     try:
+        # Fetch passenger details based on destination (station_id), status = 'B', and today's date
         search_query = """
         SELECT 
             bd.BD_ID, 
@@ -327,7 +255,7 @@ def get_disembarking_details():
             bd.boarding_time, 
             bd.disembarking_time, 
             bd.status,
-            bd.Qrcode_ID, 
+            bd.QRCode_ID, 
             bd.Schedule_ID, 
             bd.origin, 
             bd.destination, 
@@ -335,15 +263,15 @@ def get_disembarking_details():
             bd.departure_time
         FROM BoardingDisembarking bd
         WHERE bd.destination = %s
-        """
+        """  # Again, use station_id for the 'destination' field in BoardingDisembarking
 
         if query:
-            search_query += " AND (bd.Booking_ID LIKE %s OR bd.User_ID LIKE %s)"
+            search_query += " AND (bd.Booking_ID LIKE %s OR bd.User_ID LIKE %s)"  # Add search filter if query provided
 
-        search_query += " ORDER BY bd.departure_date DESC, bd.departure_time DESC LIMIT %s OFFSET %s"
+        search_query += " ORDER BY bd.departure_date DESC, bd.departure_time DESC LIMIT %s OFFSET %s"  # Pagination
 
         cursor = mysql.connection.cursor()
-        params = [destination_name]
+        params = [station_id]  # Use station_id to filter by destination
         if query:
             params.extend([f"%{query}%", f"%{query}%"])
 
@@ -351,6 +279,7 @@ def get_disembarking_details():
         passengers = cursor.fetchall()
         cursor.close()
 
+        # Format the fetched passenger data
         passenger_data = []
         for passenger in passengers:
             passenger_data.append({
@@ -372,8 +301,113 @@ def get_disembarking_details():
         print(f"Error during fetching passengers: {e}")
         return jsonify({'error': 'Database query failed'}), 500
 
+    # Return the data in the required structure
     return jsonify({
         'boardingData': passenger_data,
         'totalPages': total_pages,
         'currentPage': page
     })
+
+
+# =======================
+# UPDATE PASSENGER STATUS: ACCEPT (B) or CANCEL (C)
+# =======================
+@passengertable_bp.route('/update_passenger_status_and_qrcode', methods=['POST'])
+def update_passenger_status_and_qrcode():
+    data = request.get_json()
+    bd_id = data.get('BD_ID')
+    action = data.get('action')  # 'accept', 'cancel', or 'disembark'
+    qrcode_id = data.get('Qrcode_ID')
+
+    cursor = mysql.connection.cursor()
+
+    try:
+        if not bd_id or not action or not qrcode_id:
+            return jsonify({"error": "BD_ID, action, and Qrcode_ID are required"}), 400
+
+        # Get the current status of the passenger
+        cursor.execute("""
+            SELECT status FROM BoardingDisembarking WHERE BD_ID = %s
+        """, (bd_id,))
+        bd = cursor.fetchone()
+
+        if not bd:
+            return jsonify({"error": "Passenger not found"}), 404
+
+        current_status = bd[0]
+
+        # Prevent action if the passenger is already disembarked (status 'D')
+        if current_status == 'D':
+            return jsonify({"error": "This passenger has already been disembarked."}), 400
+
+        # Handle 'accept' action (boarding)
+        if action == 'accept':  # Mark as boarded
+            if current_status == 'B':  # If the status is already 'B', prevent boarding again
+                return jsonify({"error": "Passenger is already boarded"}), 400
+            status = 'B'  # Set status to 'B' (boarded)
+            boarding_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current timestamp
+
+            # Update BoardingDisembarking for boarding
+            cursor.execute("""
+                UPDATE BoardingDisembarking
+                SET status = %s, boarding_time = %s
+                WHERE BD_ID = %s
+            """, (status, boarding_time, bd_id))
+
+        # Handle 'cancel' action (cancellation)
+        elif action == 'cancel':  # Mark as cancelled
+            if current_status == 'B':  # If the status is 'B' (boarded), prevent cancellation
+                return jsonify({"error": "You cannot cancel boarded passengers"}), 400
+            status = 'C'  # Set status to 'C' (cancelled)
+
+            # Update BoardingDisembarking for cancellation
+            cursor.execute("""
+                UPDATE BoardingDisembarking
+                SET status = %s
+                WHERE BD_ID = %s
+            """, (status, bd_id))
+
+        # Handle 'disembark' action (mark as disembarked)
+        elif action == 'disembark':  # This is when disembark is triggered
+            if current_status != 'B':  # If the status is not 'B' (Boarded), cannot disembark
+                return jsonify({"error": "Passenger must be boarded (status 'B') to disembark."}), 400
+            status = 'D'  # Set status to 'D' (Disembarked)
+            disembarking_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current timestamp
+
+            # Update BoardingDisembarking to mark as disembarked
+            cursor.execute("""
+                UPDATE BoardingDisembarking
+                SET status = %s, disembarking_time = %s
+                WHERE BD_ID = %s
+            """, (status, disembarking_time, bd_id))
+
+        # Update QRCode based on action
+        if action == 'cancel':
+            # If cancel, set ExpiresAt and reset Maximum_Scan
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute("""
+                UPDATE QRCode
+                SET ExpiresAt = %s, Maximum_Scan = 0
+                WHERE Qrcode_ID = %s
+            """, (now, qrcode_id))
+        elif action == 'disembark' or action == 'accept':
+            # If accept or disembark, decrease the Maximum_Scan
+            cursor.execute("""
+                UPDATE QRCode
+                SET Maximum_Scan = Maximum_Scan - 1
+                WHERE Qrcode_ID = %s
+            """, (qrcode_id,))
+
+        # Commit changes to the database
+        mysql.connection.commit()
+
+        return jsonify({"message": "Passenger status updated successfully."}), 200
+
+    except Exception as e:
+        mysql.connection.rollback()
+        print("=== Exception in update_passenger_status_and_qrcode ===")
+        traceback.print_exc()  # This prints the full stack trace in console
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        cursor.close()

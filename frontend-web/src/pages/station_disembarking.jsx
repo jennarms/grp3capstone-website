@@ -21,6 +21,7 @@ export function Disembarking() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log("Fetched Station:", data?.station_name); // Debugging line to check fetched station
           setStation(data?.station_name || "loading...");
         } else {
           setStation("Failed to fetch station");
