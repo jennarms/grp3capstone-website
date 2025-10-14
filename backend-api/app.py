@@ -1,22 +1,29 @@
+# app.py
+import os
 from app import create_app
-from app.routes.boarding_passengertable import poll_for_new_bookings  # Import polling function
-from threading import Thread
 
 app = create_app()
 
-def start_polling():
-    # Start polling in the background thread after the app is created and context is available
-    with app.app_context():  # Make sure the app context is available for the background thread
-        poll_for_new_bookings()
-
-# Start polling after the app is created
-thread = Thread(target=start_polling)
-thread.daemon = True  # Ensure it runs as a daemon thread
-thread.start()
-
-@app.route('/')
+# Optional: simple root for quick sanity
+@app.route("/")
 def home():
     return "Backend is running!"
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000, debug=False) 
+if __name__ == "__main__":
+    # --- DEV ONLY: start your legacy polling thread locally ---
+    # In production (Gunicorn on Render), DO NOT start threads here; use APScheduler or a worker.
+    from threading import Thread
+    from app.routes.boarding_passengertable import poll_for_new_bookings
+
+    def start_polling():
+        with app.app_context():
+            # NOTE: If poll_for_new_bookings is an infinite loop, this will block forever.
+            # That's fine for a dev thread, but in prod use APScheduler or a worker service.
+            poll_for_new_bookings()
+
+    thread = Thread(target=start_polling, daemon=True)
+    thread.start()
+
+    # Bind to PORT (Render sets this in env). Default to 5000 locally.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

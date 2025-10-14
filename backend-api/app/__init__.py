@@ -18,14 +18,18 @@ scheduler = APScheduler()
 
 def create_app():
     app = Flask(__name__)
-
-    # Load environment variables early
     load_dotenv()
 
-    # ✅ Allow CORS for React frontend (both localhost + 127.0.0.1 just in case)
+    # Read allowed origins from env; fall back to localhost for dev
+    origins_env = os.getenv("ALLOWED_ORIGINS") or os.getenv("FRONTEND_ORIGIN")
+    if origins_env:
+        origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+    else:
+        origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
     CORS(
         app,
-        resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://grp3capstone-website-clyl.onrender.com"]}},
+        resources={r"/api/*": {"origins": origins}},
         supports_credentials=True
     )
 
@@ -112,5 +116,12 @@ def create_app():
     # Start APScheduler after app is created (only once here)
     scheduler.init_app(app)
     scheduler.start()
+    
+    @app.get("/api/healthz")
+    def healthz():
+        return {"ok": True}
+
 
     return app
+
+
