@@ -65,7 +65,10 @@ LEFT JOIN
     Users u ON bd.User_ID = u.User_ID
 WHERE 
     (bd.departure_date BETWEEN %s AND %s OR bd.departure_date IS NULL)  -- Include stations with no data
-    AND (bd.status IN ('D', 'C') OR bd.status IS NULL)  -- Allow stations with no boarding/disembarking data
+   AND (bd.status IN ('D', 'C', 'P') OR bd.status IS NULL)
+
+
+
 GROUP BY 
     st.StationName;
 
