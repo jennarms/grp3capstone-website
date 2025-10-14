@@ -29,7 +29,7 @@ def poll_for_new_bookings():
                         # Set transaction isolation level and ensure transactions are manually committed
                         cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")  # Enforce strict transaction isolation
                         mysql.connection.autocommit(False)  # Disable auto-commit for manual transaction control
-                        
+
                         # Use `FOR UPDATE` to lock the rows and ensure no other thread can process them at the same time
                         cursor.execute("""
                         SELECT b.Booking_ID, b.User_ID, b.Qrcode_ID, b.Schedule_ID, b.origin, b.destination, b.departure_date, b.departure_time
@@ -62,13 +62,29 @@ def poll_for_new_bookings():
                             if existing_record_count == 0:  # Only insert if the record doesn't already exist
                                 print(f"Inserting booking with Booking_ID: {booking[0]} and Schedule_ID: {schedule_id}")  # Debugging output
 
-                                cursor.execute("""
-                                INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
-                                """, (booking[0], booking[1], qrcode_id, schedule_id, booking[4], booking[5], booking[6], booking[7]))
+                                # Use an idempotency key to avoid duplicate insertion even in case of retries
+                                idempotency_key = f"{booking[0]}_{schedule_id}"
 
-                                mysql.connection.commit()  # Commit after successful insert
-                                print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                                # Check if this idempotency key already exists
+                                cursor.execute("""
+                                SELECT COUNT(*) FROM IdempotencyKeys WHERE key = %s
+                                """, (idempotency_key,))
+                                if cursor.fetchone()[0] == 0:
+                                    # Proceed with insert and mark the key as used
+                                    cursor.execute("""
+                                    INSERT INTO IdempotencyKeys (key) VALUES (%s)
+                                    """, (idempotency_key,))
+
+                                    cursor.execute("""
+                                    INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
+                                    """, (booking[0], booking[1], qrcode_id, schedule_id, booking[4], booking[5], booking[6], booking[7]))
+
+                                    mysql.connection.commit()  # Commit after successful insert
+                                    print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                                else:
+                                    print(f"Duplicate detected for Booking_ID: {booking[0]} and Schedule_ID: {schedule_id}. Skipping insert.")
+
                             else:
                                 print(f"Booking with Booking_ID: {booking[0]} and Schedule_ID: {schedule_id} already exists in BoardingDisembarking.")  # Debugging output
 
