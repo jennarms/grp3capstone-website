@@ -1,13 +1,12 @@
 import axios from 'axios';
-import ExcelJS from 'exceljs'; // Import exceljs
-import { jsPDF } from "jspdf"; // Import jsPDF for PDF export
+import ExcelJS from 'exceljs';
+import { jsPDF } from "jspdf";
 import { useEffect, useRef, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./reportGeneration.css";
 
-/* Helpers */
 const fmt = (d) =>
   new Date(d).toLocaleDateString(undefined, {
     month: "2-digit",
@@ -15,7 +14,7 @@ const fmt = (d) =>
     year: "numeric",
   });
 
-const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF"];
+const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF", "#FF6B9D", "#00D4FF", "#FFC837"];
 
 function Toast({ open, title, message, tone = "success" }) {
   if (!open) return null;
@@ -28,7 +27,7 @@ function Toast({ open, title, message, tone = "success" }) {
 }
 
 export function Report() {
-  const apiUrl = import.meta.env.VITE_API_URL; // API URL from environment
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   const today = new Date();
   const aWeekAgo = new Date(today);
@@ -36,7 +35,7 @@ export function Report() {
 
   const [start, setStart] = useState(aWeekAgo.toISOString().slice(0, 10));
   const [end, setEnd] = useState(today.toISOString().slice(0, 10));
-  const [rows, setRows] = useState([]); // This will hold the fetched report data
+  const [rows, setRows] = useState([]);
 
   const reportRef = useRef(null);
 
@@ -49,11 +48,9 @@ export function Report() {
   };
 
   useEffect(() => {
-    // Clean up toast timer
     return () => toastTimer.current && clearTimeout(toastTimer.current);
   }, []);
 
-  // Fetch data from backend when the date range changes
   useEffect(() => {
     const fetchReportData = async () => {
       try {
@@ -63,7 +60,7 @@ export function Report() {
             end_date: end,
           }
         });
-        setRows(response.data); // Set fetched data to rows state
+        setRows(response.data);
         showToast("Report refreshed", `Range: ${fmt(start)} — ${fmt(end)}`, "success");
       } catch (error) {
         console.error("Error fetching report data:", error);
@@ -74,7 +71,6 @@ export function Report() {
     fetchReportData();
   }, [start, end, apiUrl]);
 
-  // Export as PDF
   const exportPDF = async () => {
     try {
       const { default: html2canvas } = await import("html2canvas");
@@ -108,12 +104,10 @@ export function Report() {
     }
   };
 
-  // Export as Excel
   const exportExcel = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
 
-      // 1) Stations table
       const sheet1 = workbook.addWorksheet("Stations");
       sheet1.columns = [
         { header: 'Station Name', key: 'stationName', width: 20 },
@@ -141,7 +135,6 @@ export function Report() {
       ];
       sheet1.addRows(rows);
 
-      // Save the workbook
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const link = document.createElement('a');
@@ -156,19 +149,47 @@ export function Report() {
     }
   };
 
-  // Aggregating data for charts
-  const totalsData = rows.map((r) => ({ name: r.stationName, total: r.totalBookings }));
-  const genderTotals = [
-    { name: "Female", value: rows.reduce((acc, r) => acc + r.femaleCount, 0) },
-    { name: "Male", value: rows.reduce((acc, r) => acc + r.maleCount, 0) },
-  ];
+  // 1. Total Bookings and Cancelled Bookings Per Station
+  const bookingsCancelledData = rows.map((r) => ({
+    name: r.StationName,
+    totalBookings: r.TotalBookings,
+    cancelled: r.CanceledCount
+  }));
 
-  const sourceTotals = [
-    { name: "Mobile App", value: rows.reduce((acc, r) => acc + r.mobileApp, 0) },
-    { name: "Chatbot", value: rows.reduce((acc, r) => acc + r.chatbot, 0) },
-    { name: "Gmail", value: rows.reduce((acc, r) => acc + r.gmail, 0) },
-    { name: "Manual", value: rows.reduce((acc, r) => acc + r.manual, 0) },
-  ];
+  // 2. Gender Per Station
+  const genderPerStationData = rows.map((r) => ({
+    name: r.StationName,
+    female: r.FemaleCount,
+    male: r.MaleCount,
+    other: r.OtherGenderCount
+  }));
+
+  // 3. Age Per Station
+  const agePerStationData = rows.map((r) => ({
+    name: r.StationName,
+    "0-18": r.Age_0_18,
+    "19-25": r.Age_19_25,
+    "26-40": r.Age_26_40,
+    "41-60": r.Age_41_60,
+    "60+": r.Age_60Plus
+  }));
+
+  // 4. Demographics Distribution Per Station
+  const demographicsData = rows.map((r) => ({
+    name: r.StationName,
+    student: r.StudentCount,
+    senior: r.SeniorCount,
+    pwd: r.PWDCount
+  }));
+
+  // 5. Platform Source Per Station
+  const platformSourceData = rows.map((r) => ({
+    name: r.StationName,
+    mobileApp: r.MobileAppCount,
+    chatbot: r.ChatbotCount,
+    email: r.EmailCount,
+    manual: r.ManualBookingCount
+  }));
 
   return (
     <>
@@ -260,52 +281,96 @@ export function Report() {
                 </tbody>
               </table>
             </div>
-          </div>
 
-          {/* Charts */}
-          <div className="rg-charts">
-            <section className="chart-card">
-              <h3 className="chart-title">Total Bookings</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={totalsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="total" fill={COLORS[0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
+            {/* Charts Section */}
+            <div className="rg-charts" style={{ marginTop: '40px' }}>
+              {/* Chart 1: Total Bookings and Cancelled Bookings Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Total Bookings and Cancelled Bookings Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={bookingsCancelledData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="totalBookings" fill="#41A67E" name="Total Bookings" />
+                    <Bar dataKey="cancelled" fill="#DA6C6C" name="Cancelled" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
 
-            <section className="chart-card">
-              <h3 className="chart-title">Gender Ratio</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Legend />
-                  <Tooltip />
-                  <Pie data={genderTotals} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80}>
-                    {genderTotals.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </section>
+              {/* Chart 2: Gender Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Gender Distribution Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={genderPerStationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="female" fill="#FF6B9D" name="Female" />
+                    <Bar dataKey="male" fill="#9FB3DF" name="Male" />
+                    <Bar dataKey="other" fill="#9B7EBD" name="Other" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
 
-            <section className="chart-card">
-              <h3 className="chart-title">Booking Source</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Tooltip />
-                  <Legend />
-                  <Pie data={sourceTotals} dataKey="value" nameKey="name" outerRadius={80}>
-                    {sourceTotals.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </section>
+              {/* Chart 3: Age Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Age Distribution Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={agePerStationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="0-18" fill="#8967B3" name="0-18" />
+                    <Bar dataKey="19-25" fill="#FADFA1" name="19-25" />
+                    <Bar dataKey="26-40" fill="#b8f2e6" name="26-40" />
+                    <Bar dataKey="41-60" fill="#FF8A8A" name="41-60" />
+                    <Bar dataKey="60+" fill="#5F6F65" name="60+" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
+
+              {/* Chart 4: Demographics Distribution Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Demographics Distribution Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={demographicsData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="student" fill="#cc8b86" name="Student" />
+                    <Bar dataKey="senior" fill="#d496a7" name="Senior" />
+                    <Bar dataKey="pwd" fill="#5d576b" name="PWD" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
+
+              {/* Chart 5: Platform Source Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Preferred Platform Source of Booking Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={platformSourceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="mobileApp" fill="#1BC882" name="Mobile App" />
+                    <Bar dataKey="chatbot" fill="#2E5BFF" name="Chatbot" />
+                    <Bar dataKey="email" fill="#EA4335" name="Email" />
+                    <Bar dataKey="manual" fill="#FADA7A" name="Manual Booking" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
+            </div>
           </div>
 
           <div className="rg-export-row">
