@@ -1,9 +1,39 @@
 // App.jsx
 import { HashRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
-import React, { useEffect } from "react"; // ✅ add useEffect
+import React, { useEffect } from "react";
 import "./App.css";
 
-// ...all your existing imports (pages, providers, banners)...
+// ✅ ADD ALL MISSING IMPORTS
+// Pages
+import Login from "./pages/Login";
+import FAQs from "./pages/FAQs";
+import Edit from "./pages/Edit";
+import Announcement from "./pages/Announcement";
+import Broadcast from "./pages/Broadcast";
+import Passenger from "./pages/Passenger";
+import Feedback from "./pages/Feedback";
+import FeedbackSettings from "./pages/FeedbackSettings";
+import AccountSettings from "./pages/AccountSettings";
+import Report from "./pages/Report";
+import UI from "./pages/UICustomization";
+import VehicleTab from "./pages/operations/VehicleTab";
+import StationsTab from "./pages/operations/StationsTab";
+import RoutesTab from "./pages/operations/RoutesTab";
+import SchedulesTab from "./pages/operations/SchedulesTab";
+import FaresTab from "./pages/operations/FaresTab";
+import StationDashboard from "./pages/StationDashboard";
+import BoardingLandingPage from "./pages/BoardingLandingPage";
+import Boarding from "./pages/Boarding";
+import DisembarkingLandingPage from "./pages/DisembarkingLandingPage";
+import Disembarking from "./pages/Disembarking";
+import StationSOS from "./pages/StationSOS";
+import SOSTestPage from "./pages/SOSTestPage";
+
+// Providers and Components
+import { BroadcastProvider } from "./context/BroadcastContext";
+import { SOSProvider } from "./context/SOSContext";
+import GlobalBroadcastBanner from "./components/GlobalBroadcastBanner";
+import GlobalSOSBanner from "./components/GlobalSOSBanner";
 
 function ProtectedShell() {
   const location = useLocation();
