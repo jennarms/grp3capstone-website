@@ -9,79 +9,96 @@ import traceback
 # Initialize the Blueprint
 passengertable_bp = Blueprint('bassengertable_bp', __name__)
 
+# Lock for polling process to prevent race conditions
+polling_lock = threading.Lock()
+
 # =======================
 # POLLING, INSERTION, AND STATUS UPDATE IN ONE FUNCTION
 # =======================
 def poll_for_new_bookings():
     while True:
         try:
-            # Debugging output to check if polling is running
-            print("Polling started...")  # Debugging output
+            # Ensure that only one polling process runs at a time
+            if polling_lock.acquire(blocking=False):
+                print("Polling started...")  # Debugging output
 
-            # Explicitly get app context here for background thread
-            with current_app.app_context():  # Ensure app context is available in the background thread
-                cursor = mysql.connection.cursor()  # Use mysql.connection here
-                try:
-                    # Step 1: Fetch bookings that are not yet inserted into BoardingDisembarking
-                    cursor.execute(""" 
-                    SELECT b.Booking_ID, b.User_ID, b.Qrcode_ID, b.Schedule_ID, b.origin, b.destination, b.departure_date, b.departure_time
-                    FROM Booking b
-                    LEFT JOIN BoardingDisembarking bd ON b.Booking_ID = bd.Booking_ID
-                    WHERE bd.Booking_ID IS NULL  -- Only select bookings that haven't been inserted into BoardingDisembarking
-                    """)
-                    new_bookings = cursor.fetchall()
-                    print(f"Fetched {len(new_bookings)} new bookings.")  # Debugging output
+                with current_app.app_context():  # Ensure app context is available in the background thread
+                    cursor = mysql.connection.cursor()
 
-                    # Step 2: Insert each new booking into BoardingDisembarking with status 'P'
-                    for booking in new_bookings:
-                        schedule_id = booking[3] if booking[3] is not None else "NoSchedule"
-
-                        # Check if the booking already exists in BoardingDisembarking
+                    try:
+                        # Set transaction isolation level and ensure transactions are manually committed
+                        cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")  # Enforce strict transaction isolation
+                        mysql.connection.autocommit(False)  # Disable auto-commit for manual transaction control
+                        
+                        # Use `FOR UPDATE` to lock the rows and ensure no other thread can process them at the same time
                         cursor.execute("""
-                        SELECT COUNT(*) 
-                        FROM BoardingDisembarking
-                        WHERE Booking_ID = %s
-                        """, (booking[0],))
-                        existing_record_count = cursor.fetchone()[0]
+                        SELECT b.Booking_ID, b.User_ID, b.Qrcode_ID, b.Schedule_ID, b.origin, b.destination, b.departure_date, b.departure_time
+                        FROM Booking b
+                        LEFT JOIN BoardingDisembarking bd ON b.Booking_ID = bd.Booking_ID
+                        WHERE bd.Booking_ID IS NULL
+                        FOR UPDATE  -- Lock the rows being processed
+                        """)
+                        new_bookings = cursor.fetchall()
+                        print(f"Fetched {len(new_bookings)} new bookings.")  # Debugging output
 
-                        if existing_record_count == 0:  # Only insert if the record doesn't already exist
-                            print(f"Inserting booking with Booking_ID: {booking[0]}")  # Debugging output
+                        # Process each booking
+                        for booking in new_bookings:
+                            schedule_id = booking[3] if booking[3] is not None else "NoSchedule"
+                            qrcode_id = booking[2]  # Get Qrcode_ID from the booking data
 
+                            # If Qrcode_ID is NULL, skip this booking
+                            if qrcode_id is None:
+                                print(f"Skipping booking with Booking_ID: {booking[0]} due to missing Qrcode_ID.")
+                                continue  # Skip this booking
+
+                            # Check if the booking already exists before inserting
                             cursor.execute("""
-                            INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
-                            """, (booking[0], booking[1], booking[2], schedule_id, booking[4], booking[5], booking[6], booking[7]))
+                            SELECT COUNT(*) 
+                            FROM BoardingDisembarking
+                            WHERE Booking_ID = %s AND Schedule_ID = %s
+                            """, (booking[0], schedule_id))
+                            existing_record_count = cursor.fetchone()[0]
 
-                            mysql.connection.commit()
-                            print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
-                        else:
-                            print(f"Booking with Booking_ID: {booking[0]} already exists in BoardingDisembarking.")  # Debugging output
+                            if existing_record_count == 0:  # Only insert if the record doesn't already exist
+                                print(f"Inserting booking with Booking_ID: {booking[0]} and Schedule_ID: {schedule_id}")  # Debugging output
 
-                except Exception as e:
-                    print(f"Error in database operations: {e}")
-                finally:
-                    cursor.close()
+                                cursor.execute("""
+                                INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
+                                """, (booking[0], booking[1], qrcode_id, schedule_id, booking[4], booking[5], booking[6], booking[7]))
 
-            print("Polling completed...")  # Debugging output
-            time.sleep(10)  # Poll every 10 seconds
+                                mysql.connection.commit()  # Commit after successful insert
+                                print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                            else:
+                                print(f"Booking with Booking_ID: {booking[0]} and Schedule_ID: {schedule_id} already exists in BoardingDisembarking.")  # Debugging output
+
+                    except Exception as e:
+                        print(f"Error in database operations: {e}")
+                        mysql.connection.rollback()  # Rollback if an error occurs
+                    finally:
+                        cursor.close()
+
+                print("Polling completed...")  # Debugging output
+                polling_lock.release()  # Release the polling lock after the process is done
+                time.sleep(30)  # Increase the polling interval to avoid overlapping cycles
+
+            else:
+                print("Polling already running, skipping this cycle...")  # Debugging output
+                time.sleep(10)  # Sleep for a shorter time to allow another polling cycle to run when the lock is released
 
         except Exception as e:
             print(f"Error in polling loop: {e}")
 
-
 # Start polling in a separate thread when app starts
 def start_polling(app):
-    # Pass app context to the thread when it starts
     print("Starting polling thread...")  # Debugging output
     poll_thread = threading.Thread(target=poll_for_new_bookings)  # Polling function runs in background thread
     poll_thread.daemon = True  # Ensure the thread stops when the app stops
     poll_thread.start()
     print("Polling thread started.")  # Debugging output
 
-
 # Start the polling thread when Flask app is running
 def run_polling_with_app_context(app):
-    # Pass the Flask app instance to the polling function to use app context
     start_polling(app)
 
 # =======================
