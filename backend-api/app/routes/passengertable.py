@@ -35,17 +35,27 @@ def poll_for_new_bookings():
                     # Step 2: Insert each new booking into BoardingDisembarking with status 'P'
                     for booking in new_bookings:
                         schedule_id = booking[3] if booking[3] is not None else "NoSchedule"
-                        
-                        print(f"Inserting booking with Booking_ID: {booking[0]}")  # Debugging output
 
+                        # Check if the booking already exists in BoardingDisembarking
                         cursor.execute("""
-                        INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
-                        """, (booking[0], booking[1], booking[2], schedule_id, booking[4], booking[5], booking[6], booking[7]))
+                        SELECT COUNT(*) 
+                        FROM BoardingDisembarking
+                        WHERE Booking_ID = %s
+                        """, (booking[0],))
+                        existing_record_count = cursor.fetchone()[0]
 
-                        mysql.connection.commit()
+                        if existing_record_count == 0:  # Only insert if the record doesn't already exist
+                            print(f"Inserting booking with Booking_ID: {booking[0]}")  # Debugging output
 
-                        print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                            cursor.execute("""
+                            INSERT INTO BoardingDisembarking (Booking_ID, User_ID, Qrcode_ID, Schedule_ID, origin, destination, departure_date, departure_time, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'P')
+                            """, (booking[0], booking[1], booking[2], schedule_id, booking[4], booking[5], booking[6], booking[7]))
+
+                            mysql.connection.commit()
+                            print(f"Successfully inserted booking with Booking_ID: {booking[0]} into BoardingDisembarking.")  # Debugging output
+                        else:
+                            print(f"Booking with Booking_ID: {booking[0]} already exists in BoardingDisembarking.")  # Debugging output
 
                 except Exception as e:
                     print(f"Error in database operations: {e}")
@@ -57,6 +67,7 @@ def poll_for_new_bookings():
 
         except Exception as e:
             print(f"Error in polling loop: {e}")
+
 
 # Start polling in a separate thread when app starts
 def start_polling(app):
