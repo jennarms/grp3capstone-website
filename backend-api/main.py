@@ -3,7 +3,14 @@ from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://grp3capstone-website-1.onrender.com",  # Replace with your actual frontend URL
+            "http://localhost:5173"  # Keep this for local development
+        ]
+    }
+})
 
 @app.route('/')
 def home():

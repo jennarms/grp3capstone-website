@@ -1,4 +1,5 @@
 // App.jsx
+import { API_URL } from "./config/api";
 import React, { useEffect } from "react";
 import {
   HashRouter as Router,
@@ -83,17 +84,12 @@ function CatchAllRedirect() {
 }
 
 function App() {
-  // Health check removed temporarily - will be restored when backend is deployed
-  /*
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    if (!API) {
-      console.error(
-        "VITE_API_URL is undefined. Set it in your hosting environment."
-      );
+    if (!API_URL) {
+      console.error("VITE_API_URL is undefined. Set it in your hosting environment.");
       return;
     }
-    fetch(`${API}/api/healthz`)
+    fetch(`${API_URL}/api/healthz`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -101,7 +97,7 @@ function App() {
       .then((data) => console.log("healthz:", data))
       .catch((err) => console.error("healthz error:", err));
   }, []);
-  */
+
 
   return (
     <Router>
