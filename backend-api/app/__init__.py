@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_apscheduler import APScheduler  # Import APScheduler
+from flask_apscheduler import APScheduler
 from flask_cors import CORS
 from flask_mysqldb import MySQL
 from flask_mail import Mail
@@ -27,13 +27,14 @@ def create_app():
     else:
         origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-    # More explicit CORS configuration
+    # Comprehensive CORS configuration
     CORS(
         app,
-        origins=origins,  # Simplified - applies to all routes
+        origins=origins,
         supports_credentials=True,
-        allow_headers=["Content-Type", "Authorization"],
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        expose_headers=["Content-Type", "Authorization"]
     )
 
     # MySQL Config
@@ -124,7 +125,4 @@ def create_app():
     def healthz():
         return {"ok": True}
 
-
     return app
-
-
