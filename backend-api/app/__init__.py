@@ -27,11 +27,13 @@ def create_app():
     else:
         origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-    # Update CORS configuration - use "/*" instead of "/api/*"
+    # More explicit CORS configuration
     CORS(
         app,
-        resources={r"/*": {"origins": origins}},  # Changed from r"/api/*"
-        supports_credentials=True
+        origins=origins,  # Simplified - applies to all routes
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
     # MySQL Config
