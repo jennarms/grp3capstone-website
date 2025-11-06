@@ -27,10 +27,13 @@ def create_app():
     else:
         origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # Add frontend origin explicitly
+    origins.append("https://grp3capstone-website-1.onrender.com")
+
     # Comprehensive CORS configuration
     CORS(
         app,
-        origins=origins,
+        resources={r"/*": {"origins": origins}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
