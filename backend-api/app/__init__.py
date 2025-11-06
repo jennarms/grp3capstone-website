@@ -27,9 +27,10 @@ def create_app():
     else:
         origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # Update CORS configuration - use "/*" instead of "/api/*"
     CORS(
         app,
-        resources={r"/api/*": {"origins": origins}},
+        resources={r"/*": {"origins": origins}},  # Changed from r"/api/*"
         supports_credentials=True
     )
 
