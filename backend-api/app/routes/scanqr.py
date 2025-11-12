@@ -81,9 +81,9 @@ def scan_qrcode():
 
             # Update QRCode for disembarking (set ExpiresAt and set Maximum_Scan to 0)
             cursor.execute("""
-                UPDATE Qrcode
+                UPDATE QRCode
                 SET ExpiresAt = %s, Maximum_Scan = 0
-                WHERE Qrcode_ID=%s
+                WHERE QRCode_ID=%s
             """, (now, qr_id))
 
             message = "Passenger disembarked successfully"

@@ -51,101 +51,56 @@ def _get_vehicle_capacity(route_id):
     finally:
         cur.close()
 
-def _count_seats_taken(service_date, origin, departure_time, schedule_id):
+def _count_seats_taken(service_date, origin, departure_time):
     """
-    Count seats taken for a given date, origin, departure time, and schedule ID
-    considering passengers with status 'P' (Pending) or 'B' (Boarded)
+    Count seats taken for a given date, origin, and departure time
+    considering passengers with status 'P' (Pending) or 'B' (Boarded).
     """
     cur = mysql.connection.cursor()
     try:
         # Query to count seats with status 'P' (Pending) or 'B' (Boarded) in BoardingDisembarking
         cur.execute("""
-            SELECT COUNT(*) AS seats_taken
-            FROM BoardingDisembarking bd
-            WHERE bd.departure_date = %s
-              AND bd.origin = %s
-              AND bd.departure_time = %s
-              AND bd.Schedule_ID = %s
-              AND bd.status IN ('P', 'B')  -- Only Pending (P) or Boarded (B) passengers
-        """, (service_date, origin, departure_time, schedule_id))
-        
+            SELECT COUNT(*) AS booked_seats
+            FROM Booking b
+            LEFT JOIN BoardingDisembarking bd ON b.Booking_ID = bd.Booking_ID
+            WHERE b.departure_date = %s
+              AND b.origin = %s
+              AND b.departure_time = %s
+              AND bd.status IN ('P', 'B')
+        """, (service_date, origin, departure_time))  # Pass the date, origin, and time
         row = cur.fetchone()
-        return int(row[0]) if row else 0
+        return int(row[0]) if row else 0  # Return the count of booked seats
     finally:
         cur.close()
 
-# -------------------------------------------------------------------
-# route
-# -------------------------------------------------------------------
 
-@boarding_routecard_bp.route('/boarding/available_seats', methods=['GET'])
+@boarding_routecard_bp.route('/count-seats-taken', methods=['GET'])
+@boarding_routecard_bp.route('/boarding/count-seats-taken', methods=['GET'])
 @jwt_required()
-def get_available_seats():
+def count_seats_taken():
     """
-    Endpoint to calculate the available seats for a given schedule, departure date, origin and time.
-    GET /api/boarding/available_seats?schedule_id=<schedule_id>&date=<YYYY-MM-DD>&origin=<origin>&departure_time=<HH:MM>
+    Endpoint to count the number of seats taken for a given service date, origin, and departure time.
+    GET /api/count-seats-taken?date=<YYYY-MM-DD>&origin=<origin>&departure_time=<HH:MM>
     """
     try:
-        # Get data from the request
-        station_id = get_jwt_identity()
-        service_date = request.args.get('date', date.today().isoformat())
-        origin = request.args.get('origin')
+        # Fetch query parameters from request
+        service_date = request.args.get('date')
+        origin = request.args.get('origin')  # Origin station name
         departure_time = request.args.get('departure_time')
-        schedule_id = request.args.get('schedule_id')
 
-        # 1) Fetch the relevant schedule details to get the departure time and origin
-        cur = mysql.connection.cursor()
-        cur.execute("""
-            SELECT s.departureTime, rs.StationName
-            FROM Schedule s
-            JOIN RouteStations rs ON s.RouteStation_ID = rs.RouteStation_ID
-            WHERE s.Schedule_ID = %s
-        """, (schedule_id,))
-        schedule_row = cur.fetchone()
-        if not schedule_row:
-            return jsonify({"error": f"Schedule {schedule_id} not found."}), 404
+        # Call the helper function to count seats taken
+        seats_taken = _count_seats_taken(service_date, origin, departure_time)
 
-        departure_time_from_schedule, origin_from_schedule = schedule_row
-
-        # Check if the origin from the request matches the one in the schedule
-        if origin != origin_from_schedule:
-            return jsonify({"error": f"Origin {origin} does not match the scheduled origin {origin_from_schedule}."}), 400
-
-        # 2) Fetch vehicle capacity for the given schedule's route
-        cur.execute("""
-            SELECT r.Route_ID
-            FROM Schedule s
-            JOIN Route r ON s.Route_ID = r.Route_ID
-            WHERE s.Schedule_ID = %s
-        """, (schedule_id,))
-        route_row = cur.fetchone()
-        if not route_row:
-            return jsonify({"error": "Route not found for the given schedule."}), 404
+        print(f"Calculated seats_taken: {seats_taken}")  # Debugging log
         
-        route_id = route_row[0]
-
-        # Fetch vehicle capacity for the given route_id
-        vehicle_capacity = _get_vehicle_capacity(route_id)
-        if vehicle_capacity is None:
-            return jsonify({"error": "Vehicle capacity not found for the given route."}), 404
-
-        # 3) Count seats taken for the given parameters (departure date, origin, departure time, and schedule ID)
-        seats_taken = _count_seats_taken(service_date, origin, departure_time, schedule_id)
-
-        # 4) Calculate available seats
-        available_seats = max(0, vehicle_capacity - seats_taken)
-
-        # Return the response
-        return jsonify({
-            "vehicle_capacity": vehicle_capacity,
-            "seats_taken": seats_taken,
-            "available_seats": available_seats
-        }), 200
+        # Return the result
+        return jsonify({"seats_taken": seats_taken}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+# -------------------------------------------------------------------
+# route
+# -------------------------------------------------------------------
 @boarding_routecard_bp.route('/boarding/routecard/<schedule_id>', methods=['GET'])
 @jwt_required()
 def get_routecard(schedule_id):
@@ -196,8 +151,8 @@ def get_routecard(schedule_id):
              route_id, route_name, dir_code, current_station_name,
              stop_order, capacity, vehicle_type) = head
 
-            # 2) Compute seat info (time-based)
-            seat = _count_seats_taken(service_date, current_station_name, departure_time, schedule_id)
+            # 2) Compute seat info (time-based) - Get seats taken for this schedule
+            seats_taken = _count_seats_taken(service_date, current_station_name, departure_time)
 
             # 3) Fetch full route stops (ordered) WITH per-stop time for THIS ride
             cur.execute("""
@@ -239,8 +194,7 @@ def get_routecard(schedule_id):
                     "stop_order": int(stop_order or 0),
                     "vehicle_type": vehicle_type,
                     "total_seats": capacity,
-                    "seats_taken": seat,  # Correct value for seats taken
-                    "available_seats": max(0, capacity - seat)  # Calculate available seats
+                    "seats_taken": seats_taken  # Correct value for seats taken
                 },
                 "stops": stops
             }

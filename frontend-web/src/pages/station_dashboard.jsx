@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./station_dashboard.css";
 
-import { StationNavbar } from "../components/station_navbar";
 import { LogoutButton } from "../components/logout_button";
+<<<<<<< HEAD
 import { dashboardService } from "../services/api"; // ✅ ADDED
+=======
+import { StationNavbar } from "../components/station_navbar";
+
+const apiUrl = import.meta.env.VITE_API_URL;
+>>>>>>> 8333bfa10cee9730ad005d79e0998d385d9fa2d4
 
 function StationDashboard() {
   const [forwardSchedules, setForwardSchedules] = useState([]);
@@ -13,6 +18,7 @@ function StationDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [totals, setTotals] = useState({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
+<<<<<<< HEAD
 
   // Announcements (same shape as old dashboard: body is an array of lines)
   const announcements = [
@@ -39,6 +45,57 @@ function StationDashboard() {
     ]},
   ];
 
+=======
+  
+  // Announcements state
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [announcementsError, setAnnouncementsError] = useState("");
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      Authorization: token ? `Bearer ${token}` : "",
+      "Content-Type": "application/json",
+    };
+  };
+
+  // Fetch announcements from API
+  const fetchAnnouncements = useCallback(async () => {
+    setAnnouncementsLoading(true);
+    setAnnouncementsError("");
+    try {
+      const res = await fetch(`${apiUrl}/api/announcement`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body?.error || `Failed to fetch announcements`;
+        setAnnouncementsError(msg);
+        setAnnouncements([]);
+        return;
+      }
+
+      const data = await res.json();
+      // Transform API data to match the display format
+      const transformedAnnouncements = (data.announcements || []).map(a => ({
+        title: a.title,
+        body: a.content.split('\n').filter(line => line.trim()), // Split content by newlines
+        date_time: a.date_time,
+        admin_name: a.admin_name
+      }));
+      
+      setAnnouncements(transformedAnnouncements);
+    } catch (e) {
+      setAnnouncementsError(`Network error: ${e.message}`);
+      setAnnouncements([]);
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  }, []);
+
+>>>>>>> 8333bfa10cee9730ad005d79e0998d385d9fa2d4
   const fetchBoardingSchedules = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -70,7 +127,8 @@ function StationDashboard() {
 
   useEffect(() => {
     fetchBoardingSchedules();
-  }, [fetchBoardingSchedules]);
+    fetchAnnouncements(); // Fetch announcements on mount
+  }, [fetchBoardingSchedules, fetchAnnouncements]);
 
   // ---- helpers ----
   const formatTime = (hhmmss) => {
@@ -171,17 +229,35 @@ function StationDashboard() {
           </div>
         </section>
 
-        {/* ====== Announcements (copied from old dashboard) ====== */}
+        {/* ====== Announcements (from API) ====== */}
         <h2 className="station-title-announcement">GENERAL ANNOUNCEMENTS</h2>
+        {announcementsError && (
+          <div className="sd-error"><strong>Error:</strong> {announcementsError}</div>
+        )}
         <section className="station-announcements station-announcements--scroll">
-          {announcements.map((a, i) => (
-            <div className="station-announcement-card" key={i}>
-              <h3>{a.title}</h3>
-              {a.body.map((line, j) => (
-                <p key={j}>{line}</p>
-              ))}
+          {announcementsLoading ? (
+            <div className="station-announcement-card">
+              <p>Loading announcements...</p>
             </div>
-          ))}
+          ) : announcements.length === 0 ? (
+            <div className="station-announcement-card">
+              <p>No announcements available at this time.</p>
+            </div>
+          ) : (
+            announcements.map((a, i) => (
+              <div className="station-announcement-card" key={i}>
+                <h3>{a.title}</h3>
+                {a.body.map((line, j) => (
+                  <p key={j}>{line}</p>
+                ))}
+                {a.date_time && (
+                  <p className="announcement-meta">
+                    <small>Posted: {new Date(a.date_time).toLocaleString()}</small>
+                  </p>
+                )}
+              </div>
+            ))
+          )}
         </section>
       </main>
     </div>
@@ -189,4 +265,9 @@ function StationDashboard() {
 }
 
 export default StationDashboard;
+<<<<<<< HEAD
 export { StationDashboard };
+=======
+export { StationDashboard };
+
+>>>>>>> 8333bfa10cee9730ad005d79e0998d385d9fa2d4

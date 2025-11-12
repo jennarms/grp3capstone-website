@@ -1,38 +1,12 @@
-import ExcelJS from 'exceljs'; // Import exceljs
-import { useEffect, useMemo, useRef, useState } from "react";
+import axios from 'axios';
+import ExcelJS from 'exceljs';
+import { jsPDF } from "jspdf";
+import { useEffect, useRef, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./reportGeneration.css";
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
-/* --------- Seed data (can be swapped with real API later) --------- */
-const STATION_ROWS = [
-  { stationName: "Escolta", totalBookings: 1210, femaleCount: 670, maleCount: 540, peakStart: "5:00PM",  peakEnd: "6:30PM", mobApp: 160, chatbot: 180, gmail: 120, manual: 230 },
-  { stationName: "Lawton",  totalBookings: 980,  femaleCount: 540, maleCount: 440, peakStart: "6:30AM",  peakEnd: "8:00AM", mobApp: 200, chatbot: 170, gmail: 150, manual: 120 },
-  { stationName: "Quinta",  totalBookings: 750,  femaleCount: 410, maleCount: 340, peakStart: "3:30PM",  peakEnd: "4:30PM", mobApp: 180, chatbot: 90,  gmail: 140, manual: 80  },
-  { stationName: "PUP",     totalBookings: 1360, femaleCount: 780, maleCount: 580, peakStart: "3:00PM",  peakEnd: "6:00PM", mobApp: 560, chatbot: 270, gmail: 210, manual: 320 },
-  { stationName: "Sta. Ana",totalBookings: 840,  femaleCount: 480, maleCount: 360, peakStart: "4:30PM",  peakEnd: "6:30PM", mobApp: 190, chatbot: 160, gmail: 120, manual: 150 },
-  { stationName: "Lambingan", totalBookings: 600, femaleCount: 340, maleCount: 260, peakStart: "10:30AM", peakEnd: "12:00PM", mobApp: 120, chatbot: 90,  gmail: 120, manual: 120 },
-  { stationName: "Valenzuela", totalBookings: 930, femaleCount: 590, maleCount: 340, peakStart: "12:00PM", peakEnd: "2:30PM",  mobApp: 220, chatbot: 190, gmail: 150, manual: 120 },
-  { stationName: "Hulo",    totalBookings: 560,  femaleCount: 250, maleCount: 310, peakStart: "9:00AM",  peakEnd: "10:30AM", mobApp: 140, chatbot: 130, gmail: 109, manual: 110 },
-  { stationName: "Guadalupe", totalBookings: 710, femaleCount: 390, maleCount: 320, peakStart: "12:00PM", peakEnd: "1:40PM", mobApp: 210, chatbot: 140, gmail: 130, manual: 90  },
-  { stationName: "Meycauayan", totalBookings: 430, femaleCount: 240, maleCount: 190, peakStart: "3:30PM", peakEnd: "5:00PM", mobApp: 180, chatbot: 100, gmail: 60,  manual: 90  },
-];
-
-/* Helpers */
 const fmt = (d) =>
   new Date(d).toLocaleDateString(undefined, {
     month: "2-digit",
@@ -40,7 +14,7 @@ const fmt = (d) =>
     year: "numeric",
   });
 
-const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF"];
+const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF", "#FF6B9D", "#00D4FF", "#FFC837"];
 
 function Toast({ open, title, message, tone = "success" }) {
   if (!open) return null;
@@ -53,13 +27,15 @@ function Toast({ open, title, message, tone = "success" }) {
 }
 
 export function Report() {
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const today = new Date();
   const aWeekAgo = new Date(today);
   aWeekAgo.setDate(today.getDate() - 7);
 
   const [start, setStart] = useState(aWeekAgo.toISOString().slice(0, 10));
   const [end, setEnd] = useState(today.toISOString().slice(0, 10));
-  const [rows] = useState(STATION_ROWS);
+  const [rows, setRows] = useState([]);
 
   const reportRef = useRef(null);
 
@@ -71,82 +47,42 @@ export function Report() {
     toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, open: false })), 2800);
   };
 
-  useEffect(() => () => toastTimer.current && clearTimeout(toastTimer.current), []);
+  useEffect(() => {
+    return () => toastTimer.current && clearTimeout(toastTimer.current);
+  }, []);
 
-  /* Aggregations for charts */
-  const totalsData = useMemo(
-    () => rows.map((r) => ({ name: r.stationName, total: r.totalBookings })),
-    [rows]
-  );
+  useEffect(() => {
+    const fetchReportData = async () => {
+      try {
+        const response = await axios.get(`${apiUrl}/api/generatereport/generate_report`, {
+          params: {
+            start_date: start,
+            end_date: end,
+          }
+        });
+        setRows(response.data);
+        showToast("Report refreshed", `Range: ${fmt(start)} — ${fmt(end)}`, "success");
+      } catch (error) {
+        console.error("Error fetching report data:", error);
+        showToast("Error", "Failed to fetch report data", "error");
+      }
+    };
 
-  const genderTotals = useMemo(() => {
-    let f = 0, m = 0;
-    rows.forEach((r) => {
-      f += r.femaleCount || 0;
-      m += r.maleCount || 0;
-    });
-    return [
-      { name: "Female", value: f },
-      { name: "Male", value: m },
-    ];
-  }, [rows]);
+    fetchReportData();
+  }, [start, end, apiUrl]);
 
-  const genderPerStation = useMemo(
-    () =>
-      rows.map((r) => ({
-        name: r.stationName,
-        Female: r.femaleCount,
-        Male: r.maleCount,
-      })),
-    [rows]
-  );
-
-  const sourceTotals = useMemo(() => {
-    const agg = { "Mobile App": 0, "Chatbot": 0, "Gmail": 0, "Manual": 0 };
-    rows.forEach((r) => {
-      agg["Mobile App"] += r.mobApp || 0;
-      agg["Chatbot"] += r.chatbot || 0;
-      agg["Gmail"] += r.gmail || 0;
-      agg["Manual"] += r.manual || 0;
-    });
-    return Object.entries(agg).map(([name, value]) => ({ name, value }));
-  }, [rows]);
-
-  const sourcePerStation = useMemo(
-    () =>
-      rows.map((r) => ({
-        name: r.stationName,
-        "Mobile App": r.mobApp,
-        "Chatbot": r.chatbot,
-        "Gmail": r.gmail,
-        "Manual": r.manual,
-      })),
-    [rows]
-  );
-
-  /* --- Exports --- */
   const exportPDF = async () => {
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
-
+      const { default: html2canvas } = await import("html2canvas");
       const node = reportRef.current;
-      const canvas = await html2canvas(node, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
+      const canvas = await html2canvas(node, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL("image/png");
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-
       const imgW = pageW;
       const imgH = (canvas.height * imgW) / canvas.width;
-
       let heightLeft = imgH;
       let position = 0;
 
@@ -172,32 +108,33 @@ export function Report() {
     try {
       const workbook = new ExcelJS.Workbook();
 
-      // 1) Stations table
       const sheet1 = workbook.addWorksheet("Stations");
       sheet1.columns = [
         { header: 'Station Name', key: 'stationName', width: 20 },
         { header: 'Total Bookings', key: 'totalBookings', width: 15 },
+        { header: 'Canceled Bookings', key: 'canceledBookings', width: 15 },
         { header: 'Female Count', key: 'femaleCount', width: 15 },
         { header: 'Male Count', key: 'maleCount', width: 15 },
-        { header: 'Peak Start', key: 'peakStart', width: 15 },
-        { header: 'Peak End', key: 'peakEnd', width: 15 },
-        { header: 'Mobile App', key: 'mobApp', width: 12 },
+        { header: 'Other Gender Count', key: 'otherGenderCount', width: 20 },
+        { header: 'Age 0-18', key: 'age0_18', width: 12 },
+        { header: 'Age 19-25', key: 'age19_25', width: 12 },
+        { header: 'Age 26-40', key: 'age26_40', width: 12 },
+        { header: 'Age 41-60', key: 'age41_60', width: 12 },
+        { header: 'Age 60+', key: 'age60Plus', width: 12 },
+        { header: 'Student Count', key: 'studentCount', width: 15 },
+        { header: 'Senior Count', key: 'seniorCount', width: 15 },
+        { header: 'PWD Count', key: 'pwdCount', width: 12 },
+        { header: 'Peak Day', key: 'peakDay', width: 15 },
+        { header: 'Peak Time', key: 'peakTime', width: 15 },
+        { header: 'Off Peak Day', key: 'offPeakDay', width: 15 },
+        { header: 'Off Peak Time', key: 'offPeakTime', width: 15 },
+        { header: 'Mobile App', key: 'mobileApp', width: 12 },
         { header: 'Chatbot', key: 'chatbot', width: 12 },
         { header: 'Gmail', key: 'gmail', width: 12 },
         { header: 'Manual', key: 'manual', width: 12 }
       ];
       sheet1.addRows(rows);
 
-      // 2) Totals (gender + sources)
-      const sheet2 = workbook.addWorksheet("Totals");
-      sheet2.addRow(['Metric', 'Value']);
-      sheet2.addRow(['Female Total', genderTotals[0].value]);
-      sheet2.addRow(['Male Total', genderTotals[1].value]);
-      sourceTotals.forEach(s => {
-        sheet2.addRow([s.name, s.value]);
-      });
-
-      // Save the workbook
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const link = document.createElement('a');
@@ -212,15 +149,52 @@ export function Report() {
     }
   };
 
-  const handleGenerate = () => {
-    showToast("Report refreshed", `Range: ${fmt(start)} — ${fmt(end)}`, "success");
-  };
+  // 1. Total Bookings and Cancelled Bookings Per Station
+  const bookingsCancelledData = rows.map((r) => ({
+    name: r.StationName,
+    totalBookings: r.TotalBookings,
+    cancelled: r.CanceledCount
+  }));
+
+  // 2. Gender Per Station
+  const genderPerStationData = rows.map((r) => ({
+    name: r.StationName,
+    female: r.FemaleCount,
+    male: r.MaleCount,
+    other: r.OtherGenderCount
+  }));
+
+  // 3. Age Per Station
+  const agePerStationData = rows.map((r) => ({
+    name: r.StationName,
+    "0-18": r.Age_0_18,
+    "19-25": r.Age_19_25,
+    "26-40": r.Age_26_40,
+    "41-60": r.Age_41_60,
+    "60+": r.Age_60Plus
+  }));
+
+  // 4. Demographics Distribution Per Station
+  const demographicsData = rows.map((r) => ({
+    name: r.StationName,
+    student: r.StudentCount,
+    senior: r.SeniorCount,
+    pwd: r.PWDCount
+  }));
+
+  // 5. Platform Source Per Station
+  const platformSourceData = rows.map((r) => ({
+    name: r.StationName,
+    mobileApp: r.MobileAppCount,
+    chatbot: r.ChatbotCount,
+    email: r.EmailCount,
+    manual: r.ManualBookingCount
+  }));
 
   return (
     <>
       <Navbar />
       <HeaderButton />
-
       <Toast open={toast.open} title={toast.title} message={toast.message} tone={toast.tone} onClose={() => setToast((t) => ({ ...t, open: false }))} />
 
       <div className="reports-page" id="reportsPage">
@@ -244,7 +218,7 @@ export function Report() {
           <div ref={reportRef}>
             <div className="rg-table-head">
               <div className="rg-range-label">Report for <b>{fmt(start)}</b> — <b>{fmt(end)}</b></div>
-              <button className="rg-btn rg-btn-generate" type="button" onClick={handleGenerate}>Generate Report</button>
+              <button className="rg-btn rg-btn-generate" type="button" onClick={exportPDF}>Generate Report</button>
             </div>
 
             <div className="rg-table-wrap" role="region" aria-label="Station totals">
@@ -252,13 +226,25 @@ export function Report() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>StationName</th>
-                    <th>TotalBookings</th>
-                    <th>FemaleCount</th>
-                    <th>MaleCount</th>
-                    <th>PeakStart</th>
-                    <th>PeakEnd</th>
-                    <th>MobApp</th>
+                    <th>Station Name</th>
+                    <th>Total Bookings</th>
+                    <th>Canceled Bookings</th>
+                    <th>Female Count</th>
+                    <th>Male Count</th>
+                    <th>Other Gender Count</th>
+                    <th>Age 0-18</th>
+                    <th>Age 19-25</th>
+                    <th>Age 26-40</th>
+                    <th>Age 41-60</th>
+                    <th>Age 60+</th>
+                    <th>Student Count</th>
+                    <th>Senior Count</th>
+                    <th>PWD Count</th>
+                    <th>Peak Day</th>
+                    <th>Peak Time</th>
+                    <th>Off Peak Day</th>
+                    <th>Off Peak Time</th>
+                    <th>Mobile App</th>
                     <th>Chatbot</th>
                     <th>Gmail</th>
                     <th>Manual</th>
@@ -266,136 +252,123 @@ export function Report() {
                 </thead>
                 <tbody>
                   {rows.map((r, idx) => (
-                    <tr key={r.stationName}>
+                    <tr key={r.StationName}>
                       <td>{idx + 1}</td>
-                      <td>{r.stationName}</td>
-                      <td>{r.totalBookings}</td>
-                      <td>{r.femaleCount}</td>
-                      <td>{r.maleCount}</td>
-                      <td>{r.peakStart}</td>
-                      <td>{r.peakEnd}</td>
-                      <td>{r.mobApp}</td>
-                      <td>{r.chatbot}</td>
-                      <td>{r.gmail}</td>
-                      <td>{r.manual}</td>
+                      <td>{r.StationName}</td>
+                      <td>{r.TotalBookings}</td>
+                      <td>{r.CanceledCount}</td>
+                      <td>{r.FemaleCount}</td>
+                      <td>{r.MaleCount}</td>
+                      <td>{r.OtherGenderCount}</td>
+                      <td>{r.Age_0_18}</td>
+                      <td>{r.Age_19_25}</td>
+                      <td>{r.Age_26_40}</td>
+                      <td>{r.Age_41_60}</td>
+                      <td>{r.Age_60Plus}</td>
+                      <td>{r.StudentCount}</td>
+                      <td>{r.SeniorCount}</td>
+                      <td>{r.PWDCount}</td>
+                      <td>{r.PeakDay}</td>
+                      <td>{r.PeakTime}</td>
+                      <td>{r.OffPeakDay}</td>
+                      <td>{r.OffPeakTime}</td>
+                      <td>{r.MobileAppCount}</td>
+                      <td>{r.ChatbotCount}</td>
+                      <td>{r.EmailCount}</td>
+                      <td>{r.ManualBookingCount}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="rg-charts">
-              {/* Total Bookings Chart */}
-              <section className="chart-card">
-                <h3 className="chart-title">Total Bookings</h3>
-                <div className="chart-body">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={totalsData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="total" name="Total" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+            {/* Charts Section */}
+            <div className="rg-charts" style={{ marginTop: '40px' }}>
+              {/* Chart 1: Total Bookings and Cancelled Bookings Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Total Bookings and Cancelled Bookings Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={bookingsCancelledData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="totalBookings" fill="#41A67E" name="Total Bookings" />
+                    <Bar dataKey="cancelled" fill="#DA6C6C" name="Cancelled" />
+                  </BarChart>
+                </ResponsiveContainer>
               </section>
 
-              {/* Gender Ratio Chart */}
-              <section className="chart-card">
-                <h3 className="chart-title">Gender Ratio</h3>
-                <div className="chart-body">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Tooltip />
-                      <Legend />
-                      <Pie
-                        data={genderTotals}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={3}
-                      >
-                        {genderTotals.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+              {/* Chart 2: Gender Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Gender Distribution Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={genderPerStationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="female" fill="#FF6B9D" name="Female" />
+                    <Bar dataKey="male" fill="#9FB3DF" name="Male" />
+                    <Bar dataKey="other" fill="#9B7EBD" name="Other" />
+                  </BarChart>
+                </ResponsiveContainer>
               </section>
 
-              {/* Gender per Station Chart */}
-              <section className="chart-card">
-                <h3 className="chart-title">Gender per Station</h3>
-                <div className="chart-body">
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart
-                      layout="vertical"
-                      data={genderPerStation}
-                      margin={{ top: 8, right: 16, left: 20, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={90} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Female" fill={COLORS[1]} />
-                      <Bar dataKey="Male" fill={COLORS[3]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              {/* Chart 3: Age Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Age Distribution Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={agePerStationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="0-18" fill="#8967B3" name="0-18" />
+                    <Bar dataKey="19-25" fill="#FADFA1" name="19-25" />
+                    <Bar dataKey="26-40" fill="#b8f2e6" name="26-40" />
+                    <Bar dataKey="41-60" fill="#FF8A8A" name="41-60" />
+                    <Bar dataKey="60+" fill="#5F6F65" name="60+" />
+                  </BarChart>
+                </ResponsiveContainer>
               </section>
 
-              {/* Booking Source Chart */}
-              <section className="chart-card">
-                <h3 className="chart-title">Booking Source</h3>
-                <div className="chart-body">
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Tooltip />
-                      <Legend />
-                      <Pie
-                        data={sourceTotals}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={85}
-                        label
-                      >
-                        {sourceTotals.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+              {/* Chart 4: Demographics Distribution Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Demographics Distribution Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={demographicsData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="student" fill="#cc8b86" name="Student" />
+                    <Bar dataKey="senior" fill="#d496a7" name="Senior" />
+                    <Bar dataKey="pwd" fill="#5d576b" name="PWD" />
+                  </BarChart>
+                </ResponsiveContainer>
               </section>
 
-              {/* Booking Source per Station Chart */}
-              <section className="chart-card chart-span-2">
-                <h3 className="chart-title">Booking Source per Station</h3>
-                <div className="chart-body">
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart
-                      layout="vertical"
-                      data={sourcePerStation}
-                      margin={{ top: 8, right: 16, left: 20, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={90} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Mobile App" fill={COLORS[0]} />
-                      <Bar dataKey="Chatbot" fill={COLORS[2]} />
-                      <Bar dataKey="Gmail" fill={COLORS[3]} />
-                      <Bar dataKey="Manual" fill={COLORS[4]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              {/* Chart 5: Platform Source Per Station */}
+              <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <h3 className="chart-title">Preferred Platform Source of Booking Per Station</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={platformSourceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="mobileApp" fill="#1BC882" name="Mobile App" />
+                    <Bar dataKey="chatbot" fill="#2E5BFF" name="Chatbot" />
+                    <Bar dataKey="email" fill="#EA4335" name="Email" />
+                    <Bar dataKey="manual" fill="#FADA7A" name="Manual Booking" />
+                  </BarChart>
+                </ResponsiveContainer>
               </section>
             </div>
           </div>
