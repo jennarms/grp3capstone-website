@@ -32,14 +32,21 @@ def create_app():
     CORS(app,
          origins=origins,
          supports_credentials=True,
-         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+         allow_headers=[
+             "Content-Type", 
+             "Authorization", 
+             "Access-Control-Allow-Credentials",
+             "x-user-role",
+             "x-user-id",
+             "x-admin-id"
+         ],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
          expose_headers=["Content-Type", "Authorization"],
          send_wildcard=False,
          always_send=True,
          max_age=3600)
     
-    # MySQL Config (ONLY ONCE)
+    # MySQL Config
     app.config['MYSQL_HOST'] = os.getenv('DB_HOST')
     app.config['MYSQL_USER'] = os.getenv('DB_USER')
     app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD')
