@@ -2,13 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "./station_dashboard.css";
 
 import { LogoutButton } from "../components/logout_button";
-<<<<<<< HEAD
-import { dashboardService } from "../services/api"; // ✅ ADDED
-=======
 import { StationNavbar } from "../components/station_navbar";
+import { dashboardService } from "../services/api"; // ✅ ADDED
 
 const apiUrl = import.meta.env.VITE_API_URL;
->>>>>>> 8333bfa10cee9730ad005d79e0998d385d9fa2d4
 
 function StationDashboard() {
   const [forwardSchedules, setForwardSchedules] = useState([]);
@@ -18,35 +15,7 @@ function StationDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [totals, setTotals] = useState({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
-<<<<<<< HEAD
 
-  // Announcements (same shape as old dashboard: body is an array of lines)
-  const announcements = [
-    { title: "Scheduled System Maintenance", body: [
-      "Please be informed that the MetroLayag Passenger Management System will undergo scheduled maintenance on:",
-      "Date: May 25, 2025",
-      "Time: 3:00 PM - 5:00 PM PHT",
-    ]},
-    { title: "Weather Advisory", body: [
-      "Expect intermittent rain showers in the afternoon.",
-      "Some trips may be delayed by 10–15 minutes for safety checks.",
-    ]},
-    { title: "New Boarding Flow", body: [
-      "Starting next week, boarding gates will open 20 minutes before departure.",
-      "Please have your QR code ready at the gate.",
-    ]},
-    { title: "Lost & Found Reminder", body: [
-      "Items are kept for 30 days at the PUP Station office.",
-      "Bring a valid ID to claim.",
-    ]},
-    { title: "System Update", body: [
-      "We've improved seat availability syncing across stations.",
-      "Report any glitches via the Help menu.",
-    ]},
-  ];
-
-=======
-  
   // Announcements state
   const [announcements, setAnnouncements] = useState([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(false);
@@ -95,7 +64,6 @@ function StationDashboard() {
     }
   }, []);
 
->>>>>>> 8333bfa10cee9730ad005d79e0998d385d9fa2d4
   const fetchBoardingSchedules = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -265,9 +233,4 @@ function StationDashboard() {
 }
 
 export default StationDashboard;
-<<<<<<< HEAD
 export { StationDashboard };
-=======
-export { StationDashboard };
-
->>>>>>> 8333bfa10cee9730ad005d79e0998d385d9fa2d4
