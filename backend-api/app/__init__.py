@@ -20,7 +20,14 @@ def create_app():
     app = Flask(__name__)
     load_dotenv()
 
-    # Read allowed origins from env; fall back to localhost for dev
+    # MySQL Config (move this BEFORE CORS)
+    app.config['MYSQL_HOST'] = os.getenv('DB_HOST')
+    app.config['MYSQL_USER'] = os.getenv('DB_USER')
+    app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD')
+    app.config['MYSQL_DB'] = os.getenv('DB_NAME')
+    app.config['MYSQL_CHARSET'] = 'utf8mb4'
+
+    # Read allowed origins from env
     origins_env = os.getenv("ALLOWED_ORIGINS") or os.getenv("FRONTEND_ORIGIN")
     if origins_env:
         origins = [o.strip() for o in origins_env.split(",") if o.strip()]
@@ -30,15 +37,16 @@ def create_app():
     # Add frontend origin explicitly
     origins.append("https://grp3capstone-website-1.onrender.com")
 
-    # Comprehensive CORS configuration
-    CORS(
-        app,
-        resources={r"/*": {"origins": origins}},
-        supports_credentials=True,
-        allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        expose_headers=["Content-Type", "Authorization"]
-    )
+    # Apply CORS globally to the entire app
+    CORS(app, 
+         origins=origins,
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+         expose_headers=["Content-Type", "Authorization"],
+         send_wildcard=False,
+         always_send=True,
+         max_age=3600)
 
     # MySQL Config
     app.config['MYSQL_HOST'] = os.getenv('DB_HOST')
