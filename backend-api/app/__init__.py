@@ -129,6 +129,9 @@ def create_app():
     from app.routes.generatereport import generatereport_bp
     app.register_blueprint(generatereport_bp, url_prefix="/api/generatereport")
     
+    from app.routes.sos import sos_bp
+    app.register_blueprint(sos_bp, url_prefix="/api/sos")
+    
     # Start APScheduler after app is created
     scheduler.init_app(app)
     scheduler.start()
