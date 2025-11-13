@@ -132,6 +132,9 @@ def create_app():
     from app.routes.sos import sos_bp
     app.register_blueprint(sos_bp, url_prefix="/api/sos")
     
+    from app.routes.realtime import realtime_bp
+    app.register_blueprint(realtime_bp, url_prefix="/api/realtime")
+    
     # Start APScheduler after app is created
     scheduler.init_app(app)
     scheduler.start()
