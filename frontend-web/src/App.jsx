@@ -1,8 +1,16 @@
-// App.tsx
-import { HashRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
-import React from "react";
+// App.jsx
+import { API_URL } from "./config/api";
+import React, { useEffect } from "react";
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
 import "./App.css";
 
+/* Pages */
 import { AccountSettings } from "./pages/accountSettings";
 import { Broadcast } from "./pages/broadcastChannel";
 import { Edit } from "./pages/editAccount";
@@ -27,33 +35,33 @@ import { StationSOS } from "./pages/station_sos";
 import { UI } from "./pages/uiCustomization";
 import { SOSTestPage } from "./pages/SOSTestPage";
 
-/* SOS */
+/* Providers & banners */
 import { SOSProvider } from "./sos/SOSContext";
 import GlobalSOSBanner from "./sos/GlobalSOSBanner";
-
-/* Broadcast */
 import { BroadcastProvider } from "./broadcast/BroadcastProvider";
 import GlobalBroadcastBanner from "./broadcast/GlobalBroadcastBanner";
 
-/** Only render providers + global banners on non-login routes */
-function ProtectedShell() {
-  const location = useLocation();
-  // If you have a real auth signal, prefer that (e.g., token). This is your current pattern:
-  const userId =
+/* ---------- auth util (no hooks) ---------- */
+function getAuthUserId() {
+  return (
     localStorage.getItem("admin_id") ||
     localStorage.getItem("admin_name") ||
-    ""; // <-- no fallback to avoid "station-admin" during login
+    ""
+  );
+}
 
-  // Hide banners/providers on login path or when not authenticated
-  const onLogin = location.pathname === "/" || location.pathname === "/login";
-  const isAuthed = Boolean(userId);
+/* Public routes only when NOT authed */
+function PublicOnly({ children }) {
+  const userId = getAuthUserId();
+  if (userId) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
 
-  if (onLogin || !isAuthed) {
-    // Render child routes without providers/banners (e.g., /)
-    return <Outlet />;
-  }
+/* Protected routes with providers/banners */
+function RequireAuth() {
+  const userId = getAuthUserId();
+  if (!userId) return <Navigate to="/login" replace />;
 
-  // Render the rest of the app with global providers and banners
   return (
     <BroadcastProvider userId={userId}>
       <SOSProvider enabled={true}>
@@ -65,15 +73,55 @@ function ProtectedShell() {
   );
 }
 
+/* Catch-all redirect that respects auth */
+function CatchAllRedirect() {
+  const userId = getAuthUserId();
+  return userId ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
+}
+
 function App() {
+  useEffect(() => {
+    if (!API_URL) {
+      console.error("VITE_API_URL is undefined. Set it in your hosting environment.");
+      return;
+    }
+    fetch(`${API_URL}/api/healthz`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => console.log("healthz:", data))
+      .catch((err) => console.error("healthz error:", err));
+  }, []);
+
+
   return (
     <Router>
       <Routes>
-        {/* Public route(s) */}
-        <Route path="/" element={<Login />} />
+        {/* Public (visible only when NOT authed) */}
+        <Route
+          index
+          element={
+            <PublicOnly>
+              <Login />
+            </PublicOnly>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicOnly>
+              <Login />
+            </PublicOnly>
+          }
+        />
 
-        {/* Everything else goes under the ProtectedShell */}
-        <Route element={<ProtectedShell />}>
+        {/* Protected (must be authed; providers included) */}
+        <Route element={<RequireAuth />}>
           <Route path="/faqs" element={<FAQs />} />
           <Route path="/edit" element={<Edit />} />
           <Route path="/announcement" element={<Announcement />} />
@@ -97,6 +145,9 @@ function App() {
           <Route path="/stationsos" element={<StationSOS />} />
           <Route path="/sostest" element={<SOSTestPage />} />
         </Route>
+
+        {/* Catch-all */}
+        <Route path="*" element={<CatchAllRedirect />} />
       </Routes>
     </Router>
   );

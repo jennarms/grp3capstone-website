@@ -3,6 +3,7 @@ import "./station_dashboard.css";
 
 import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
+import { dashboardService } from "../services/api"; // ✅ ADDED
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -14,7 +15,7 @@ function StationDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [totals, setTotals] = useState({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
-  
+
   // Announcements state
   const [announcements, setAnnouncements] = useState([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(false);
@@ -67,22 +68,9 @@ function StationDashboard() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
-        `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(selectedDate)}`,
-        { headers: getAuthHeaders() }
-      );
+      // ✅ UPDATED: Using API service instead of direct fetch
+      const data = await dashboardService.getBoardingSchedules(selectedDate);
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        const msg = body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
-        setError(msg);
-        setForwardSchedules([]);
-        setReverseSchedules([]);
-        setTotals({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
-        return;
-      }
-
-      const data = await res.json();
       const f = Array.isArray(data.forward_schedules) ? data.forward_schedules : [];
       const r = Array.isArray(data.reverse_schedules) ? data.reverse_schedules : [];
 
@@ -96,7 +84,7 @@ function StationDashboard() {
       const ts = typeof data.total_schedules === "number" ? data.total_schedules : tf + tr;
       setTotals({ total_forward: tf, total_reverse: tr, total_schedules: ts });
     } catch (e) {
-      setError(`Network error: ${e.message}`);
+      setError(e.message);
       setForwardSchedules([]);
       setReverseSchedules([]);
       setTotals({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
@@ -246,4 +234,3 @@ function StationDashboard() {
 
 export default StationDashboard;
 export { StationDashboard };
-
