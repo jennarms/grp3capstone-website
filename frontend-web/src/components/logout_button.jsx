@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./logout_button.css"; // Keep this if necessary, or comment out to debug
+import "./logout_button.css";
 
 export function LogoutButton() {
   const navigate = useNavigate();
@@ -10,25 +10,48 @@ export function LogoutButton() {
   const closeConfirm = () => setShowConfirm(false);
 
   const confirmLogout = () => {
-    // 1. Clear localStorage
+    // --- CLEAR LOGIN KEYS ---
     localStorage.removeItem("token");
     localStorage.removeItem("admin_id");
     localStorage.removeItem("role");
 
-    // 2. Close modal
+    // --- CLEAR BC, ADMIN & BROADCAST KEYS ---
+    const keysToRemove = [
+      "admin_name",
+      "bc:lastOpenAt",
+      "bc:lastSeen:admins",
+      "bc:lastSeen:everyone",
+    ];
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+    // Remove dynamic broadcast:lastSeen:* keys
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("broadcast:lastSeen:")) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // 👇 FORCE REACT TO UPDATE & STOP RE-USING OLD LOCALSTORAGE VALUES
+    window.dispatchEvent(new Event("storage"));
+
+    // Close modal first (UI update)
     closeConfirm();
 
-    // 3. Redirect to login page, and prevent going back to previous page
-    navigate("/", { replace: true });
+    // 👇 FIX: Small delay prevents React components from restoring the old values
+    setTimeout(() => {
+      // Redirect to login page
+      navigate("/", { replace: true });
 
-    // 4. Use window.history.pushState to prevent going back
-    window.history.pushState(null, "", window.location.href);
-    window.onpopstate = () => {
-      window.history.pushState(null, "", window.location.href); // Prevent going back to the previous page
-    };
+      // Prevent back navigation
+      window.history.pushState(null, "", window.location.href);
+      window.onpopstate = () => {
+        window.history.pushState(null, "", window.location.href);
+      };
+    }, 50);
   };
 
-  // Close modal on ESC key
+  // Close modal with ESC key
   useEffect(() => {
     if (!showConfirm) return;
     const onKey = (e) => {
@@ -42,16 +65,12 @@ export function LogoutButton() {
     <>
       {/* Logout button */}
       <div className="logout-btn-fixed">
-        <button
-          type="button"
-          className="logout-btn"
-          onClick={openConfirm}
-        >
+        <button type="button" className="logout-btn" onClick={openConfirm}>
           Log Out
         </button>
       </div>
 
-      {/* Temporarily removed modal */}
+      {/* Confirmation Modal */}
       {showConfirm && (
         <div
           className="logout-btn-confirm-overlay"
@@ -64,10 +83,18 @@ export function LogoutButton() {
             <p>Are you sure you want to log out?</p>
 
             <div className="logout-btn-confirm-buttons">
-              <button type="button" className="logout-btn-cancel-btn" onClick={closeConfirm}>
+              <button
+                type="button"
+                className="logout-btn-cancel-btn"
+                onClick={closeConfirm}
+              >
                 Cancel
               </button>
-              <button type="button" className="logout-btn-yes-btn" onClick={confirmLogout}>
+              <button
+                type="button"
+                className="logout-btn-yes-btn"
+                onClick={confirmLogout}
+              >
                 Log out
               </button>
             </div>
