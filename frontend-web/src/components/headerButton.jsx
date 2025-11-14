@@ -10,16 +10,44 @@ export function HeaderButton() {
   const closeConfirm = () => setShowConfirm(false);
 
   const confirmLogout = () => {
-    // 1. Clear localStorage
+    // --- CLEAR LOGIN KEYS ---
     localStorage.removeItem("token");
     localStorage.removeItem("admin_id");
     localStorage.removeItem("role");
 
-    // 2. Close modal
+    // --- CLEAR ADMIN + BC + BROADCAST KEYS ---
+    const keysToRemove = [
+      "admin_name",
+      "bc:lastOpenAt",
+      "bc:lastSeen:admins",
+      "bc:lastSeen:everyone",
+    ];
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+    // Remove ALL "broadcast:lastSeen:*"
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("broadcast:lastSeen:")) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // 👇 IMPORTANT: Force React to re-evaluate localStorage immediately
+    window.dispatchEvent(new Event("storage"));
+
+    // Close modal first
     closeConfirm();
 
-    // 3. Redirect to login page (your login route is '/')
-    navigate("/");
+    // 👇 Delay navigation slightly so React cannot repopulate values
+    setTimeout(() => {
+      navigate("/", { replace: true });
+
+      // Prevent back navigation
+      window.history.pushState(null, "", window.location.href);
+      window.onpopstate = () => {
+        window.history.pushState(null, "", window.location.href);
+      };
+    }, 50); // <-- fixes the double logout issue
   };
 
   // Close modal on ESC key
