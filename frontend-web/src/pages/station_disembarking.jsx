@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+// ===============================
+// station_disembark.jsx
+// ===============================
+import { useEffect, useState } from "react";
 import { LogoutButton } from "../components/logout_button";
 import { StationNavbar } from "../components/station_navbar";
 import "./station_disembarking.css";
@@ -9,25 +12,29 @@ import ScanButtonModule from "../modules/ScanButtonModule.jsx";
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export function Disembarking() {
-  const [station, setStation] = useState("loading..."); // Station name will be fetched here
+  const [station, setStation] = useState("loading...");
+
+  // PAGE RENDER DEBUG
+  console.log("📌 PAGE RENDER — station =", station);
 
   useEffect(() => {
     const fetchStationData = async () => {
       try {
-        // Fetch the station name from the new endpoint
-        const response = await fetch(`${apiUrl}/api/boarding/routecard/station`, {
-          headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` },
+        const res = await fetch(`${apiUrl}/api/boarding/routecard/station`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Fetched Station:", data?.station_name); // Debugging line to check fetched station
-          setStation(data?.station_name || "loading...");
+        if (res.ok) {
+          const data = await res.json();
+
+          console.log("📥 FETCHED STATION =", data.station_name);
+
+          setStation(data.station_name || "loading...");
         } else {
           setStation("Failed to fetch station");
         }
-      } catch (error) {
-        console.error("Error fetching station info:", error);
+      } catch (err) {
+        console.error("❌ ERROR FETCHING STATION:", err);
         setStation("Failed to fetch station");
       }
     };
@@ -35,28 +42,29 @@ export function Disembarking() {
     fetchStationData();
   }, []);
 
-  return (
-    <div className="dm-shell">
-      <StationNavbar />
-      <main className="dm-main">
-        <h1 className="dm-title">Disembarking Management</h1>
-        <LogoutButton />
+return (
+  <div className="dm-shell">
+    <StationNavbar />
+    <main className="dm-main">
+      <h1 className="dm-title">Disembarking Management</h1>
+      <LogoutButton />
 
-        {/* Route Card / Station Name Header */}
-        <section className="dm-tripcard">
-          <div className="dm-tripcard-head">
-            <div className="dm-tripcard-route">{station}</div> {/* Only station name displayed here */}
-          </div>
-        </section>
+      <section className="dm-tripcard">
+        <div className="dm-tripcard-head">
+          <div className="dm-tripcard-route">{station}</div>
+        </div>
+      </section>
 
-        {/* Scan Modal */}
-        <ScanButtonModule action="disembarking" />
+      <ScanButtonModule action="disembarking" />
 
-        {/* Render the table only if destination matches the station */}
-        {station !== "loading..." && (
+      {station &&
+        station !== "loading..." &&
+        station !== "Failed to fetch station" ? (
           <DisembarkPassengerTable destination={station} />
+        ) : (
+          <p className="loading-message">Loading station...</p>
         )}
-      </main>
-    </div>
-  );
+    </main>
+  </div>
+);
 }
