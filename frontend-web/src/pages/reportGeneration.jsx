@@ -198,8 +198,8 @@ export function Report() {
         <main className="reports-main">
           <header className="reports-header-row">
             <div>
-              <h1 className="reports-title">Report Generation</h1>
-              <div className="reports-subtitle">Station Usage Summary Report</div>
+              <h1 className="reports-title">Comprehensive Report</h1>
+              <div className="reports-subtitle">Station Demographics & Activity Report</div>
             </div>
           </header>
 

@@ -1,14 +1,14 @@
 // App.jsx
-import { API_URL } from "./config/api";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import {
-  HashRouter as Router,
-  Routes,
-  Route,
   Navigate,
   Outlet,
+  Route,
+  HashRouter as Router,
+  Routes,
 } from "react-router-dom";
 import "./App.css";
+import { API_URL } from "./config/api";
 
 /* Pages */
 import { AccountSettings } from "./pages/accountSettings";
@@ -25,7 +25,9 @@ import { SchedulesTab } from "./pages/operations_schedulesTab";
 import { StationsTab } from "./pages/operations_stationsTab";
 import VehicleTab from "./pages/operations_vehicleTab";
 import { Passenger } from "./pages/passengerManagement";
+import PeakReport from "./pages/PeakReport";
 import { Report } from "./pages/reportGeneration";
+import { SOSTestPage } from "./pages/SOSTestPage";
 import { Boarding } from "./pages/station_boarding";
 import { BoardingLandingPage } from "./pages/station_boardingLanding";
 import { StationDashboard } from "./pages/station_dashboard";
@@ -33,13 +35,12 @@ import { Disembarking } from "./pages/station_disembarking";
 import { DisembarkingLandingPage } from "./pages/station_disembarkingLanding";
 import { StationSOS } from "./pages/station_sos";
 import { UI } from "./pages/uiCustomization";
-import { SOSTestPage } from "./pages/SOSTestPage";
 
 /* Providers & banners */
-import { SOSProvider } from "./sos/SOSContext";
-import GlobalSOSBanner from "./sos/GlobalSOSBanner";
 import { BroadcastProvider } from "./broadcast/BroadcastProvider";
 import GlobalBroadcastBanner from "./broadcast/GlobalBroadcastBanner";
+import GlobalSOSBanner from "./sos/GlobalSOSBanner";
+import { SOSProvider } from "./sos/SOSContext";
 
 /* ---------- auth util (no hooks) ---------- */
 function getAuthUserId() {
@@ -144,6 +145,8 @@ function App() {
           <Route path="/disembarking" element={<Disembarking />} />
           <Route path="/stationsos" element={<StationSOS />} />
           <Route path="/sostest" element={<SOSTestPage />} />
+          <Route path="/peak-report" element={<PeakReport />} />
+          
         </Route>
 
         {/* Catch-all */}

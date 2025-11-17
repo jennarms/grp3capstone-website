@@ -143,7 +143,7 @@ export function Passenger() {
       <Navbar />
       <div className="pmc-main">
         <div className="pmc-header-row">
-          <h1 className="pmc-title">Passenger Management</h1>
+          <h1 className="pmc-title">Passenger Report</h1>
           <HeaderButton />
         </div>
 
