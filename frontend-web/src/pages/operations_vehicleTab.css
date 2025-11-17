@@ -1,162 +1,217 @@
-:root{
-  --nav-h: 100px;
-  --sidebar-w: 260px;
-  --ink: #0b1a78;
-  --stroke: #cfd8ea;
+.vehicle-page-container {
+  margin-top: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* place content to the right of the left sidebar */
-.ops-page {
-  margin-left: var(--ops-left);
-  margin-right: var(--ops-right);
-  padding: 20px 24px 40px;
+.vehicle-title {
+  font-size: 40px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  text-align: start;
+  width: 100%;
+  margin-top: -80px;
+}
+
+.vehicle-layout {
+  margin-top: 40px;
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1900px;
+  padding: 10px;
+  box-sizing: border-box;
+  margin-left: 300px;
+}
+
+.vehicle-box {
+  flex: 1;
+  min-width: 750px;
+  padding: 25px;
+  border: 3px solid #000;
+  border-radius: 14px;
+  min-height: 320px;
+  background: white;
   box-sizing: border-box;
 }
 
-/* section label */
-.ops-section {
-  margin: 6px 0 20px;
-  font-size: 45px;
-  font-weight: 800;
-  color: #000;
-  text-align: left;
-  margin-left: -620px;
-  margin-top: -300px;
+/* Search + Add vehicle */
+.vehicle-search-row {
+  display: flex;
+  gap: 12px;
 }
 
-/* form */
-.vehicle-form {
-  display: grid;
-  gap: 16px;
-  max-width: 720px;
+.vehicle-search {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 2px solid #000;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 180px 260px;
-  align-items: center;
-  gap: 14px;
-  text-align: start;
-  margin-left: -580px;
-}
-
-.form-row label {
-  font-weight: 600;
+/* Table */
+.vehicle-list-title {
+  font-weight: 700;
+  margin-top: 20px;
+  margin-bottom: 10px;
   font-size: 23px;
-  color: #000;
+  text-align: start;
+}
+
+.vehicle-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vehicle-table th,
+.vehicle-table td {
+  border: 1px solid #444;
+  padding: 8px;
+}
+
+.vehicle-table th {
+  background: #eaeaea;
+  font-weight: bold;
+}
+
+/* GPS Dropdowns */
+.gps-pair-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.gps-row {
+  display: flex;
+  flex-direction: column;
+  width: 48%;
+}
+
+.gps-row label {
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-align: start;
+  font-size: 19px;
 }
 
 .input {
-  height: 40px;
-  border: 1px solid #9da9c2;
-  border-radius: 10px;
-  background: #fff;
-  padding: 6px 12px;
-  font-size: 16px;
-  color: #000;
-  width: 300px;
+  padding: 8px;
+  border: 2px solid #000;
+  border-radius: 6px;
 }
 
-/* save centered — blue consistent with other pages */
-.form-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
+.center-btn {
+  margin-top: 25px;
+  display: block;
+  width: 200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.ops-page .form-actions .primary-btn{
-  background: var(--ink) !important;
-  border: 1px solid var(--ink) !important;
-  color: #fff !important;
-
-  border-radius: 12px;
-  padding: 8px 36px;
-  font-weight: 800;
-  font-size: 18px;
-  cursor: pointer;
-  width: 250px;
-  margin-top: 30px;
-  transition: filter .15s ease, box-shadow .15s ease;
-}
-.ops-page .form-actions .primary-btn:hover{ filter: brightness(1.05); }
-.ops-page .form-actions .primary-btn:focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(11,26,120,.2);
+.notice {
+  margin-top: 20px;
+  text-align: center;
+  padding: 10px;
+  font-weight: bold;
+  border-radius: 8px;
 }
 
-/* ===== Standardized modal (matches previous pages) ===== */
-.ops-modalOverlay{
+.notice.success { background: #d2f5d2; color: green; }
+.notice.error { background: #ffdddd; color: darkred; }
+
+/* Modal */
+.add-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.45);
+  background: rgba(0,0,0,0.45);
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 3000;
+  align-items: center;
+  z-index: 5000;
 }
 
-.ops-modal{
-  width: 560px;
-  max-width: 92vw;
+.add-modal {
+  width: 700px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 16px 40px rgba(0,0,0,.2);
-  border: 1px solid var(--stroke);
-  overflow: hidden;
+  padding: 30px;
+  border-radius: 16px;
+  border: 3px solid #000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-.ops-modalHeader{
-  padding: 16px 20px 10px;
-  border-bottom: 1px solid #eee;
-}
-.ops-modalTitle{
-  margin: 0;
-  font-size: 1.25rem;
+.add-modal-title {
+  text-align: start;
+  font-size: 28px;
   font-weight: 800;
-  color: #111;
-  text-align: left; /* title left */
+  margin-bottom: 25px;
 }
 
-.ops-modalBody{
-  padding: 14px 22px 4px;
-  color: #111;
-  font-size: 1rem;
-}
-
-.ops-modalFooter{
+.add-modal-row {
   display: flex;
-  justify-content: flex-end; /* buttons right */
-  gap: 10px;
-  padding: 14px 16px 18px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
-/* Buttons inside modal */
-.ops-btn{
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 10px 22px;
-  font-weight: 700;
+.add-modal-row label {
+  width: 150px;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.modal-input {
+  width: 350px;
+  padding: 8px;
+  border: 2px solid #000;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.save-modal-btn {
+  display: block;
+  width: 180px;
+  margin: 20px auto 0 auto;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+/* Buttons */
+.blue-btn {
+  background: #0b1a78;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
   cursor: pointer;
-  min-width: 120px;
-  transition: filter .15s ease, box-shadow .15s ease, background .15s ease;
+  font-weight: bold;
+  transition: 0.2s ease;
 }
-.ops-btn:focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(11,26,120,.2);
-}
-.ops-btnOutline{
-  background: #fff;
-  border-color: #cfd1d8;
-  color: #111;
-}
-.ops-btnOutline:hover{ background: #f5f6f8; }
-.ops-btnNavy{
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
-}
-.ops-btnNavy:hover{ filter: brightness(1.05); }
 
-/* ✅ Keep layout stable & prevent scroll when any modal is open */
-html { scrollbar-gutter: stable; }
-body.ops-modalOpen { overflow: hidden; }
+.blue-btn:hover {
+  background: #0b1a78;
+}
+
+.center-btn:hover {
+  background: #0b1a78;
+}
+
+/* -------------------- SELECT DROPDOWN COLOR FIX -------------------- */
+
+/* Selected value (vehicle/gps) should always show black text */
+.input {
+  color: #000 !important;
+}
+
+/* Placeholder option (value="") should appear gray */
+.input option[value=""] {
+  color: #777 !important;
+}
+
+/* All real options should be black */
+.input option {
+  color: #000 !important;
+}

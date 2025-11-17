@@ -1,253 +1,108 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import { OperationsTab } from "../components/operationsTab";
 import "./operations_vehicleTab.css";
 
 export default function VehicleTab() {
-  const [type, setType] = useState("Ferry");
-  const [capacity, setCapacity] = useState("");
-  const [originalType, setOriginalType] = useState("Ferry"); // Track original type
-
-  // Capacity save confirmation
-  const [showCapacityConfirm, setShowCapacityConfirm] = useState(false);
-
-  // Vehicle type change - triple confirmation states
-  const [typeChangeStep, setTypeChangeStep] = useState(0); // 0=none, 1=first confirm, 2=type confirm, 3=final confirm
-  const [confirmationText, setConfirmationText] = useState("");
-  const [finalConfirmationText, setFinalConfirmationText] = useState("");
-
-  // Success/Error notices
-  const [notice, setNotice] = useState({ show: false, message: "", type: "success" });
-
-  // Loading states
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Use environment variable for API URL
   const apiUrl = import.meta.env.VITE_API_URL;
-  console.log("API URL from env:", apiUrl);
-
   const token = localStorage.getItem("token");
 
-  // Show notice helper
-  const showNotice = (message, type = "success") => {
-    setNotice({ show: true, message, type });
-    setTimeout(() => setNotice({ show: false, message: "", type: "success" }), 3000);
+  const [vehicles, setVehicles] = useState([]);
+  const [search, setSearch] = useState("");
+
+  const [gpsVehicle, setGpsVehicle] = useState("");
+  const [gpsDevice, setGpsDevice] = useState("");
+
+  const [notice, setNotice] = useState(null);
+  const showNotice = (msg, type = "success") => {
+    setNotice({ msg, type });
+    setTimeout(() => setNotice(null), 2500);
   };
 
-  // ✅ Auto-fetch existing vehicle on load
-  useEffect(() => {
-    const fetchVehicle = async () => {
-      try {
-        setIsLoading(true);
-        const response = await axios.get(`${apiUrl}/api/vehicle/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.data) {
-          setType(response.data.type);
-          setOriginalType(response.data.type);
-          setCapacity(response.data.capacity.toString());
-        }
-      } catch (err) {
-        console.error("❌ Error fetching vehicle:", err.response?.data || err.message);
-        if (err.response?.status !== 404) {
-          showNotice("Failed to fetch vehicle data", "error");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalVehicleName, setModalVehicleName] = useState("");
+  const [modalVehicleType, setModalVehicleType] = useState("Ferry");
+  const [modalVehicleCapacity, setModalVehicleCapacity] = useState("");
 
+  // ==========================================================
+  // FETCH VEHICLES (wrapped in useCallback → no ESLint warning)
+  // ==========================================================
+  const fetchVehicles = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${apiUrl}/api/vehicle/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setVehicles(data);
+      if (data.length) setGpsVehicle(data[0].name);
+    } catch {
+      showNotice("Failed to load vehicles", "error");
+    }
+  }, [apiUrl, token]);
+
+  // RUN fetchVehicles WHEN apiUrl/token changes
+  useEffect(() => {
     if (apiUrl && token) {
-      fetchVehicle();
+      fetchVehicles();
     }
-  }, [token, apiUrl]);
+  }, [apiUrl, token, fetchVehicles]);
 
-  // ===== CAPACITY SAVE =====
-  const handleCapacitySave = (e) => {
-    e.preventDefault();
-    if (!capacity.trim()) {
-      showNotice("Please enter a capacity value", "error");
-      return;
-    }
-    setShowCapacityConfirm(true);
-  };
+  // ==========================================================
+  // SAVE GPS ASSIGNMENT
+  // ==========================================================
+  const handleSaveGPS = async () => {
+    if (!gpsVehicle || !gpsDevice)
+      return showNotice("Please fill all fields", "error");
 
-  const handleCapacityConfirmYes = async () => {
     try {
-      setIsLoading(true);
-      const response = await axios.put(
-        `${apiUrl}/api/vehicle/capacity`,
-        { capacity: parseInt(capacity) },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
+      await axios.post(
+        `${apiUrl}/api/vehicle/gps/assign`,
+        { vehicle: gpsVehicle, gpsCode: gpsDevice },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log("✅ Capacity saved:", response.data);
-      showNotice("Vehicle capacity updated successfully!");
-    } catch (err) {
-      console.error("❌ Error saving capacity:", err.response?.data || err.message);
-      showNotice(`Failed to update capacity: ${err.response?.data?.error || err.message}`, "error");
-    } finally {
-      setIsLoading(false);
-      setShowCapacityConfirm(false);
+      showNotice("GPS assigned successfully!");
+    } catch {
+      showNotice("Failed to assign GPS", "error");
     }
   };
 
-  // ===== VEHICLE TYPE CHANGE - TRIPLE CONFIRMATION =====
-  const handleTypeChange = (newType) => {
-    setType(newType);
-
-    // If type actually changed from original, start confirmation process
-    if (newType !== originalType) {
-      setTypeChangeStep(1);
-    } else {
-      setTypeChangeStep(0);
-    }
-  };
-
-  const handleTypeSave = (e) => {
-    e.preventDefault();
-
-    if (type === originalType) {
-      showNotice("No changes to vehicle type");
-      return;
-    }
-
-    // Start the confirmation process
-    setTypeChangeStep(1);
-  };
-
-  // Step 1: First confirmation
-  const handleFirstConfirm = () => {
-    setTypeChangeStep(2);
-    setConfirmationText("");
-  };
-
-  // Step 2: Type "CONFIRM"
-  const handleSecondConfirm = () => {
-    if (confirmationText !== "CONFIRM") {
-      showNotice("Please type 'CONFIRM' exactly", "error");
-      return;
-    }
-    setTypeChangeStep(3);
-    setFinalConfirmationText("");
-  };
-
-  // Step 3: Final confirmation with typing "CONFIRM" again
-  const handleFinalConfirm = async () => {
-    if (finalConfirmationText !== "CONFIRM") {
-      showNotice("Please type 'CONFIRM' exactly", "error");
-      return;
-    }
+  // ==========================================================
+  // ADD VEHICLE
+  // ==========================================================
+  const handleSaveVehicle = async () => {
+    if (!modalVehicleName.trim() || !modalVehicleCapacity.trim())
+      return showNotice("Please fill all fields", "error");
 
     try {
-      setIsLoading(true);
-      const response = await axios.put(
-        `${apiUrl}/api/vehicle/type`,
+      await axios.post(
+        `${apiUrl}/api/vehicle/add`,
         {
-          vehicleType: type,
-          confirmationCode: finalConfirmationText,
+          name: modalVehicleName,
+          type: modalVehicleType,
+          capacity: Number(modalVehicleCapacity),
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("✅ Vehicle type updated:", response.data);
-      setOriginalType(type); // Update original type
-      showNotice("Vehicle type updated successfully! Warning: This may have affected related data.");
+      showNotice("Vehicle added!");
 
-      // Reset confirmation process
-      setTypeChangeStep(0);
-      setConfirmationText("");
-      setFinalConfirmationText("");
-    } catch (err) {
-      console.error("❌ Error updating vehicle type:", err.response?.data || err.message);
-      showNotice(`Failed to update vehicle type: ${err.response?.data?.error || err.message}`, "error");
-    } finally {
-      setIsLoading(false);
+      setModalVehicleName("");
+      setModalVehicleType("Ferry");
+      setModalVehicleCapacity("");
+      setShowAddModal(false);
+
+      fetchVehicles();
+    } catch {
+      showNotice("Error adding vehicle", "error");
     }
   };
 
-  // Cancel all confirmations
-  const cancelAllConfirmations = () => {
-    setShowCapacityConfirm(false);
-    setTypeChangeStep(0);
-    setConfirmationText("");
-    setFinalConfirmationText("");
-    setType(originalType); // Reset type to original
-  };
-
-  // ESC to close modals
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        cancelAllConfirmations();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [originalType]);
-
-  // 🔒 Prevent page scroll / movement while any modal is open (no layout jump)
-  const modalOpen = showCapacityConfirm || typeChangeStep > 0 || notice.show;
-  useEffect(() => {
-    const body = document.body;
-
-    if (modalOpen) {
-      const scrollY = window.scrollY || window.pageYOffset;
-      // Freeze the body at the current position
-      body.style.position = "fixed";
-      body.style.top = `-${scrollY}px`;
-      body.style.left = "0";
-      body.style.right = "0";
-      body.style.width = "100%";
-      body.style.overscrollBehavior = "contain";
-      body.classList.add("ops-modalOpen"); // cosmetic rules
-    } else {
-      // Restore scroll position exactly
-      const top = body.style.top;
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      body.style.overscrollBehavior = "";
-      body.classList.remove("ops-modalOpen");
-      if (top) {
-        const y = -parseInt(top, 10);
-        window.scrollTo(0, y);
-      }
-    }
-
-    return () => {
-      // Cleanup in case component unmounts while modal is open
-      if (document.body.style.position === "fixed") {
-        const top = document.body.style.top;
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.left = "";
-        document.body.style.right = "";
-        document.body.style.width = "";
-        document.body.style.overscrollBehavior = "";
-        document.body.classList.remove("ops-modalOpen");
-        if (top) {
-          const y = -parseInt(top, 10);
-          window.scrollTo(0, y);
-        }
-      }
-    };
-  }, [modalOpen]);
+  // FILTER SEARCH
+  const filteredVehicles = vehicles.filter((v) =>
+    v.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <>
@@ -255,241 +110,143 @@ export default function VehicleTab() {
       <HeaderButton />
       <OperationsTab />
 
-      <div className="ops-page">
-        <div className="ops-main">
-          <h2 className="ops-section">Vehicle Management</h2>
+      <div className="vehicle-page-container">
+        <h2 className="vehicle-title">Vehicle Management</h2>
 
-          {isLoading && (
-            <div className="loading-overlay">
-              <div className="loading-spinner">Loading...</div>
+        <div className="vehicle-layout">
+          {/* LEFT BOX */}
+          <div className="vehicle-box">
+            <div className="vehicle-search-row">
+              <input
+                className="vehicle-search"
+                placeholder="Search vehicle name..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+
+              <button className="blue-btn" onClick={() => setShowAddModal(true)}>
+                Add vehicle
+              </button>
             </div>
-          )}
 
-          {/* Vehicle Type Form */}
-          <div className="vehicle-form-section">
-            <h3 className="form-section-title"></h3>
-            <div className="form-row">
-              <label htmlFor="vehType">Type of Vehicle</label>
+            <div className="vehicle-list-title">Vehicles List</div>
+
+            <table className="vehicle-table">
+              <thead>
+                <tr>
+                  <th>Vehicle Name</th>
+                  <th>Type</th>
+                  <th>Capacity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredVehicles.length ? (
+                  filteredVehicles.map((v) => (
+                    <tr key={v.id}>
+                      <td>{v.name}</td>
+                      <td>{v.type}</td>
+                      <td>{v.capacity}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" style={{ textAlign: "center" }}>
+                      No vehicles found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* RIGHT BOX */}
+          <div className="vehicle-box">
+            <div className="vehicle-list-title">Assign GPS Device</div>
+
+            <div className="gps-pair-row">
+              <div className="gps-row">
+                <label>Vehicle:</label>
+                <select
+                  className="input"
+                  value={gpsVehicle}
+                  onChange={(e) => setGpsVehicle(e.target.value)}
+                >
+                  <option value="" disabled>Select Vehicle</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.name}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="gps-row">
+                <label>GPS Device:</label>
+                <select
+                  className="input"
+                  value={gpsDevice}
+                  onChange={(e) => setGpsDevice(e.target.value)}
+                >
+                  <option value="">Select Device</option>
+                  <option value="FERRY-001">FERRY-001</option>
+                  <option value="FERRY-002">FERRY-002</option>
+                </select>
+              </div>
+            </div>
+
+            <button className="blue-btn center-btn" onClick={handleSaveGPS}>
+              Save Assignment
+            </button>
+          </div>
+        </div>
+
+        {notice && (
+          <div className={`notice ${notice.type}`}>{notice.msg}</div>
+        )}
+      </div>
+
+      {showAddModal && (
+        <div className="add-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="add-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="add-modal-title">Vehicle Details</h2>
+
+            <div className="add-modal-row">
+              <label>Vehicle Name:</label>
+              <input
+                type="text"
+                className="modal-input"
+                value={modalVehicleName}
+                onChange={(e) => setModalVehicleName(e.target.value)}
+              />
+            </div>
+
+            <div className="add-modal-row">
+              <label>Vehicle Type:</label>
               <select
-                id="vehType"
-                value={type}
-                onChange={(e) => handleTypeChange(e.target.value)}
-                className="input"
-                disabled={isLoading}
+                className="modal-input"
+                value={modalVehicleType}
+                onChange={(e) => setModalVehicleType(e.target.value)}
               >
                 <option value="Ferry">Ferry</option>
-                <option value="Roll-on/Roll-off Vessels">Roll-on/Roll-off Vessels</option>
                 <option value="Bus">Bus</option>
                 <option value="Shuttle Vans">Shuttle Vans</option>
+                <option value="Roll-on/Roll-off Vessels">Roll-on/Roll-off Vessels</option>
               </select>
             </div>
 
-            <div className="form-actions">
-              <button
-                className={`primary-btn ${type !== originalType ? "btn-warning" : "btn-disabled"}`}
-                onClick={handleTypeSave}
-                disabled={type === originalType || isLoading}
-              >
-                {type !== originalType ? "⚠️ Save Type Change (Dangerous)" : "No Changes"}
-              </button>
-            </div>
-          </div>
-
-          {/* Capacity Form */}
-          <div className="vehicle-form-section">
-            <h3 className="form-section-title"></h3>
-            <div className="form-row">
-              <label htmlFor="capacity">Capacity</label>
+            <div className="add-modal-row">
+              <label>Capacity:</label>
               <input
-                id="capacity"
                 type="number"
-                min="0"
-                className="input"
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-                placeholder="Enter capacity"
-                disabled={isLoading}
+                className="modal-input"
+                value={modalVehicleCapacity}
+                onChange={(e) => setModalVehicleCapacity(e.target.value)}
               />
             </div>
 
-            <div className="form-actions">
-              <button
-                className="primary-btn"
-                onClick={handleCapacitySave}
-                disabled={isLoading || !capacity.trim()}
-              >
-                Save Capacity
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Capacity Confirmation */}
-      {showCapacityConfirm && (
-        <div className="ops-modalOverlay" onClick={() => setShowCapacityConfirm(false)}>
-          <div className="ops-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ops-modalHeader">
-              <h3 className="ops-modalTitle">Save Capacity Changes</h3>
-            </div>
-            <div className="ops-modalBody">
-              Are you sure you want to update the vehicle capacity to <strong>{capacity}</strong>?
-            </div>
-            <div className="ops-modalFooter">
-              <button
-                className="ops-btn ops-btnOutline"
-                onClick={() => setShowCapacityConfirm(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                className="ops-btn ops-btnNavy"
-                onClick={handleCapacityConfirmYes}
-                disabled={isLoading}
-              >
-                {isLoading ? "Saving..." : "Save Capacity"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Vehicle Type Change - Step 1: First Confirmation */}
-      {typeChangeStep === 1 && (
-        <div className="ops-modalOverlay" onClick={cancelAllConfirmations}>
-          <div className="ops-modal danger-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ops-modalHeader">
-              <h3 className="ops-modalTitle">⚠️ Dangerous Operation</h3>
-            </div>
-            <div className="ops-modalBody">
-              <p>
-                <strong>WARNING:</strong> Changing the vehicle type is a sensitive operation that may
-                delete or corrupt data connected to this vehicle.
-              </p>
-              <p>
-                You are about to change from <strong>"{originalType}"</strong> to{" "}
-                <strong>"{type}"</strong>.
-              </p>
-              <p>Are you absolutely sure you want to continue?</p>
-            </div>
-            <div className="ops-modalFooter">
-              <button className="ops-btn ops-btnOutline" onClick={cancelAllConfirmations}>
-                Cancel
-              </button>
-              <button className="ops-btn ops-btnNavy" onClick={handleFirstConfirm}>
-                Yes, I'm Sure
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Vehicle Type Change - Step 2: Type CONFIRM */}
-      {typeChangeStep === 2 && (
-        <div className="ops-modalOverlay" onClick={cancelAllConfirmations}>
-          <div className="ops-modal danger-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ops-modalHeader">
-              <h3 className="ops-modalTitle">⚠️ Type Confirmation Required</h3>
-            </div>
-            <div className="ops-modalBody">
-              <p>
-                To proceed with this dangerous operation, please type <strong>"CONFIRM"</strong>{" "}
-                exactly:
-              </p>
-              <input
-                type="text"
-                className="input confirmation-input"
-                value={confirmationText}
-                onChange={(e) => setConfirmationText(e.target.value)}
-                placeholder="Type CONFIRM"
-                autoFocus
-              />
-            </div>
-            <div className="ops-modalFooter">
-              <button className="ops-btn ops-btnOutline" onClick={cancelAllConfirmations}>
-                Cancel
-              </button>
-              <button
-                className="ops-btn ops-btnNavy"
-                onClick={handleSecondConfirm}
-                disabled={confirmationText !== "CONFIRM"}
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Vehicle Type Change - Step 3: Final Confirmation */}
-      {typeChangeStep === 3 && (
-        <div className="ops-modalOverlay" onClick={cancelAllConfirmations}>
-          <div className="ops-modal danger-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ops-modalHeader">
-              <h3 className="ops-modalTitle">🚨 FINAL CONFIRMATION</h3>
-            </div>
-            <div className="ops-modalBody">
-              <p>
-                <strong>LAST CHANCE:</strong> This action cannot be undone!
-              </p>
-              <p>
-                Vehicle type will change from <strong>"{originalType}"</strong> to{" "}
-                <strong>"{type}"</strong>
-              </p>
-              <p>
-                Type <strong>"CONFIRM"</strong> one more time to proceed:
-              </p>
-              <input
-                type="text"
-                className="input confirmation-input"
-                value={finalConfirmationText}
-                onChange={(e) => setFinalConfirmationText(e.target.value)}
-                placeholder="Type CONFIRM"
-                autoFocus
-              />
-            </div>
-            <div className="ops-modalFooter">
-              <button className="ops-btn ops-btnOutline" onClick={cancelAllConfirmations}>
-                Cancel
-              </button>
-              <button
-                className="ops-btn ops-btnNavy"
-                onClick={handleFinalConfirm}
-                disabled={finalConfirmationText !== "CONFIRM" || isLoading}
-              >
-                {isLoading ? "Executing..." : "Execute Change"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success/Error Notice */}
-      {notice.show && (
-        <div
-          className="ops-modalOverlay"
-          onClick={() => setNotice({ show: false, message: "", type: "success" })}
-        >
-          <div className="ops-modal notice-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ops-modalHeader">
-              <h3
-                className={`ops-modalTitle ${
-                  notice.type === "error" ? "error-title" : "success-title"
-                }`}
-              >
-                {notice.type === "error" ? "❌ Error" : "✅ Success"}
-              </h3>
-            </div>
-            <div className="ops-modalBody">{notice.message}</div>
-            <div className="ops-modalFooter">
-              <button
-                className="ops-btn ops-btnNavy"
-                onClick={() => setNotice({ show: false, message: "", type: "success" })}
-              >
-                OK
-              </button>
-            </div>
+            <button className="blue-btn save-modal-btn" onClick={handleSaveVehicle}>
+              Save Vehicle
+            </button>
           </div>
         </div>
       )}
