@@ -1,52 +1,58 @@
-import axios from 'axios';
-import { useCallback, useEffect, useState } from 'react';
+// ===============================
+// PassengerTable.jsx (FIXED)
+// ===============================
+import axios from "axios";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function PassengerTable({ origin, scheduleTime }) {
-  const [passengerData, setPassengerData] = useState([]); 
+  const [passengerData, setPassengerData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+
+  // 🔥 useRef to STOP flicker (loading message never hides table)
+  const loadingRef = useRef(false);
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalAction, setModalAction] = useState(null); // 'accept' or 'cancel'
+  const [modalAction, setModalAction] = useState(null);
   const [selectedPassenger, setSelectedPassenger] = useState(null);
-  const [modalMessage, setModalMessage] = useState(""); // For custom message in modal
+  const [modalMessage, setModalMessage] = useState("");
 
+  // --------------------------------------------------
+  // HANDLE ACCEPT / CANCEL
+  // --------------------------------------------------
   const handleAction = async (action, passengerId, qrcodeId) => {
     try {
-      const response = await axios.post(`${apiUrl}/api/passengertable/update_passenger_status_and_qrcode`, {
+      await axios.post(`${apiUrl}/api/passengertable/update_passenger_status_and_qrcode`, {
         BD_ID: passengerId,
-        action: action,
+        action,
         Qrcode_ID: qrcodeId,
       });
 
-      console.log(response.data.message);
-
-      // Update passenger status locally
-      setPassengerData(prevData =>
-        prevData.map(passenger =>
-          passenger.BD_ID === passengerId
-            ? { ...passenger, status: action === 'accept' ? 'B' : 'C' }
-            : passenger
+      // Update instantly
+      setPassengerData((prev) =>
+        prev.map((p) =>
+          p.BD_ID === passengerId
+            ? { ...p, status: action === "accept" ? "B" : "C" }
+            : p
         )
       );
-    } catch (error) {
-      console.error("Error updating passenger status and QR Code:", error);
+    } catch (err) {
+      console.error("Action error:", err);
     } finally {
       closeModal();
     }
   };
 
   const openModal = (action, passenger) => {
-    if (action === 'accept' && passenger.status === 'B') {
-      setModalMessage("This passenger is already boarded. Cannot board again.");
+    if (action === "accept" && passenger.status === "B") {
+      setModalMessage("This passenger is already boarded.");
       setModalAction(null);
-    } else if (action === 'cancel' && passenger.status === 'B') {
-      setModalMessage("You cannot cancel boarded passengers.");
+    } else if (action === "cancel" && passenger.status === "B") {
+      setModalMessage("You cannot cancel a boarded passenger.");
       setModalAction(null);
     } else {
       setModalMessage(`Are you sure you want to ${action} this passenger?`);
@@ -60,105 +66,97 @@ export default function PassengerTable({ origin, scheduleTime }) {
     setModalVisible(false);
     setModalAction(null);
     setSelectedPassenger(null);
-    setModalMessage(""); // Clear message when modal is closed
+    setModalMessage("");
   };
 
   const confirmModalAction = () => {
-    if (selectedPassenger && modalAction) {
+    if (modalAction && selectedPassenger) {
       handleAction(modalAction, selectedPassenger.BD_ID, selectedPassenger.Qrcode_ID);
     }
   };
 
-  // Fetching boarding data (same as before)
-  const fetchBoardingData = useCallback(async (page) => {
+  // --------------------------------------------------
+  // FETCH BOARDING DATA (NO FLICKER)
+  // --------------------------------------------------
+  const fetchBoardingData = useCallback(async () => {
     if (!origin || !scheduleTime) return;
 
-    const formatTime = (time) => {
-      const [h, m] = time.split(":").map(Number);
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+    const formatTime = (t) => {
+      const [h, m] = t.split(":");
+      return `${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`;
     };
 
-    setLoading(true);
+    loadingRef.current = true;
+
     try {
-      const params = { page, origin, schedule_time: formatTime(scheduleTime) };
+      const params = {
+        page: currentPage,
+        origin,
+        schedule_time: formatTime(scheduleTime),
+      };
+
       if (query) params.query = query;
-      const response = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, { params });
-      setPassengerData(response.data.boardingData);
-      setTotalPages(response.data.totalPages);
-    } catch (error) {
-      console.error("Error fetching boarding data:", error);
+
+      const res = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, { params });
+
+      setPassengerData(res.data.boardingData || []);
+      setTotalPages(res.data.totalPages || 0);
+    } catch (err) {
+      console.error("Fetch error:", err);
     } finally {
-      setLoading(false);
+      // 🔥 Do NOT trigger UI flicker — just silently finish
+      loadingRef.current = false;
     }
-  }, [origin, scheduleTime, query]);
+  }, [origin, scheduleTime, query, currentPage]);
 
-  useEffect(() => { fetchBoardingData(currentPage); }, [currentPage, fetchBoardingData]);
+  // Initial load
   useEffect(() => {
-    const interval = setInterval(() => { fetchBoardingData(currentPage); }, 10000);
-    return () => clearInterval(interval);
-  }, [currentPage, fetchBoardingData]);
+    fetchBoardingData();
+  }, [fetchBoardingData]);
 
-  const handlePageChange = (direction) => {
-    if (direction === 'prev' && currentPage > 1) setCurrentPage(currentPage - 1);
-    else if (direction === 'next' && currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
+  // Auto refresh every 10 seconds but NO remount / NO glitch
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetchBoardingData();
+    }, 10000);
 
-  // Function to compare the departure date with the current date
-  const isDateExpired = (departureDate) => {
+    return () => clearInterval(id);
+  }, [fetchBoardingData]);
+
+  // --------------------------------------------------
+  // Remove expired dates AND status D
+  // --------------------------------------------------
+  const isExpired = (dateStr) => {
     const today = new Date();
-    const departure = new Date(departureDate);
-
-    // Set the time to 00:00 to only compare the dates
     today.setHours(0, 0, 0, 0);
-    departure.setHours(0, 0, 0, 0);
 
-    // If the departure date is older than today, return true
-    return departure < today;
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+
+    return d < today;
   };
 
-  // Filter out passengers where departure_date has passed by more than 1 day
-  const filterPassengerData = passengerData.filter((passenger) => {
-    return !isDateExpired(passenger.departure_date); // Only show those that are not expired
+  const activePassengers = passengerData.filter(
+    (p) => !isExpired(p.departure_date) && p.status !== "D"
+  );
+
+  // --------------------------------------------------
+  // SEARCH
+  // --------------------------------------------------
+  const normalize = (v) => String(v || "").toLowerCase();
+
+  const filteredData = activePassengers.filter((p) => {
+    const q = query.toLowerCase();
+    return Object.values(p).some((v) => normalize(v).includes(q));
   });
-
-  // Function to normalize and search by all fields (convert all values to strings for search)
-  const normalizeValue = (value) => {
-    // If the value is a Date, convert it to a string (e.g., 'YYYY-MM-DD')
-    if (value instanceof Date) {
-      return value.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
-    }
-    return String(value || "").toLowerCase(); // Convert to string for non-date values
-  };
-
-  // Function to filter passengers based on search query (check each column individually)
-  const filterBySearchQuery = (data, query) => {
-    const queryLower = query.toLowerCase(); // Make the search case-insensitive
-    return data.filter((passenger) => {
-      return (
-        normalizeValue(passenger.BD_ID).includes(queryLower) ||
-        normalizeValue(passenger.Booking_ID).includes(queryLower) ||
-        normalizeValue(passenger.User_ID).includes(queryLower) ||
-        normalizeValue(passenger.boarding_time).includes(queryLower) ||
-        normalizeValue(passenger.disembarking_time).includes(queryLower) ||
-        normalizeValue(passenger.status).includes(queryLower) ||
-        normalizeValue(passenger.Qrcode_ID).includes(queryLower) ||
-        normalizeValue(passenger.Schedule_ID).includes(queryLower) ||
-        normalizeValue(passenger.origin).includes(queryLower) ||
-        normalizeValue(passenger.destination).includes(queryLower) ||
-        normalizeValue(passenger.departure_date).includes(queryLower) ||
-        normalizeValue(passenger.departure_time).includes(queryLower)
-      );
-    });
-  };
-
-  const filteredData = filterBySearchQuery(filterPassengerData, query);
 
   return (
     <>
+      {/* HEADER */}
       <section className="passenger-head-section">
         <div className="table-header">
           <h3>Passenger List</h3>
-          <div className="table-search" role="search">
+          <div className="table-search">
             <input
               className="table-search-input"
               value={query}
@@ -169,11 +167,10 @@ export default function PassengerTable({ origin, scheduleTime }) {
         </div>
       </section>
 
+      {/* TABLE */}
       <section className="boarding-table-section">
         <div className="table-wrapper">
-          {loading ? (
-            <div className="loading-message">Loading data...</div>
-          ) : filteredData.length === 0 ? (
+          {filteredData.length === 0 ? (
             <div className="no-data-message">No passengers available.</div>
           ) : (
             <table className="passenger-list-table">
@@ -194,30 +191,36 @@ export default function PassengerTable({ origin, scheduleTime }) {
                   <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
-                {filteredData.map((passenger) => (
-                  <tr key={passenger.BD_ID}>
-                    <td>{passenger.BD_ID}</td>
-                    <td>{passenger.Booking_ID}</td>
-                    <td>{passenger.User_ID}</td>
-                    <td>{passenger.boarding_time || '—'}</td>
-                    <td>{passenger.disembarking_time || '—'}</td>
-                    <td>{passenger.status || '—'}</td>
-                    <td>{passenger.Qrcode_ID || '—'}</td>
-                    <td>{passenger.Schedule_ID || '—'}</td>
-                    <td>{passenger.origin || '—'}</td>
-                    <td>{passenger.destination || '—'}</td>
-                    <td>{passenger.departure_date || '—'}</td>
-                    <td>{passenger.departure_time || '—'}</td>
+                {filteredData.map((p) => (
+                  <tr key={p.BD_ID}>
+                    <td>{p.BD_ID}</td>
+                    <td>{p.Booking_ID}</td>
+                    <td>{p.User_ID}</td>
+                    <td>{p.boarding_time || "—"}</td>
+                    <td>{p.disembarking_time || "—"}</td>
+                    <td>{p.status}</td>
+                    <td>{p.Qrcode_ID}</td>
+                    <td>{p.Schedule_ID || "—"}</td>
+                    <td>{p.origin}</td>
+                    <td>{p.destination}</td>
+                    <td>{p.departure_date}</td>
+                    <td>{p.departure_time}</td>
+
                     <td>
-                      {passenger.status === 'B' ? ( // If status is Boarded (B)
-                        <span>Already Boarded</span> // Replace button with text for boarded passengers
-                      ) : passenger.status === 'C' ? ( // If status is Cancelled (C)
-                        <span>Already Cancelled</span> // Replace button with text for cancelled passengers
+                      {p.status === "B" ? (
+                        <span>Already Boarded</span>
+                      ) : p.status === "C" ? (
+                        <span>Cancelled</span>
                       ) : (
                         <>
-                          <button className="actionbtn" onClick={() => openModal('accept', passenger)}>Accept</button>
-                          <button className="actionbtn" onClick={() => openModal('cancel', passenger)}>Cancel</button>
+                          <button className="actionbtn" onClick={() => openModal("accept", p)}>
+                            Accept
+                          </button>
+                          <button className="actionbtn" onClick={() => openModal("cancel", p)}>
+                            Cancel
+                          </button>
                         </>
                       )}
                     </td>
@@ -229,21 +232,26 @@ export default function PassengerTable({ origin, scheduleTime }) {
         </div>
       </section>
 
+      {/* PAGINATION */}
       <div className="pagination">
-        <button disabled={currentPage === 1} onClick={() => handlePageChange('prev')}>Prev</button>
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+          Prev
+        </button>
         <span>{currentPage}</span>
-        <button disabled={currentPage === totalPages} onClick={() => handlePageChange('next')}>Next</button>
+        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+          Next
+        </button>
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {modalVisible && (
         <div className="actionbtn-modal-confirm-overlay">
           <div className="actionbtn-modal-confirm-box">
-            <h3>{modalAction === 'accept' ? 'Confirm Accept' : 'Confirm Cancel'}</h3>
+            <h3>{modalAction === "accept" ? "Confirm Accept" : "Confirm Cancel"}</h3>
             <p>{modalMessage}</p>
             <div className="actionbtn-modal-confirm-buttons">
-              <button className="actionbtn-modal-cancel-btn" onClick={closeModal}>Cancel</button>
-              <button className="actionbtn-modal-yes-btn" onClick={confirmModalAction}>Yes</button>
+              <button onClick={closeModal}>Cancel</button>
+              <button onClick={confirmModalAction}>Yes</button>
             </div>
           </div>
         </div>
