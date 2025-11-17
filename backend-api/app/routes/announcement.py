@@ -24,16 +24,15 @@ def get_announcements():
         result = cur.fetchall()
         cur.close()
 
-        announcements = [
-            {
+        announcements = []
+        for row in result:
+            announcements.append({
                 "announce_id": row[0],
                 "title": row[1],
                 "content": row[2],
                 "date_time": row[3].strftime("%Y-%m-%d %H:%M:%S"),
                 "admin_name": row[4],
-            }
-            for row in result
-        ]
+            })
 
         return jsonify({"announcements": announcements}), 200
 
@@ -80,7 +79,9 @@ def create_announcement():
             new_num = 1
 
         announce_id = f"Announce{new_num}"
-        date_time = datetime.utcnow()
+        
+        # ✅ Use datetime.now() instead of datetime.utcnow()
+        date_time = datetime.now()
 
         cur.execute(
             """
