@@ -20,7 +20,23 @@ def poll_new_bookings():
         cursor = mysql.connection.cursor()
 
         try:
-            # STEP 1 — Fetch bookings not yet inside BoardingDisembarking
+            # --------------------------------------------------
+            # 0) AUTO-CANCEL OLD PENDING BOOKINGS
+            # --------------------------------------------------
+            # Any record where departure_date < today AND status = 'P'
+            # will be marked as 'C' (Cancelled).
+            cursor.execute("""
+                UPDATE BoardingDisembarking
+                SET status = 'C'
+                WHERE departure_date < CURDATE()
+                  AND status = 'P'
+            """)
+            mysql.connection.commit()
+            print("[poll_new_bookings] Auto-cancelled old pending bookings ✓")
+
+            # --------------------------------------------------
+            # 1) Fetch bookings not yet inside BoardingDisembarking
+            # --------------------------------------------------
             cursor.execute("""
                 SELECT 
                     b.Booking_ID,
@@ -41,7 +57,7 @@ def poll_new_bookings():
             new_bookings = cursor.fetchall()
             print(f"[poll_new_bookings] Fetched {len(new_bookings)} bookings to insert")
 
-            # STEP 2 — Insert each booking
+            # 2) Insert each booking
             for booking in new_bookings:
                 (booking_id, user_id, qrcode_id, schedule_id,
                  origin, destination, dep_date, dep_time) = booking
@@ -53,7 +69,6 @@ def poll_new_bookings():
 
                 print(f"[poll_new_bookings] Inserting Booking_ID={booking_id}")
 
-                # Insert with Schedule_ID allowed null
                 cursor.execute("""
                     INSERT INTO BoardingDisembarking 
                         (Booking_ID, User_ID, Qrcode_ID, Schedule_ID,
@@ -81,6 +96,7 @@ def poll_new_bookings():
         finally:
             cursor.close()
             print("[poll_new_bookings] Job finished")
+
 
 # ======================================================
 # REGISTER POLLING TASK WITH APSCHEDULER
@@ -111,6 +127,7 @@ def _get_station_id_by_name(station_name):
 
 # ======================================================
 # GET BOARDING DETAILS
+# (unchanged logic)
 # ======================================================
 @passengertable_bp.route('/get_boarding_details', methods=['GET'])
 def get_boarding_details():
@@ -193,6 +210,7 @@ def get_boarding_details():
 
 # ======================================================
 # GET DISEMBARKING DETAILS
+# (only today's B & D)
 # ======================================================
 @passengertable_bp.route('/get_disembarking_details', methods=['GET'])
 def get_disembarking_details():
@@ -212,17 +230,18 @@ def get_disembarking_details():
 
     cursor = mysql.connection.cursor()
 
-    # COUNT VALID PASSENGERS
+    # COUNT VALID PASSENGERS:
+    # - For this destination
+    # - departure_date = today only
+    # - status is B (boarded) or D (disembarked)
     cursor.execute("""
         SELECT COUNT(*)
         FROM BoardingDisembarking
         WHERE destination = %s
-          AND (
-                status = 'B'
-                OR (status = 'D' AND departure_date = CURDATE())
-              )
+          AND departure_date = CURDATE()
+          AND status IN ('B', 'D')
     """, (station_id,))
-    
+
     total_records = cursor.fetchone()[0]
     cursor.close()
 
@@ -239,10 +258,8 @@ def get_disembarking_details():
                departure_date, departure_time
         FROM BoardingDisembarking
         WHERE destination = %s
-          AND (
-                status = 'B'
-                OR (status = 'D' AND departure_date = CURDATE())
-              )
+          AND departure_date = CURDATE()
+          AND status IN ('B', 'D')
     """
 
     params = [station_id]
@@ -280,7 +297,6 @@ def get_disembarking_details():
         "totalPages": total_pages,
         "currentPage": page
     })
-
 
 
 # ======================================================
