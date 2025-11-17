@@ -7,14 +7,23 @@
   --chip-bg: #eef3ff;
 }
 
-/* page scaffold (matches your layout) */
-.pmc-main{
-  margin-left: -40px;
-  margin-top: 80px;              /* you had two margin-top declarations; keep the intended one */
-  margin-bottom: 100px;
-  padding: 24px;
+/* === FIXED PAGE LAYOUT (MATCHES REPORTS PAGE) === */
+.pmc-main {
+  position: fixed;
+  top: var(--nav-h);  
+  left: var(--sidebar-w); 
+  right: 0;
+  bottom: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+
+  padding: 0 16px 40px 24px;
   box-sizing: border-box;
-  width: 1600px;
+
+  /* SAME spacing as reports-page */
+  margin-left: 50px;
 }
 
 /* header row: title (left) | account/actions (right) */
@@ -286,3 +295,98 @@ html { scrollbar-gutter: stable; }
   color: #fff;
 }
 .pmc-btnNavy:hover{ filter: brightness(1.05); }
+
+.pmc-filterGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin-top: 8px;
+}
+
+.pmc-filterField span {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pmc-filterField input {
+  width: 100%;
+  height: 38px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #9da9c2;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+
+/* Additional styles for export buttons and toast */
+.rg-export-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.rg-export {
+  padding: 12px 24px;
+  background: #2E5BFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.rg-export:hover {
+  background: #1d4ed8;
+}
+
+.rg-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 9999;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.rg-toast.success {
+  background: #10b981;
+  color: white;
+}
+
+.rg-toast.error {
+  background: #ef4444;
+  color: white;
+}
+
+.rg-toast-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+
+.rg-toast-msg {
+  font-size: 14px;
+  opacity: 0.95;
+}
