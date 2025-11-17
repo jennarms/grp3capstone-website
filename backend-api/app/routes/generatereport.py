@@ -31,7 +31,7 @@ def generate_report():
         return jsonify({"error": f"Invalid date format. Use YYYY-MM-DD. Error: {str(e)}"}), 400
 
     try:
-        # Create the SQL query
+        # Create the SQL query - removed Peak/Off-Peak columns
         query = """
         SELECT 
     st.StationName,
@@ -48,11 +48,6 @@ def generate_report():
     SUM(CASE WHEN u.profession LIKE '%%Student%%' THEN 1 ELSE 0 END) AS StudentCount,
     SUM(CASE WHEN u.profession LIKE '%%Senior%%' THEN 1 ELSE 0 END) AS SeniorCount,
     SUM(CASE WHEN u.profession LIKE '%%PWD%%' THEN 1 ELSE 0 END) AS PWDCount,
-    -- Fixing Peak and Off-Peak times
-    MIN(bd.departure_date) AS PeakDay,
-    MIN(bd.departure_time) AS PeakTime,
-    MAX(bd.departure_date) AS OffPeakDay,
-    MAX(bd.departure_time) AS OffPeakTime,
     SUM(CASE WHEN u.platform_source = 'MA' THEN 1 ELSE 0 END) AS MobileAppCount,
     SUM(CASE WHEN u.platform_source = 'CB' THEN 1 ELSE 0 END) AS ChatbotCount,
     SUM(CASE WHEN u.platform_source = 'EM' THEN 1 ELSE 0 END) AS EmailCount,
@@ -64,14 +59,10 @@ LEFT JOIN
 LEFT JOIN 
     Users u ON bd.User_ID = u.User_ID
 WHERE 
-    (bd.departure_date BETWEEN %s AND %s OR bd.departure_date IS NULL)  -- Include stations with no data
+    (bd.departure_date BETWEEN %s AND %s OR bd.departure_date IS NULL)
    AND (bd.status IN ('D', 'C', 'P') OR bd.status IS NULL)
-
-
-
 GROUP BY 
     st.StationName;
-
         """
 
         # Log the query execution with parameters
@@ -85,7 +76,7 @@ GROUP BY
         # Log the fetched data
         logging.debug("Fetched %d rows from database.", len(result))
 
-        # Format the results into a list of dictionaries
+        # Format the results into a list of dictionaries - removed Peak/Off-Peak fields
         report = []
         for row in result:
             report.append({
@@ -103,14 +94,10 @@ GROUP BY
                 "StudentCount": row[11],
                 "SeniorCount": row[12],
                 "PWDCount": row[13],
-                "PeakDay": row[14].strftime('%Y-%m-%d') if isinstance(row[14], datetime) else str(row[14]),
-                "PeakTime": row[15].strftime('%H:%M:%S') if isinstance(row[15], datetime) else str(row[15]),
-                "OffPeakDay": row[16].strftime('%Y-%m-%d') if isinstance(row[16], datetime) else str(row[16]),
-                "OffPeakTime": row[17].strftime('%H:%M:%S') if isinstance(row[17], datetime) else str(row[17]),
-                "MobileAppCount": row[18],
-                "ChatbotCount": row[19],
-                "EmailCount": row[20],
-                "ManualBookingCount": row[21],
+                "MobileAppCount": row[14],
+                "ChatbotCount": row[15],
+                "EmailCount": row[16],
+                "ManualBookingCount": row[17],
             })
 
         cursor.close()  # Close the cursor after fetching data

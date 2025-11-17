@@ -109,29 +109,26 @@ export function Report() {
       const workbook = new ExcelJS.Workbook();
 
       const sheet1 = workbook.addWorksheet("Stations");
+      // Removed Peak Day, Peak Time, Off Peak Day, Off Peak Time columns
       sheet1.columns = [
-        { header: 'Station Name', key: 'stationName', width: 20 },
-        { header: 'Total Bookings', key: 'totalBookings', width: 15 },
-        { header: 'Canceled Bookings', key: 'canceledBookings', width: 15 },
-        { header: 'Female Count', key: 'femaleCount', width: 15 },
-        { header: 'Male Count', key: 'maleCount', width: 15 },
-        { header: 'Other Gender Count', key: 'otherGenderCount', width: 20 },
-        { header: 'Age 0-18', key: 'age0_18', width: 12 },
-        { header: 'Age 19-25', key: 'age19_25', width: 12 },
-        { header: 'Age 26-40', key: 'age26_40', width: 12 },
-        { header: 'Age 41-60', key: 'age41_60', width: 12 },
-        { header: 'Age 60+', key: 'age60Plus', width: 12 },
-        { header: 'Student Count', key: 'studentCount', width: 15 },
-        { header: 'Senior Count', key: 'seniorCount', width: 15 },
-        { header: 'PWD Count', key: 'pwdCount', width: 12 },
-        { header: 'Peak Day', key: 'peakDay', width: 15 },
-        { header: 'Peak Time', key: 'peakTime', width: 15 },
-        { header: 'Off Peak Day', key: 'offPeakDay', width: 15 },
-        { header: 'Off Peak Time', key: 'offPeakTime', width: 15 },
-        { header: 'Mobile App', key: 'mobileApp', width: 12 },
-        { header: 'Chatbot', key: 'chatbot', width: 12 },
-        { header: 'Gmail', key: 'gmail', width: 12 },
-        { header: 'Manual', key: 'manual', width: 12 }
+        { header: 'Station Name', key: 'StationName', width: 20 },
+        { header: 'Total Bookings', key: 'TotalBookings', width: 15 },
+        { header: 'Canceled Bookings', key: 'CanceledCount', width: 15 },
+        { header: 'Female Count', key: 'FemaleCount', width: 15 },
+        { header: 'Male Count', key: 'MaleCount', width: 15 },
+        { header: 'Other Gender Count', key: 'OtherGenderCount', width: 20 },
+        { header: 'Age 0-18', key: 'Age_0_18', width: 12 },
+        { header: 'Age 19-25', key: 'Age_19_25', width: 12 },
+        { header: 'Age 26-40', key: 'Age_26_40', width: 12 },
+        { header: 'Age 41-60', key: 'Age_41_60', width: 12 },
+        { header: 'Age 60+', key: 'Age_60Plus', width: 12 },
+        { header: 'Student Count', key: 'StudentCount', width: 15 },
+        { header: 'Senior Count', key: 'SeniorCount', width: 15 },
+        { header: 'PWD Count', key: 'PWDCount', width: 12 },
+        { header: 'Mobile App', key: 'MobileAppCount', width: 12 },
+        { header: 'Chatbot', key: 'ChatbotCount', width: 12 },
+        { header: 'Gmail', key: 'EmailCount', width: 12 },
+        { header: 'Manual', key: 'ManualBookingCount', width: 12 }
       ];
       sheet1.addRows(rows);
 
@@ -216,9 +213,9 @@ export function Report() {
           </div>
 
           <div ref={reportRef}>
+            {/* Removed the Generate Report button from here */}
             <div className="rg-table-head">
               <div className="rg-range-label">Report for <b>{fmt(start)}</b> — <b>{fmt(end)}</b></div>
-              <button className="rg-btn rg-btn-generate" type="button" onClick={exportPDF}>Generate Report</button>
             </div>
 
             <div className="rg-table-wrap" role="region" aria-label="Station totals">
@@ -240,10 +237,7 @@ export function Report() {
                     <th>Student Count</th>
                     <th>Senior Count</th>
                     <th>PWD Count</th>
-                    <th>Peak Day</th>
-                    <th>Peak Time</th>
-                    <th>Off Peak Day</th>
-                    <th>Off Peak Time</th>
+                    {/* Removed Peak Day, Peak Time, Off Peak Day, Off Peak Time columns */}
                     <th>Mobile App</th>
                     <th>Chatbot</th>
                     <th>Gmail</th>
@@ -268,10 +262,7 @@ export function Report() {
                       <td>{r.StudentCount}</td>
                       <td>{r.SeniorCount}</td>
                       <td>{r.PWDCount}</td>
-                      <td>{r.PeakDay}</td>
-                      <td>{r.PeakTime}</td>
-                      <td>{r.OffPeakDay}</td>
-                      <td>{r.OffPeakTime}</td>
+                      {/* Removed Peak/Off-Peak data cells */}
                       <td>{r.MobileAppCount}</td>
                       <td>{r.ChatbotCount}</td>
                       <td>{r.EmailCount}</td>
