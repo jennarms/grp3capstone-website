@@ -1,22 +1,71 @@
-from flask import Blueprint, Response, stream_with_context
+from flask import Blueprint, Response, jsonify
+from flask_jwt_extended import jwt_required
+from app import mysql
 import json
-import time
 
 realtime_bp = Blueprint('realtime', __name__)
 
-@realtime_bp.route('/sos:<int:interval>', methods=['GET'])
-def sos_stream(interval):
-    """Server-Sent Events stream for SOS updates"""
-    def generate():
-        while True:
-            # Query for SOS alerts
-            # This is a simple example - adjust based on your needs
-            yield f"data: {json.dumps({'status': 'checking'})}\n\n"
-            time.sleep(interval)
+def dictfetchall(cursor):
+    cols = [col[0] for col in cursor.description]
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+@realtime_bp.route('/sos', methods=['GET'])
+@jwt_required()
+def get_realtime_sos():
+    """
+    GET /api/realtime/sos
+    Returns current open SOS alerts
+    """
+    cursor = mysql.connection.cursor()
     
-    return Response(stream_with_context(generate()), 
-                   mimetype='text/event-stream',
-                   headers={
-                       'Cache-Control': 'no-cache',
-                       'X-Accel-Buffering': 'no'
-                   })
+    try:
+        cursor.execute(
+            """
+            SELECT 
+                s.SOS_ID,
+                s.User_ID,
+                s.Station_ID,
+                s.timestamp,
+                s.status,
+                s.latitude,
+                s.longitude,
+                st.StationName,
+                u.first_name,
+                u.last_name
+            FROM SOS s
+            LEFT JOIN Station st ON st.Station_ID = s.Station_ID
+            LEFT JOIN Users u ON u.User_ID = s.User_ID
+            WHERE s.status = 'PN'
+            ORDER BY s.timestamp DESC
+            LIMIT 50
+            """
+        )
+        
+        rows = dictfetchall(cursor)
+        
+        items = []
+        for row in rows:
+            first = row.get("first_name") or ""
+            last = row.get("last_name") or ""
+            name = f"{first} {last}".strip() or row.get("User_ID") or "Unknown"
+            
+            items.append({
+                "id": row.get("SOS_ID"),
+                "userId": row.get("User_ID"),
+                "userName": name,
+                "stationId": row.get("Station_ID"),
+                "boardingStation": row.get("StationName") or "Unknown",
+                "timestamp": row.get("timestamp").isoformat() if row.get("timestamp") else None,
+                "latitude": float(row.get("latitude")) if row.get("latitude") else None,
+                "longitude": float(row.get("longitude")) if row.get("longitude") else None,
+            })
+        
+        return jsonify({"items": items, "count": len(items)}), 200
+        
+    except Exception as e:
+        print(f"Error in get_realtime_sos: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"message": "Failed to fetch SOS alerts"}), 500
+    finally:
+        cursor.close()

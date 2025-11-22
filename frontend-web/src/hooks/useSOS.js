@@ -16,7 +16,21 @@ export default function useSOS({
   const esRef = useRef(null);
 
   const playChime = () => {
-    try { new Audio("/sounds/alert.mp3").play(); } catch {}
+    try { 
+      new Audio("/sounds/alert.mp3").play(); 
+    } catch (err) {
+      console.warn("[SOS] Failed to play chime:", err);
+    }
+  };
+
+  // Helper to get JWT token
+  const getToken = () => {
+    return (
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("station_token") ||
+      localStorage.getItem("authToken")
+    );
   };
 
   // restore banner after reload within 6s TTL
@@ -34,16 +48,21 @@ export default function useSOS({
       } else {
         sessionStorage.removeItem("sosBanner");
       }
-    } catch {}
+    } catch (err) {
+      console.error("[SOS] Failed to restore banner:", err);
+    }
   }, []);
 
   const showBannerFor = (alert, isTest = false) => {
     if (!alert?.id) return;
+
     if (!lastSeenIdsRef.current.has(alert.id)) {
       lastSeenIdsRef.current.add(alert.id);
     }
+
     setLatest(alert);
     setOpenCount((v) => v + 1);
+
     const text = isTest ? "Received SOS Alert! (Test)" : "Received SOS Alert!";
     setBanner({ id: alert.id, text });
     playChime();
@@ -55,7 +74,9 @@ export default function useSOS({
         "sosBanner",
         JSON.stringify({ id: alert.id, text, payload: alert, until: Date.now() + 6000 })
       );
-    } catch {}
+    } catch (err) {
+      console.warn("[SOS] Failed to persist banner:", err);
+    }
 
     setTimeout(() => setBanner(null), 6000);
   };
@@ -74,23 +95,35 @@ export default function useSOS({
     showBannerFor(fake, true);
   };
 
-  // SSE + polling (safe in frontend-only; fetch may fail silently)
+  // SSE + polling
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
     const refreshOpen = async () => {
       try {
-        const r = await fetch(pollUrl, { credentials: "include" });
+        const token = getToken();
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const r = await fetch(pollUrl, { credentials: "include", headers });
+        if (!r.ok) {
+          console.error(`[SOS] Poll failed: ${r.status} ${r.statusText}`);
+          return;
+        }
+
         const data = await r.json();
         if (cancelled) return;
-        const arr = Array.isArray(data) ? data : [];
+
+        const arr = data.items ? data.items : Array.isArray(data) ? data : [];
         setOpenCount(arr.length);
+
         if (lastSeenIdsRef.current.size === 0) {
           arr.forEach((a) => a?.id && lastSeenIdsRef.current.add(a.id));
         }
-      } catch {
-        // fine in pure-frontend
+
+        console.log(`[SOS] Poll success: ${arr.length} open alerts`);
+      } catch (err) {
+        console.error("[SOS] Poll error:", err);
       }
     };
 
@@ -100,7 +133,8 @@ export default function useSOS({
       const es = new EventSource(sseUrl, { withCredentials: true });
       esRef.current = es;
 
-      es.addEventListener("error", () => {
+      es.addEventListener("error", (err) => {
+        console.log("[SOS] SSE error, falling back to polling");
         es.close();
         pollTimer.current = setInterval(refreshOpen, pollMs);
       });
@@ -108,10 +142,10 @@ export default function useSOS({
       es.addEventListener("sos.created", (ev) => {
         try {
           const alert = JSON.parse(ev.data);
-          if (!lastSeenIdsRef.current.has(alert.id)) {
-            showBannerFor(alert);
-          }
-        } catch {}
+          if (!lastSeenIdsRef.current.has(alert.id)) showBannerFor(alert);
+        } catch (err) {
+          console.warn("[SOS] Failed to parse SSE sos.created:", err);
+        }
       });
 
       es.addEventListener("sos.resolved", (ev) => {
@@ -120,9 +154,12 @@ export default function useSOS({
           if (alert?.id && lastSeenIdsRef.current.has(alert.id)) {
             setOpenCount((v) => Math.max(0, v - 1));
           }
-        } catch {}
+        } catch (err) {
+          console.warn("[SOS] Failed to parse SSE sos.resolved:", err);
+        }
       });
-    } catch {
+    } catch (err) {
+      console.log("[SOS] SSE not available, using polling only", err);
       pollTimer.current = setInterval(refreshOpen, pollMs);
     }
 
