@@ -22,6 +22,7 @@ def _get_station_info(station_id):
     finally:
         cur.close()
 
+
 def _normalize_direction(dir_code: str) -> str:
     """
     Map DB codes to 'forward' | 'reverse' for the API.
@@ -36,6 +37,7 @@ def _normalize_direction(dir_code: str) -> str:
         return "reverse"
     return "forward"
 
+
 def _get_vehicle_capacity(route_id):
     """Fetch vehicle capacity from the Vehicle table based on the route."""
     cur = mysql.connection.cursor()
@@ -47,18 +49,21 @@ def _get_vehicle_capacity(route_id):
             WHERE r.Route_ID = %s
         """, (route_id,))
         row = cur.fetchone()
-        return row[0] if row else None  # Fetch the capacity from the Vehicle table
+        return row[0] if row else None
     finally:
         cur.close()
 
-def _count_seats_taken(service_date, origin, departure_time):
+
+def _count_seats_taken(service_date, station_id, departure_time):
     """
-    Count seats taken for a given date, origin, and departure time
-    considering passengers with status 'P' (Pending) or 'B' (Boarded).
+    Count seats taken for a given date, station, and departure time.
+
+    We match Booking.origin (which stores station IDs like ST0009)
+    against the given station_id, and count BoardingDisembarking
+    rows with status 'P' (Pending) or 'B' (Boarded).
     """
     cur = mysql.connection.cursor()
     try:
-        # Query to count seats with status 'P' (Pending) or 'B' (Boarded) in BoardingDisembarking
         cur.execute("""
             SELECT COUNT(*) AS booked_seats
             FROM Booking b
@@ -67,40 +72,49 @@ def _count_seats_taken(service_date, origin, departure_time):
               AND b.origin = %s
               AND b.departure_time = %s
               AND bd.status IN ('P', 'B')
-        """, (service_date, origin, departure_time))  # Pass the date, origin, and time
+        """, (service_date, station_id, departure_time))
         row = cur.fetchone()
-        return int(row[0]) if row else 0  # Return the count of booked seats
+        return int(row[0]) if row and row[0] is not None else 0
     finally:
         cur.close()
 
+
+# -------------------------------------------------------------------
+# endpoints
+# -------------------------------------------------------------------
 
 @boarding_routecard_bp.route('/count-seats-taken', methods=['GET'])
 @boarding_routecard_bp.route('/boarding/count-seats-taken', methods=['GET'])
 @jwt_required()
 def count_seats_taken():
     """
-    Endpoint to count the number of seats taken for a given service date, origin, and departure time.
-    GET /api/count-seats-taken?date=<YYYY-MM-DD>&origin=<origin>&departure_time=<HH:MM>
+    Endpoint to count the number of seats taken for a given service date,
+    station, and departure time.
+
+    GET /api/boarding/count-seats-taken?date=YYYY-MM-DD&origin=ST0009&departure_time=HH:MM:SS
+    or use station_id instead of origin; if missing, falls back to JWT identity.
     """
     try:
-        # Fetch query parameters from request
         service_date = request.args.get('date')
-        origin = request.args.get('origin')  # Origin station name
+        station_id = (
+            request.args.get('origin')
+            or request.args.get('station_id')
+            or get_jwt_identity()
+        )
         departure_time = request.args.get('departure_time')
 
-        # Call the helper function to count seats taken
-        seats_taken = _count_seats_taken(service_date, origin, departure_time)
+        if not service_date or not station_id or not departure_time:
+            return jsonify({"error": "Missing date, station_id/origin, or departure_time"}), 400
 
-        print(f"Calculated seats_taken: {seats_taken}")  # Debugging log
-        
-        # Return the result
+        seats_taken = _count_seats_taken(service_date, station_id, departure_time)
+        print(f"Calculated seats_taken: {seats_taken} for {service_date} {station_id} {departure_time}")
+
         return jsonify({"seats_taken": seats_taken}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-# -------------------------------------------------------------------
-# route
-# -------------------------------------------------------------------
+
+
 @boarding_routecard_bp.route('/boarding/routecard/<schedule_id>', methods=['GET'])
 @jwt_required()
 def get_routecard(schedule_id):
@@ -120,7 +134,7 @@ def get_routecard(schedule_id):
 
         cur = mysql.connection.cursor()
         try:
-            # 1) Fetch schedule header for THIS station (access control)
+            # 1) Schedule header for THIS station
             cur.execute("""
                 SELECT 
                     s.Schedule_ID,
@@ -151,10 +165,10 @@ def get_routecard(schedule_id):
              route_id, route_name, dir_code, current_station_name,
              stop_order, capacity, vehicle_type) = head
 
-            # 2) Compute seat info (time-based) - Get seats taken for this schedule
-            seats_taken = _count_seats_taken(service_date, current_station_name, departure_time)
+            # 2) Compute seat info (date + station_id + time)
+            seats_taken = _count_seats_taken(service_date, station_id, departure_time)
 
-            # 3) Fetch full route stops (ordered) WITH per-stop time for THIS ride
+            # 3) Full route stops
             cur.execute("""
                 SELECT
                     rs.Station_ID,
@@ -180,7 +194,7 @@ def get_routecard(schedule_id):
                 })
 
             payload = {
-                "station_name": station_name,   # station from JWT
+                "station_name": station_name,
                 "date": service_date,
                 "schedule_info": {
                     "schedule_id": str(sch_id),
@@ -194,7 +208,7 @@ def get_routecard(schedule_id):
                     "stop_order": int(stop_order or 0),
                     "vehicle_type": vehicle_type,
                     "total_seats": capacity,
-                    "seats_taken": seats_taken  # Correct value for seats taken
+                    "seats_taken": seats_taken,
                 },
                 "stops": stops
             }
@@ -206,6 +220,7 @@ def get_routecard(schedule_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @boarding_routecard_bp.route('/boarding/routecard/station', methods=['GET'])
 @jwt_required()
 def get_station_name():
@@ -213,18 +228,13 @@ def get_station_name():
     Fetch only the station name for the logged-in user.
     """
     try:
-        # Get the station_id from the JWT identity
         station_id = get_jwt_identity()
-
-        # Fetch the station information using the helper function
         st_info = _get_station_info(station_id)
         if not st_info:
             return jsonify({"error": "Station not found"}), 404
 
-        # Extract the station_name from the fetched data
         station_id, company_id, station_name = st_info
 
-        # Return the station name
         return jsonify({
             "station_name": station_name
         }), 200

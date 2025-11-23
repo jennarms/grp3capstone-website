@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import './navBar.css';
 import BroadcastBadge from '../broadcast/BroadcastBadge';
+import './navBar.css';
 
 export function Navbar() {
   const [adminName, setAdminName] = useState('Main Admin');
@@ -36,9 +36,7 @@ export function Navbar() {
         <Link to="/operations/vehicle" className="navbar-sidebar-link">
           Operations Management
         </Link>
-        <Link to="/passenger" className="navbar-sidebar-link">
-          Passenger Management
-        </Link>
+        
         <Link to="/feedback" className="navbar-sidebar-link">
           Feedback
         </Link>
@@ -48,9 +46,16 @@ export function Navbar() {
         <Link to="/UICustomization" className="navbar-sidebar-link">
           UI Customization
         </Link>
-        <Link to="/reports" className="navbar-sidebar-link">
-          Report Generation
+        <Link to="/passenger" className="navbar-sidebar-link">
+          Passenger Report
         </Link>
+        <Link to="/peak-report" className="navbar-sidebar-link">
+        Peak & Off-Peak Report
+        </Link>
+        <Link to="/reports" className="navbar-sidebar-link">
+          Comprehensive Report
+        </Link>
+
       </nav>
     </aside>
   );

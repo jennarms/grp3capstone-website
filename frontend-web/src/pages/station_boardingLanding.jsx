@@ -6,19 +6,34 @@ import "./station_boardingLanding.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
+// ⭐ NEW: local date helper (fixes UTC bug)
+function getLocalDateISO() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function BoardingLandingPage() {
   const navigate = useNavigate();
 
   const [forwardSchedules, setForwardSchedules] = useState([]);
   const [reverseSchedules, setReverseSchedules] = useState([]);
   const [stationName, setStationName] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+
+  // ⭐ FIXED: use local date, not UTC ISO
+  const [selectedDate, setSelectedDate] = useState(getLocalDateISO());
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Row refs for auto-scroll + highlight
   const forwardRowRefs = useRef([]);
   const reverseRowRefs = useRef([]);
+
+  useEffect(() => {
+    console.log("[BLP] Mounted. apiUrl =", apiUrl);
+  }, []);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -28,17 +43,35 @@ export function BoardingLandingPage() {
     };
   };
 
+  const normalizeSchedules = (list, label) => {
+    const norm = Array.isArray(list)
+      ? list.map((s) => ({
+          ...s,
+          available_seats: Number(s.available_seats ?? 0),
+          total_seats: Number(s.total_seats ?? 0),
+          booked_seats: Number(s.booked_seats ?? 0),
+        }))
+      : [];
+
+    console.log(`[BLP] Normalized ${label} schedules:`, norm);
+    return norm;
+  };
+
   const fetchBoardingSchedules = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
-        `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(selectedDate)}`,
-        { headers: getAuthHeaders() }
-      );
+      console.log("[BLP] Fetching schedules for date:", selectedDate);
+      const url = `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(
+        selectedDate
+      )}`;
+      console.log("[BLP] Request URL:", url);
+
+      const res = await fetch(url, { headers: getAuthHeaders() });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        console.error("[BLP] Error response body:", body);
         const msg = body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
         setError(msg);
         setForwardSchedules([]);
@@ -46,11 +79,17 @@ export function BoardingLandingPage() {
         return;
       }
 
-      const data = await res.json();
-      setStationName(data.station_name || "Unknown Station");
-      setForwardSchedules(Array.isArray(data.forward_schedules) ? data.forward_schedules : []);
-      setReverseSchedules(Array.isArray(data.reverse_schedules) ? data.reverse_schedules : []);
+      const raw = await res.json();
+      console.log("[BLP] RAW API data:", raw);
+
+      const fNorm = normalizeSchedules(raw.forward_schedules, "forward");
+      const rNorm = normalizeSchedules(raw.reverse_schedules, "reverse");
+
+      setStationName(raw.station_name || "Unknown Station");
+      setForwardSchedules(fNorm);
+      setReverseSchedules(rNorm);
     } catch (e) {
+      console.error("[BLP] Network or parsing error:", e);
       setError(`Network error: ${e.message}`);
       setForwardSchedules([]);
       setReverseSchedules([]);
@@ -80,23 +119,25 @@ export function BoardingLandingPage() {
     const h = parseInt(hStr, 10) || 0;
     const m = (mStr ?? "00").padStart(2, "0");
     const ampm = h >= 12 ? "PM" : "AM";
-    const h12 = (h % 12) || 12;
+    const h12 = h % 12 || 12;
     return `${h12}:${m} ${ampm}`;
   };
 
-  // Stable finder for the next upcoming index for a given list
   const nextIndexFor = useCallback(
     (schedules) => {
       if (!Array.isArray(schedules) || schedules.length === 0) return -1;
 
       const today = new Date();
       const selectedMidnight = new Date(selectedDate + "T00:00:00");
-      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayMidnight = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
 
-      if (selectedMidnight > todayMidnight) return 0;   // future date -> first row
-      if (selectedMidnight < todayMidnight) return -1;  // past date -> none
+      if (selectedMidnight > todayMidnight) return 0;
+      if (selectedMidnight < todayMidnight) return -1;
 
-      // selected date === today: find first time >= now
       const now = Date.now();
       for (let i = 0; i < schedules.length; i++) {
         const dep = parseDateTime(selectedDate, schedules[i]?.departure_time);
@@ -107,7 +148,6 @@ export function BoardingLandingPage() {
     [selectedDate]
   );
 
-  // Memoized indices for the "next" rows (deps satisfied)
   const nextForwardIndex = useMemo(
     () => nextIndexFor(forwardSchedules),
     [forwardSchedules, nextIndexFor]
@@ -117,31 +157,29 @@ export function BoardingLandingPage() {
     [reverseSchedules, nextIndexFor]
   );
 
-  // ---------- Auto-scroll after data renders for both forward and reverse schedules ----------
-  // Scroll forward table
   useEffect(() => {
     const t = setTimeout(() => {
       const elF = nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
-      if (elF && typeof elF.scrollIntoView === "function") {
-        elF.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      if (elF?.scrollIntoView) elF.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
     return () => clearTimeout(t);
   }, [nextForwardIndex, forwardSchedules]);
 
-  // Scroll reverse table
   useEffect(() => {
     const t = setTimeout(() => {
       const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
-      if (elR && typeof elR.scrollIntoView === "function") {
-        elR.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      if (elR?.scrollIntoView) elR.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
     return () => clearTimeout(t);
   }, [nextReverseIndex, reverseSchedules]);
 
-  // ---------- navigation ----------
-  const goToBoarding = ({ scheduleId, departureTimeHHMMSS, availableSeats, totalSeats, direction }) => {
+  const goToBoarding = ({
+    scheduleId,
+    departureTimeHHMMSS,
+    availableSeats,
+    totalSeats,
+    direction,
+  }) => {
     const formattedTime = formatTime(departureTimeHHMMSS);
     const availNum = Number(availableSeats || 0);
     const totalNum = Number(totalSeats || 0);
@@ -160,20 +198,14 @@ export function BoardingLandingPage() {
     const path = `/station-boarding/${encodeURIComponent(String(scheduleId))}`;
     const search = `?${params.toString()}`;
 
-    if (window.location.hash) {
+    if (window.location.hash)
       window.location.hash = "#" + (path + search).replace(/^\//, "");
-    } else {
+    else
       navigate({ pathname: path, search });
-    }
   };
 
-  // helpers to set row refs in map
-  const setForwardRef = (el, idx) => {
-    forwardRowRefs.current[idx] = el;
-  };
-  const setReverseRef = (el, idx) => {
-    reverseRowRefs.current[idx] = el;
-  };
+  const setForwardRef = (el, idx) => (forwardRowRefs.current[idx] = el);
+  const setReverseRef = (el, idx) => (reverseRowRefs.current[idx] = el);
 
   const rowClass = (isNext) => "blp-row" + (isNext ? " blp-row-highlight" : "");
 
@@ -245,7 +277,7 @@ export function BoardingLandingPage() {
                   </tr>
                   <tr className="blp-cols-row">
                     <th>Time</th>
-                    <th>Available Seats</th>
+                    <th>Seats</th>
                     <th className="blp-action-col">Action</th>
                   </tr>
                 </thead>
@@ -266,7 +298,10 @@ export function BoardingLandingPage() {
                           className={rowClass(isNext)}
                         >
                           <td>{formatTime(s.departure_time)}</td>
-                          <td>{s.available_seats} / {s.total_seats}</td>
+                          <td>
+                            Available: {s.available_seats} / {s.total_seats} (
+                            <strong>Booked: {s.booked_seats}</strong>)
+                          </td>
                           <td className="blp-action-cell">
                             <button
                               className="blp-view-btn"
@@ -306,7 +341,7 @@ export function BoardingLandingPage() {
                   </tr>
                   <tr className="blp-cols-row">
                     <th>Time</th>
-                    <th>Available Seats</th>
+                    <th>Seats</th>
                     <th className="blp-action-col">Action</th>
                   </tr>
                 </thead>
@@ -327,7 +362,10 @@ export function BoardingLandingPage() {
                           className={rowClass(isNext)}
                         >
                           <td>{formatTime(s.departure_time)}</td>
-                          <td>{s.available_seats} / {s.total_seats}</td>
+                          <td>
+                            Available: {s.available_seats} / {s.total_seats} (
+                            <strong>Booked: {s.booked_seats}</strong>)
+                          </td>
                           <td className="blp-action-cell">
                             <button
                               className="blp-view-btn"

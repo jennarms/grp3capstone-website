@@ -26,7 +26,7 @@ export function DisembarkingLandingPage() {
   const navigate = useNavigate();
 
   // ⬇️ SOS: banner + open count (badge). `latest` available if you want to react to each new alert.
-  const { banner, setBanner, openCount, latest } = useSOS({
+  const { banner, setBanner, openCount } = useSOS({
     sseUrl: "/api/realtime/sos",
     pollUrl: "/api/sos?status=OPEN",
   });
