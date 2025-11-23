@@ -1,9 +1,7 @@
-// src/hooks/useSOS.js
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function useSOS({
   enabled = true,
-  sseUrl = "/api/realtime/sos",
   pollUrl = "/api/sos?status=OPEN",
   pollMs = 10000,
 } = {}) {
@@ -13,17 +11,15 @@ export default function useSOS({
 
   const lastSeenIdsRef = useRef(new Set());
   const pollTimer = useRef(null);
-  const esRef = useRef(null);
 
   const playChime = () => {
-    try { 
-      new Audio("/sounds/alert.mp3").play(); 
-    } catch (err) {
-      console.warn("[SOS] Failed to play chime:", err);
+    try {
+      new Audio("/sounds/alert.mp3").play();
+    } catch (_err) {
+      console.warn("[SOS] Failed to play chime:", _err);
     }
   };
 
-  // Helper to get JWT token
   const getToken = () => {
     return (
       localStorage.getItem("access_token") ||
@@ -48,12 +44,13 @@ export default function useSOS({
       } else {
         sessionStorage.removeItem("sosBanner");
       }
-    } catch (err) {
-      console.error("[SOS] Failed to restore banner:", err);
+    } catch (_err) {
+      console.error("[SOS] Failed to restore banner:", _err);
     }
   }, []);
 
-  const showBannerFor = (alert, isTest = false) => {
+  // showBannerFor wrapped in useCallback
+  const showBannerFor = useCallback((alert, isTest = false) => {
     if (!alert?.id) return;
 
     if (!lastSeenIdsRef.current.has(alert.id)) {
@@ -68,20 +65,23 @@ export default function useSOS({
     playChime();
     console.log("[SOS] banner set:", { alert, text });
 
-    // persist ~6s
     try {
       sessionStorage.setItem(
         "sosBanner",
-        JSON.stringify({ id: alert.id, text, payload: alert, until: Date.now() + 6000 })
+        JSON.stringify({
+          id: alert.id,
+          text,
+          payload: alert,
+          until: Date.now() + 6000,
+        })
       );
-    } catch (err) {
-      console.warn("[SOS] Failed to persist banner:", err);
+    } catch (_err) {
+      console.warn("[SOS] Failed to persist banner:", _err);
     }
 
     setTimeout(() => setBanner(null), 6000);
-  };
+  }, []);
 
-  // public: fire a fake alert (frontend only)
   const triggerTest = (partial = {}) => {
     if (!enabled) return;
     const fake = {
@@ -95,9 +95,10 @@ export default function useSOS({
     showBannerFor(fake, true);
   };
 
-  // SSE + polling
+  // POLLING ONLY (no EventSource)
   useEffect(() => {
     if (!enabled) return;
+
     let cancelled = false;
 
     const refreshOpen = async () => {
@@ -115,60 +116,41 @@ export default function useSOS({
         if (cancelled) return;
 
         const arr = data.items ? data.items : Array.isArray(data) ? data : [];
-        setOpenCount(arr.length);
 
+        // First run: just mark everything as seen, no banner spam
         if (lastSeenIdsRef.current.size === 0) {
           arr.forEach((a) => a?.id && lastSeenIdsRef.current.add(a.id));
+        } else {
+          // Subsequent runs: find new alerts (new IDs not seen before)
+          arr.forEach((a) => {
+            if (a?.id && !lastSeenIdsRef.current.has(a.id)) {
+              lastSeenIdsRef.current.add(a.id);
+              showBannerFor(a);
+            }
+          });
         }
 
+        // Open count = current number of items
+        setOpenCount(arr.length);
+
         console.log(`[SOS] Poll success: ${arr.length} open alerts`);
-      } catch (err) {
-        console.error("[SOS] Poll error:", err);
+      } catch (_err) {
+        console.error("[SOS] Poll error:", _err);
       }
     };
 
+    // Initial fetch
     refreshOpen();
 
-    try {
-      const es = new EventSource(sseUrl, { withCredentials: true });
-      esRef.current = es;
-
-      es.addEventListener("error", (err) => {
-        console.log("[SOS] SSE error, falling back to polling");
-        es.close();
-        pollTimer.current = setInterval(refreshOpen, pollMs);
-      });
-
-      es.addEventListener("sos.created", (ev) => {
-        try {
-          const alert = JSON.parse(ev.data);
-          if (!lastSeenIdsRef.current.has(alert.id)) showBannerFor(alert);
-        } catch (err) {
-          console.warn("[SOS] Failed to parse SSE sos.created:", err);
-        }
-      });
-
-      es.addEventListener("sos.resolved", (ev) => {
-        try {
-          const alert = JSON.parse(ev.data);
-          if (alert?.id && lastSeenIdsRef.current.has(alert.id)) {
-            setOpenCount((v) => Math.max(0, v - 1));
-          }
-        } catch (err) {
-          console.warn("[SOS] Failed to parse SSE sos.resolved:", err);
-        }
-      });
-    } catch (err) {
-      console.log("[SOS] SSE not available, using polling only", err);
-      pollTimer.current = setInterval(refreshOpen, pollMs);
-    }
+    // Start polling
+    pollTimer.current = setInterval(refreshOpen, pollMs);
 
     return () => {
       cancelled = true;
-      if (esRef.current) esRef.current.close();
-      if (pollTimer.current) clearInterval(pollTimer.current);
+      if (pollTimer.current) {
+        clearInterval(pollTimer.current);
+      }
     };
-  }, [enabled, sseUrl, pollUrl, pollMs]);
-
+  }, [enabled, pollUrl, pollMs, showBannerFor]);
   return { banner, setBanner, openCount, latest, triggerTest };
 }

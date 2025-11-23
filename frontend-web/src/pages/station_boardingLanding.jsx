@@ -12,13 +12,20 @@ export function BoardingLandingPage() {
   const [forwardSchedules, setForwardSchedules] = useState([]);
   const [reverseSchedules, setReverseSchedules] = useState([]);
   const [stationName, setStationName] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Row refs for auto-scroll + highlight
   const forwardRowRefs = useRef([]);
   const reverseRowRefs = useRef([]);
+
+  // Log once so we know which API base URL this component uses
+  useEffect(() => {
+    console.log("[BLP] Mounted. apiUrl =", apiUrl);
+  }, []);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -28,17 +35,35 @@ export function BoardingLandingPage() {
     };
   };
 
+  const normalizeSchedules = (list, label) => {
+    const norm = Array.isArray(list)
+      ? list.map((s) => ({
+          ...s,
+          available_seats: Number(s.available_seats ?? 0),
+          total_seats: Number(s.total_seats ?? 0),
+          booked_seats: Number(s.booked_seats ?? 0),
+        }))
+      : [];
+
+    console.log(`[BLP] Normalized ${label} schedules:`, norm);
+    return norm;
+  };
+
   const fetchBoardingSchedules = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
-        `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(selectedDate)}`,
-        { headers: getAuthHeaders() }
-      );
+      console.log("[BLP] Fetching schedules for date:", selectedDate);
+      const url = `${apiUrl}/api/landingboarding/boarding-schedules?date=${encodeURIComponent(
+        selectedDate
+      )}`;
+      console.log("[BLP] Request URL:", url);
+
+      const res = await fetch(url, { headers: getAuthHeaders() });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        console.error("[BLP] Error response body:", body);
         const msg = body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
         setError(msg);
         setForwardSchedules([]);
@@ -46,11 +71,17 @@ export function BoardingLandingPage() {
         return;
       }
 
-      const data = await res.json();
-      setStationName(data.station_name || "Unknown Station");
-      setForwardSchedules(Array.isArray(data.forward_schedules) ? data.forward_schedules : []);
-      setReverseSchedules(Array.isArray(data.reverse_schedules) ? data.reverse_schedules : []);
+      const raw = await res.json();
+      console.log("[BLP] RAW API data:", raw);
+
+      const fNorm = normalizeSchedules(raw.forward_schedules, "forward");
+      const rNorm = normalizeSchedules(raw.reverse_schedules, "reverse");
+
+      setStationName(raw.station_name || "Unknown Station");
+      setForwardSchedules(fNorm);
+      setReverseSchedules(rNorm);
     } catch (e) {
+      console.error("[BLP] Network or parsing error:", e);
       setError(`Network error: ${e.message}`);
       setForwardSchedules([]);
       setReverseSchedules([]);
@@ -80,7 +111,7 @@ export function BoardingLandingPage() {
     const h = parseInt(hStr, 10) || 0;
     const m = (mStr ?? "00").padStart(2, "0");
     const ampm = h >= 12 ? "PM" : "AM";
-    const h12 = (h % 12) || 12;
+    const h12 = h % 12 || 12;
     return `${h12}:${m} ${ampm}`;
   };
 
@@ -91,10 +122,14 @@ export function BoardingLandingPage() {
 
       const today = new Date();
       const selectedMidnight = new Date(selectedDate + "T00:00:00");
-      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayMidnight = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
 
-      if (selectedMidnight > todayMidnight) return 0;   // future date -> first row
-      if (selectedMidnight < todayMidnight) return -1;  // past date -> none
+      if (selectedMidnight > todayMidnight) return 0; // future date -> first row
+      if (selectedMidnight < todayMidnight) return -1; // past date -> none
 
       // selected date === today: find first time >= now
       const now = Date.now();
@@ -117,11 +152,11 @@ export function BoardingLandingPage() {
     [reverseSchedules, nextIndexFor]
   );
 
-  // ---------- Auto-scroll after data renders for both forward and reverse schedules ----------
-  // Scroll forward table
+  // ---------- Auto-scroll ----------
   useEffect(() => {
     const t = setTimeout(() => {
-      const elF = nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
+      const elF =
+        nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
       if (elF && typeof elF.scrollIntoView === "function") {
         elF.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -129,10 +164,10 @@ export function BoardingLandingPage() {
     return () => clearTimeout(t);
   }, [nextForwardIndex, forwardSchedules]);
 
-  // Scroll reverse table
   useEffect(() => {
     const t = setTimeout(() => {
-      const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
+      const elR =
+        nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
       if (elR && typeof elR.scrollIntoView === "function") {
         elR.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -141,11 +176,26 @@ export function BoardingLandingPage() {
   }, [nextReverseIndex, reverseSchedules]);
 
   // ---------- navigation ----------
-  const goToBoarding = ({ scheduleId, departureTimeHHMMSS, availableSeats, totalSeats, direction }) => {
+  const goToBoarding = ({
+    scheduleId,
+    departureTimeHHMMSS,
+    availableSeats,
+    totalSeats,
+    direction,
+  }) => {
     const formattedTime = formatTime(departureTimeHHMMSS);
     const availNum = Number(availableSeats || 0);
     const totalNum = Number(totalSeats || 0);
     const booked = Math.max(0, totalNum - availNum);
+
+    console.log("[BLP] goToBoarding clicked:", {
+      scheduleId,
+      departureTimeHHMMSS,
+      availableSeats,
+      totalSeats,
+      booked,
+      direction,
+    });
 
     const params = new URLSearchParams({
       date: selectedDate,
@@ -240,19 +290,23 @@ export function BoardingLandingPage() {
                 <thead>
                   <tr className="blp-caption-row">
                     <th className="blp-caption-th" colSpan={3}>
-                      {stationName} - FORWARD DIRECTION ({forwardSchedules.length} schedules)
+                      {stationName} - FORWARD DIRECTION (
+                      {forwardSchedules.length} schedules)
                     </th>
                   </tr>
                   <tr className="blp-cols-row">
                     <th>Time</th>
-                    <th>Available Seats</th>
+                    <th>Seats</th>
                     <th className="blp-action-col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {forwardSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={3} style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
+                      <td
+                        colSpan={3}
+                        style={{ textAlign: "center", padding: "1rem", color: "#666" }}
+                      >
                         {loading ? "Loading..." : "No forward schedules available"}
                       </td>
                     </tr>
@@ -266,7 +320,10 @@ export function BoardingLandingPage() {
                           className={rowClass(isNext)}
                         >
                           <td>{formatTime(s.departure_time)}</td>
-                          <td>{s.available_seats} / {s.total_seats}</td>
+                          <td>
+                            Available: {s.available_seats} / {s.total_seats}{" "}
+                            (<strong>Booked: {s.booked_seats}</strong>)
+                          </td>
                           <td className="blp-action-cell">
                             <button
                               className="blp-view-btn"
@@ -301,19 +358,23 @@ export function BoardingLandingPage() {
                 <thead>
                   <tr className="blp-caption-row">
                     <th className="blp-caption-th" colSpan={3}>
-                      {stationName} - REVERSE DIRECTION ({reverseSchedules.length} schedules)
+                      {stationName} - REVERSE DIRECTION (
+                      {reverseSchedules.length} schedules)
                     </th>
                   </tr>
                   <tr className="blp-cols-row">
                     <th>Time</th>
-                    <th>Available Seats</th>
+                    <th>Seats</th>
                     <th className="blp-action-col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reverseSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={3} style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
+                      <td
+                        colSpan={3}
+                        style={{ textAlign: "center", padding: "1rem", color: "#666" }}
+                      >
                         {loading ? "Loading..." : "No reverse schedules available"}
                       </td>
                     </tr>
@@ -327,7 +388,10 @@ export function BoardingLandingPage() {
                           className={rowClass(isNext)}
                         >
                           <td>{formatTime(s.departure_time)}</td>
-                          <td>{s.available_seats} / {s.total_seats}</td>
+                          <td>
+                            Available: {s.available_seats} / {s.total_seats}{" "}
+                            (<strong>Booked: {s.booked_seats}</strong>)
+                          </td>
                           <td className="blp-action-cell">
                             <button
                               className="blp-view-btn"

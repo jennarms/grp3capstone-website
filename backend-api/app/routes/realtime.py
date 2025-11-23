@@ -10,14 +10,18 @@ def dictfetchall(cursor):
     return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 @realtime_bp.route('/sos', methods=['GET'])
-@jwt_required()
+@jwt_required(locations=["headers", "query_string"])
 def get_realtime_sos():
     """
     GET /api/realtime/sos
     Returns current open SOS alerts
+
+    JWT is accepted from:
+      - Authorization header:  Bearer <token>
+      - Query string:          ?jwt=<token>
     """
     cursor = mysql.connection.cursor()
-    
+
     try:
         cursor.execute(
             """
@@ -40,15 +44,15 @@ def get_realtime_sos():
             LIMIT 50
             """
         )
-        
+
         rows = dictfetchall(cursor)
-        
+
         items = []
         for row in rows:
             first = row.get("first_name") or ""
             last = row.get("last_name") or ""
             name = f"{first} {last}".strip() or row.get("User_ID") or "Unknown"
-            
+
             items.append({
                 "id": row.get("SOS_ID"),
                 "userId": row.get("User_ID"),
@@ -59,9 +63,9 @@ def get_realtime_sos():
                 "latitude": float(row.get("latitude")) if row.get("latitude") else None,
                 "longitude": float(row.get("longitude")) if row.get("longitude") else None,
             })
-        
+
         return jsonify({"items": items, "count": len(items)}), 200
-        
+
     except Exception as e:
         print(f"Error in get_realtime_sos: {e}")
         import traceback
