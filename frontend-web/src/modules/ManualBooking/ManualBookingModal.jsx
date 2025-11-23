@@ -1,22 +1,20 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import BookingInfo from "./BookingInfo.jsx"; // Importing BookingInfo
+import BookingInfo from "./BookingInfo.jsx";
 import PassengerInfo from "./PassengerInfo.jsx";
 import Payment from "./Payment.jsx";
 import QrCode from "./QrCode.jsx";
 
-// API URL from environment variable
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// Function to convert 12-hour time to 24-hour time format
 const convertTo24HourFormat = (time12hr) => {
-  const [time, modifier] = time12hr.split(' ');
-  let [hours, minutes] = time.split(':');
-  if (modifier === 'PM' && hours !== '12') {
+  const [time, modifier] = time12hr.split(" ");
+  let [hours, minutes] = time.split(":");
+  if (modifier === "PM" && hours !== "12") {
     hours = (parseInt(hours) + 12).toString();
   }
-  if (modifier === 'AM' && hours === '12') {
-    hours = '00';
+  if (modifier === "AM" && hours === "12") {
+    hours = "00";
   }
   return `${hours}:${minutes}`;
 };
@@ -24,39 +22,92 @@ const convertTo24HourFormat = (time12hr) => {
 export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
   const [step, setStep] = useState(1);
   const [manualData, setManualData] = useState({
-    bookingID: "", userID: "", qrCodeID: "",
-    origin: "", destination: "", departureDate: "", departureTime: "",
-    paymentStatus: "NP", paidAmount: "", paidAt: "",
-    bookingStatus: "PE", bookingSource: "MB",
+    bookingID: "",
+    userID: "",
+    qrCodeID: "",
+    origin: "",
+    destination: "",
+    departureDate: "",
+    departureTime: "",
+    paymentStatus: "NP",
+    paidAmount: "",
+    paidAt: "",
+    bookingStatus: "PE",
+    bookingSource: "MB",
   });
   const [passengerInfo, setPassengerInfo] = useState({
-    firstName: "", lastName: "", address: "",
-    profession: "", contactNumber: "", age: "",
-    gender: "", email: "", platformSource: "MB",
+    firstName: "",
+    lastName: "",
+    address: "",
+    profession: "",
+    contactNumber: "",
+    age: "",
+    gender: "",
+    email: "",
+    platformSource: "MB",
   });
   const [errors, setErrors] = useState({});
-  const [stations, setStations] = useState([]);  // Stations state
-  const [schedules, setSchedules] = useState([]);  // Schedules state
+  const [stations, setStations] = useState([]);
+  const [schedules, setSchedules] = useState([]);
 
-  // Fetch stations data
+  // 🔁 Reset wizard state (so "restart submit" works)
+  const resetState = () => {
+    setStep(1);
+    setManualData({
+      bookingID: "",
+      userID: "",
+      qrCodeID: "",
+      origin: "",
+      destination: "",
+      departureDate: "",
+      departureTime: "",
+      paymentStatus: "NP",
+      paidAmount: "",
+      paidAt: "",
+      bookingStatus: "PE",
+      bookingSource: "MB",
+    });
+    setPassengerInfo({
+      firstName: "",
+      lastName: "",
+      address: "",
+      profession: "",
+      contactNumber: "",
+      age: "",
+      gender: "",
+      email: "",
+      platformSource: "MB",
+    });
+    setErrors({});
+  };
+
+  // Unified close handler: reset + call parent onClose
+  const handleClose = () => {
+    resetState();
+    if (typeof onClose === "function") {
+      onClose();
+    }
+  };
+
   useEffect(() => {
-    axios.get(`${apiUrl}/api/boarding/manual/get_stations`)
-      .then(response => {
-        setStations(response.data.stations);  // Set stations data
+    axios
+      .get(`${apiUrl}/api/boarding/manual/get_stations`)
+      .then((response) => {
+        setStations(response.data.stations);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("Error fetching stations:", error);
       });
 
-    // Fetch departure schedules when origin or destination changes
     if (manualData.origin && manualData.destination) {
-      axios.get(`${apiUrl}/api/boarding/manual/get_departure_schedules`, {
-        params: { origin: manualData.origin, destination: manualData.destination }
-      })
-        .then(response => {
-          setSchedules(response.data.schedules);  // Set schedules data
+      axios
+        .get(`${apiUrl}/api/boarding/manual/get_departure_schedules`, {
+          params: { origin: manualData.origin, destination: manualData.destination },
         })
-        .catch(error => {
+        .then((response) => {
+          setSchedules(response.data.schedules);
+        })
+        .catch((error) => {
           console.error("Error fetching schedules:", error);
           if (error.response && error.response.status === 400) {
             alert("Invalid origin or destination. Please check your selections.");
@@ -69,23 +120,35 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     }
   }, [manualData.origin, manualData.destination]);
 
-  // Validation function for passenger info
   const validatePassenger = (d) => {
     const errs = {};
-    const req = (k, label) => { if (!String(d[k] ?? "").trim()) errs[k] = label + " is required"; };
-    req("firstName", "First name"); req("lastName", "Last name"); req("address", "Address");
-    req("profession", "Profession"); req("contactNumber", "Contact number"); req("age", "Age");
-    req("gender", "Gender"); req("platformSource", "Platform source");
+    const req = (k, label) => {
+      if (!String(d[k] ?? "").trim()) errs[k] = label + " is required";
+    };
+    req("firstName", "First name");
+    req("lastName", "Last name");
+    req("address", "Address");
+    req("profession", "Profession");
+    req("contactNumber", "Contact number");
+    req("age", "Age");
+    req("gender", "Gender");
+    req("platformSource", "Platform source");
 
     const digits = (d.contactNumber || "").replace(/\D/g, "");
     if (digits.length < 7) errs.contactNumber = "Enter a valid contact number";
 
     const ageNum = Number(d.age);
-    if (isNaN(ageNum) || ageNum <= 0 || !Number.isInteger(ageNum) || ageNum > 120) errs.age = "Enter a valid age (1–120)";
+    if (isNaN(ageNum) || ageNum <= 0 || !Number.isInteger(ageNum) || ageNum > 120) {
+      errs.age = "Enter a valid age (1–120)";
+    }
 
     const okGenders = ["Male", "Female", "Other"];
-    if (d.gender && okGenders.indexOf(d.gender) === -1) errs.gender = "Select Male, Female, or Other";
-    if (d.platformSource !== "MB") errs.platformSource = "Platform Source must be M";
+    if (d.gender && okGenders.indexOf(d.gender) === -1) {
+      errs.gender = "Select Male, Female, or Other";
+    }
+    if (d.platformSource !== "MB") {
+      errs.platformSource = "Platform Source must be M";
+    }
     return errs;
   };
 
@@ -93,15 +156,12 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     return Object.keys(validatePassenger(passengerInfo)).length === 0;
   }, [passengerInfo]);
 
-  // Save booking data (Including user registration)
   const saveBookingData = async () => {
-    console.log("Passenger Info to register:", passengerInfo);  // Log passenger info before sending
+    console.log("Passenger Info to register:", passengerInfo);
 
     try {
-      // Convert departure time to 24-hour format
       const departureTime24hr = convertTo24HourFormat(manualData.departureTime);
 
-      // Register user if not exists
       const userResponse = await axios.post(`${apiUrl}/api/boarding/manual/register_user`, {
         first_name: passengerInfo.firstName,
         last_name: passengerInfo.lastName,
@@ -113,7 +173,7 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
         platform_source: passengerInfo.platformSource,
       });
 
-      console.log("User Response:", userResponse.data);  // Log user registration response
+      console.log("User Response:", userResponse.data);
       const userID = userResponse.data.user_id;
 
       if (!userID) {
@@ -121,43 +181,42 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
         return;
       }
 
-      // Log booking data before sending
       console.log("Booking Data to save:", {
         user_id: userID,
         origin: manualData.origin,
         destination: manualData.destination,
         departure_date: manualData.departureDate,
-        departure_time: departureTime24hr,  // Use the 24-hour time here
+        departure_time: departureTime24hr,
       });
 
-      // Save booking details
-      const bookingResponse = await axios.post(`${apiUrl}/api/boarding/manual/create_booking`, {
-        user_id: userID,
-        origin: manualData.origin,
-        destination: manualData.destination,
-        departure_date: manualData.departureDate,
-        departure_time: departureTime24hr,  // Use the 24-hour time here
-      });
+      const bookingResponse = await axios.post(
+        `${apiUrl}/api/boarding/manual/create_booking`,
+        {
+          user_id: userID,
+          origin: manualData.origin,
+          destination: manualData.destination,
+          departure_date: manualData.departureDate,
+          departure_time: departureTime24hr,
+        }
+      );
 
-      console.log("Booking Response:", bookingResponse.data);  // Log booking response
+      console.log("Booking Response:", bookingResponse.data);
       const bookingID = bookingResponse.data.booking_id;
-      const qrCodeID = bookingResponse.data.qr_code;  // Get the QR Code ID from the response
+      const qrCodeID = bookingResponse.data.qr_code;
 
       if (!bookingID) {
         console.error("Error: No booking_id received from booking creation.");
         return;
       }
 
-      // Set qrCodeID in manualData state
-      setManualData(prevData => ({
+      setManualData((prevData) => ({
         ...prevData,
         bookingID: bookingID,
-        qrCodeID: qrCodeID,  // Set the QR Code ID here
+        qrCodeID: qrCodeID,
       }));
 
-      // Fetch fare before proceeding with the payment update
       const fareResponse = await axios.get(`${apiUrl}/api/boarding/manual/get_fare`, {
-        params: { origin: manualData.origin, destination: manualData.destination }
+        params: { origin: manualData.origin, destination: manualData.destination },
       });
 
       const fare = fareResponse.data.fare;
@@ -167,11 +226,13 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
         return;
       }
 
-      // Update the booking's fare and change the payment status to 'P'
-      const paymentResponse = await axios.post(`${apiUrl}/api/boarding/manual/update_payment`, {
-        Booking_ID: bookingID,  // Corrected key: Booking_ID
-        payment_amount: fare,    // Corrected key: payment_amount
-      });
+      const paymentResponse = await axios.post(
+        `${apiUrl}/api/boarding/manual/update_payment`,
+        {
+          Booking_ID: bookingID,
+          payment_amount: fare,
+        }
+      );
       console.log("Payment Status Updated:", paymentResponse.data);
 
       console.log("Booking data saved successfully.");
@@ -180,42 +241,57 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
     }
   };
 
-  // Handle payment
   const handlePayment = async () => {
     const errs = validatePassenger(passengerInfo);
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    await saveBookingData();  // Save all data after payment is completed
-    setStep(4);  // Move to next step (QR Code)
+    await saveBookingData();
+    setStep(4);
   };
 
-  // Handle Next step
   const handleNext = () => {
     const errs = validatePassenger(passengerInfo);
     setErrors(errs);
     if (Object.keys(errs).length === 0) {
-      setStep(3); // Move to the next step
+      setStep(3);
     }
   };
 
-  // Prevent rendering if modal is closed
   if (!open) return null;
 
   return (
-    <div className="boarding-modal-backdrop" onClick={onClose} aria-hidden="true">
-      <div className="boarding-manual-card" role="dialog" aria-modal="true" aria-labelledby="manualFormTitle" onClick={(e) => e.stopPropagation()}>
-        <h3 id="manualFormTitle" className="boarding-manual-title">Manual Booking</h3>
+    <div
+      className="boarding-modal-backdrop"
+      onClick={handleClose}
+      aria-hidden="true"
+    >
+      <div
+        className="boarding-manual-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manualFormTitle"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="manualFormTitle" className="boarding-manual-title">
+          Manual Booking
+        </h3>
 
-        {/* Stepper */}
         <div className="wizard-steps wizard-steps--four">
-          <div className={"wizard-step " + (step >= 1 ? "is-active" : "")}><span className="wizard-dot" /> Passenger Information</div>
-          <div className={"wizard-step " + (step >= 2 ? "is-active" : "")}><span className="wizard-dot" /> Booking Information</div>
-          <div className={"wizard-step " + (step >= 3 ? "is-active" : "")}><span className="wizard-dot" /> Payment</div>
-          <div className={"wizard-step " + (step >= 4 ? "is-active" : "")}><span className="wizard-dot" /> QR Code</div>
+          <div className={"wizard-step " + (step >= 1 ? "is-active" : "")}>
+            <span className="wizard-dot" /> Passenger Information
+          </div>
+          <div className={"wizard-step " + (step >= 2 ? "is-active" : "")}>
+            <span className="wizard-dot" /> Booking Information
+          </div>
+          <div className={"wizard-step " + (step >= 3 ? "is-active" : "")}>
+            <span className="wizard-dot" /> Payment
+          </div>
+          <div className={"wizard-step " + (step >= 4 ? "is-active" : "")}>
+            <span className="wizard-dot" /> QR Code
+          </div>
         </div>
 
-        {/* Step 1: Passenger Info */}
         {step === 1 && (
           <PassengerInfo
             data={passengerInfo}
@@ -224,12 +300,13 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
             onNext={() => {
               const errs = validatePassenger(passengerInfo);
               setErrors(errs);
-              if (Object.keys(errs).length === 0) { setStep(2); }
+              if (Object.keys(errs).length === 0) {
+                setStep(2);
+              }
             }}
           />
         )}
 
-        {/* Step 2: Booking Info */}
         {step === 2 && (
           <BookingInfo
             data={manualData}
@@ -237,30 +314,34 @@ export default function ManualBookingModal({ open, onClose, addPassengerRow }) {
             setData={setManualData}
             isValid={isManualValid}
             onBack={() => setStep(1)}
-            onNext={handleNext}  // Trigger the payment handler
-            stations={stations}  // Pass stations to BookingInfo
-            schedules={schedules}  // Pass schedules to BookingInfo
+            onNext={handleNext}
+            stations={stations}
+            schedules={schedules}
           />
         )}
 
-        {/* Step 3: Payment Info */}
         {step === 3 && (
           <Payment
             data={manualData}
             onBack={() => setStep(2)}
-            onPaid={handlePayment}  // Trigger the payment handler here
+            onPaid={handlePayment}
           />
         )}
 
-        {/* Step 4: QR Code */}
         {step === 4 && (
           <QrCode
-            passengerInfo={passengerInfo}  // Pass the full passengerInfo object here
+            passengerInfo={passengerInfo}
             data={manualData}
             onBack={() => setStep(3)}
             onFinish={() => {
-              addPassengerRow(manualData);
-              onClose();
+              try {
+                if (typeof addPassengerRow === "function") {
+                  addPassengerRow(manualData);
+                }
+              } catch (e) {
+                console.error("[ManualBookingModal] addPassengerRow error:", e);
+              }
+              handleClose(); // ✅ close + reset wizard
             }}
           />
         )}
