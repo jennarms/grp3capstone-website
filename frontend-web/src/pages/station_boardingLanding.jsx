@@ -6,23 +6,31 @@ import "./station_boardingLanding.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
+// ⭐ NEW: local date helper (fixes UTC bug)
+function getLocalDateISO() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function BoardingLandingPage() {
   const navigate = useNavigate();
 
   const [forwardSchedules, setForwardSchedules] = useState([]);
   const [reverseSchedules, setReverseSchedules] = useState([]);
   const [stationName, setStationName] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+
+  // ⭐ FIXED: use local date, not UTC ISO
+  const [selectedDate, setSelectedDate] = useState(getLocalDateISO());
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Row refs for auto-scroll + highlight
   const forwardRowRefs = useRef([]);
   const reverseRowRefs = useRef([]);
 
-  // Log once so we know which API base URL this component uses
   useEffect(() => {
     console.log("[BLP] Mounted. apiUrl =", apiUrl);
   }, []);
@@ -115,7 +123,6 @@ export function BoardingLandingPage() {
     return `${h12}:${m} ${ampm}`;
   };
 
-  // Stable finder for the next upcoming index for a given list
   const nextIndexFor = useCallback(
     (schedules) => {
       if (!Array.isArray(schedules) || schedules.length === 0) return -1;
@@ -128,10 +135,9 @@ export function BoardingLandingPage() {
         today.getDate()
       );
 
-      if (selectedMidnight > todayMidnight) return 0; // future date -> first row
-      if (selectedMidnight < todayMidnight) return -1; // past date -> none
+      if (selectedMidnight > todayMidnight) return 0;
+      if (selectedMidnight < todayMidnight) return -1;
 
-      // selected date === today: find first time >= now
       const now = Date.now();
       for (let i = 0; i < schedules.length; i++) {
         const dep = parseDateTime(selectedDate, schedules[i]?.departure_time);
@@ -142,7 +148,6 @@ export function BoardingLandingPage() {
     [selectedDate]
   );
 
-  // Memoized indices for the "next" rows (deps satisfied)
   const nextForwardIndex = useMemo(
     () => nextIndexFor(forwardSchedules),
     [forwardSchedules, nextIndexFor]
@@ -152,30 +157,22 @@ export function BoardingLandingPage() {
     [reverseSchedules, nextIndexFor]
   );
 
-  // ---------- Auto-scroll ----------
   useEffect(() => {
     const t = setTimeout(() => {
-      const elF =
-        nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
-      if (elF && typeof elF.scrollIntoView === "function") {
-        elF.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      const elF = nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
+      if (elF?.scrollIntoView) elF.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
     return () => clearTimeout(t);
   }, [nextForwardIndex, forwardSchedules]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const elR =
-        nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
-      if (elR && typeof elR.scrollIntoView === "function") {
-        elR.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
+      if (elR?.scrollIntoView) elR.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
     return () => clearTimeout(t);
   }, [nextReverseIndex, reverseSchedules]);
 
-  // ---------- navigation ----------
   const goToBoarding = ({
     scheduleId,
     departureTimeHHMMSS,
@@ -187,15 +184,6 @@ export function BoardingLandingPage() {
     const availNum = Number(availableSeats || 0);
     const totalNum = Number(totalSeats || 0);
     const booked = Math.max(0, totalNum - availNum);
-
-    console.log("[BLP] goToBoarding clicked:", {
-      scheduleId,
-      departureTimeHHMMSS,
-      availableSeats,
-      totalSeats,
-      booked,
-      direction,
-    });
 
     const params = new URLSearchParams({
       date: selectedDate,
@@ -210,20 +198,14 @@ export function BoardingLandingPage() {
     const path = `/station-boarding/${encodeURIComponent(String(scheduleId))}`;
     const search = `?${params.toString()}`;
 
-    if (window.location.hash) {
+    if (window.location.hash)
       window.location.hash = "#" + (path + search).replace(/^\//, "");
-    } else {
+    else
       navigate({ pathname: path, search });
-    }
   };
 
-  // helpers to set row refs in map
-  const setForwardRef = (el, idx) => {
-    forwardRowRefs.current[idx] = el;
-  };
-  const setReverseRef = (el, idx) => {
-    reverseRowRefs.current[idx] = el;
-  };
+  const setForwardRef = (el, idx) => (forwardRowRefs.current[idx] = el);
+  const setReverseRef = (el, idx) => (reverseRowRefs.current[idx] = el);
 
   const rowClass = (isNext) => "blp-row" + (isNext ? " blp-row-highlight" : "");
 
@@ -290,8 +272,7 @@ export function BoardingLandingPage() {
                 <thead>
                   <tr className="blp-caption-row">
                     <th className="blp-caption-th" colSpan={3}>
-                      {stationName} - FORWARD DIRECTION (
-                      {forwardSchedules.length} schedules)
+                      {stationName} - FORWARD DIRECTION ({forwardSchedules.length} schedules)
                     </th>
                   </tr>
                   <tr className="blp-cols-row">
@@ -303,10 +284,7 @@ export function BoardingLandingPage() {
                 <tbody>
                   {forwardSchedules.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={3}
-                        style={{ textAlign: "center", padding: "1rem", color: "#666" }}
-                      >
+                      <td colSpan={3} style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
                         {loading ? "Loading..." : "No forward schedules available"}
                       </td>
                     </tr>
@@ -321,8 +299,8 @@ export function BoardingLandingPage() {
                         >
                           <td>{formatTime(s.departure_time)}</td>
                           <td>
-                            Available: {s.available_seats} / {s.total_seats}{" "}
-                            (<strong>Booked: {s.booked_seats}</strong>)
+                            Available: {s.available_seats} / {s.total_seats} (
+                            <strong>Booked: {s.booked_seats}</strong>)
                           </td>
                           <td className="blp-action-cell">
                             <button
@@ -358,8 +336,7 @@ export function BoardingLandingPage() {
                 <thead>
                   <tr className="blp-caption-row">
                     <th className="blp-caption-th" colSpan={3}>
-                      {stationName} - REVERSE DIRECTION (
-                      {reverseSchedules.length} schedules)
+                      {stationName} - REVERSE DIRECTION ({reverseSchedules.length} schedules)
                     </th>
                   </tr>
                   <tr className="blp-cols-row">
@@ -371,10 +348,7 @@ export function BoardingLandingPage() {
                 <tbody>
                   {reverseSchedules.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={3}
-                        style={{ textAlign: "center", padding: "1rem", color: "#666" }}
-                      >
+                      <td colSpan={3} style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
                         {loading ? "Loading..." : "No reverse schedules available"}
                       </td>
                     </tr>
@@ -389,8 +363,8 @@ export function BoardingLandingPage() {
                         >
                           <td>{formatTime(s.departure_time)}</td>
                           <td>
-                            Available: {s.available_seats} / {s.total_seats}{" "}
-                            (<strong>Booked: {s.booked_seats}</strong>)
+                            Available: {s.available_seats} / {s.total_seats} (
+                            <strong>Booked: {s.booked_seats}</strong>)
                           </td>
                           <td className="blp-action-cell">
                             <button
