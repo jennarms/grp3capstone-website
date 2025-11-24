@@ -61,6 +61,11 @@ export function StationsTab() {
   const getToken = () =>
     localStorage.getItem("token") || sessionStorage.getItem("token");
 
+  // ===== Email validation =====
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isValidEmail = (email) => emailRegex.test(email.trim());
+  // ============================
+
   const apiRequest = useCallback(
     async (url, options = {}) => {
       const token = getToken();
@@ -150,17 +155,23 @@ export function StationsTab() {
       lon,
     } = newStation;
 
+    const trimmedEmail = email.trim();
+
     if (
       !companyId ||
       !stationName ||
       !username ||
-      !email ||
+      !trimmedEmail ||
       !password ||
       !confirmPassword ||
       !lat ||
       !lon
     ) {
       setFormError("All fields are required.");
+      return;
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      setFormError("Please enter a valid email address (e.g. name@example.com).");
       return;
     }
     if (password !== confirmPassword) {
@@ -171,7 +182,7 @@ export function StationsTab() {
       setFormError(validatePassword(password));
       return;
     }
-    if (rows.some((station) => station.email === email)) {
+    if (rows.some((station) => station.email === trimmedEmail)) {
       setFormError("This email is already used by another station.");
       return;
     }
@@ -180,10 +191,11 @@ export function StationsTab() {
       setLoading(true);
       await apiRequest("/api/station/request-add", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: trimmedEmail }),
       });
       setShowAddModal(false);
       setShowOtpModal(true);
+      setFormError("");
     } catch (err) {
       setFormError(`Failed to send OTP: ${err.message}`);
     } finally {
@@ -201,7 +213,13 @@ export function StationsTab() {
       setLoading(true);
       const response = await apiRequest("/api/station/confirm-add", {
         method: "POST",
-        body: JSON.stringify({ otpCode, details: newStation }),
+        body: JSON.stringify({
+          otpCode,
+          details: {
+            ...newStation,
+            email: newStation.email.trim(),
+          },
+        }),
       });
 
       setShowOtpModal(false);
@@ -225,6 +243,7 @@ export function StationsTab() {
       // Success modal (Add)
       setSuccessMessage(`Station created successfully! ID: ${response.stationId}`);
       setShowSuccessModal(true);
+      setFormError("");
     } catch (err) {
       setFormError(`Failed to create station: ${err.message}`);
     } finally {
@@ -243,8 +262,18 @@ export function StationsTab() {
     if (!editStation) return;
 
     const original = rows.find((r) => r.stationId === editStation.stationId);
-    const emailChanged = original?.email !== editStation.email;
+    const trimmedEmail = editStation.email.trim();
+    const emailChanged = original?.email !== trimmedEmail;
     const passwordChanged = editStation.password !== "";
+
+    if (!trimmedEmail) {
+      setFormError("Email is required.");
+      return;
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      setFormError("Please enter a valid email address (e.g. name@example.com).");
+      return;
+    }
 
     if (passwordChanged && editStation.password !== editStation.confirmPassword) {
       setFormError("Passwords do not match.");
@@ -254,7 +283,7 @@ export function StationsTab() {
       setFormError(validatePassword(editStation.password));
       return;
     }
-    if (emailChanged && rows.some((s) => s.email === editStation.email)) {
+    if (emailChanged && rows.some((s) => s.email === trimmedEmail)) {
       setFormError("This email is already used by another station.");
       return;
     }
@@ -264,10 +293,11 @@ export function StationsTab() {
         setLoading(true);
         await apiRequest(`/api/station/request-update/${editStation.stationId}`, {
           method: "POST",
-          body: JSON.stringify({ email: editStation.email }),
+          body: JSON.stringify({ email: trimmedEmail }),
         });
         setShowEditModal(false);
         setShowEditOtpModal(true);
+        setFormError("");
       } catch (err) {
         setFormError(`Failed to send OTP: ${err.message}`);
       } finally {
@@ -282,7 +312,8 @@ export function StationsTab() {
     if (!editStation) return;
 
     const original = rows.find((r) => r.stationId === editStation.stationId);
-    const emailChanged = original?.email !== editStation.email;
+    const trimmedEmail = editStation.email.trim();
+    const emailChanged = original?.email !== trimmedEmail;
 
     if (emailChanged && !otpCode) {
       setFormError("Please enter the OTP code.");
@@ -297,7 +328,7 @@ export function StationsTab() {
           ...(emailChanged && { otpCode }),
           details: {
             stationName: editStation.stationName,
-            email: editStation.email,
+            email: trimmedEmail,
             username: editStation.username,
             lat: editStation.lat,
             lon: editStation.lon,
@@ -316,6 +347,7 @@ export function StationsTab() {
       // Success modal (Edit)
       setSuccessMessage("Station updated successfully!");
       setShowSuccessModal(true);
+      setFormError("");
     } catch (err) {
       setFormError(`Failed to update station: ${err.message}`);
     } finally {
@@ -330,6 +362,7 @@ export function StationsTab() {
       setDeleteStationId(id);
       // Show info modal first; after OK, we'll open the OTP+Admin modal
       setShowDeleteInfoModal(true);
+      setFormError("");
     } catch (err) {
       setFormError(`Failed to request delete: ${err.message}`);
     } finally {
@@ -360,6 +393,7 @@ export function StationsTab() {
       // Success modal (Delete)
       setSuccessMessage("Station deleted successfully!");
       setShowSuccessModal(true);
+      setFormError("");
     } catch (err) {
       setFormError(`Failed to delete station: ${err.message}`);
     } finally {
@@ -545,6 +579,7 @@ export function StationsTab() {
                   setNewStation({ ...newStation, email: e.target.value })
                 }
                 disabled={loading}
+                placeholder="name@example.com"
               />
 
               {/* Password with eye toggle + hint */}
@@ -723,15 +758,20 @@ export function StationsTab() {
               <input
                 type="text"
                 value={editStation.username}
-                onChange={(e) => setEditStation({ ...editStation, username: e.target.value })}
+                onChange={(e) =>
+                  setEditStation({ ...editStation, username: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Email:</label>
               <input
                 type="email"
                 value={editStation.email}
-                onChange={(e) => setEditStation({ ...editStation, email: e.target.value })}
+                onChange={(e) =>
+                  setEditStation({ ...editStation, email: e.target.value })
+                }
                 disabled={loading}
+                placeholder="name@example.com"
               />
 
               {/* New Password controls */}
@@ -809,14 +849,18 @@ export function StationsTab() {
               <input
                 type="text"
                 value={editStation.lat}
-                onChange={(e) => setEditStation({ ...editStation, lat: e.target.value })}
+                onChange={(e) =>
+                  setEditStation({ ...editStation, lat: e.target.value })
+                }
                 disabled={loading}
               />
               <label>Longitude:</label>
               <input
                 type="text"
                 value={editStation.lon}
-                onChange={(e) => setEditStation({ ...editStation, lon: e.target.value })}
+                onChange={(e) =>
+                  setEditStation({ ...editStation, lon: e.target.value })
+                }
                 disabled={loading}
               />
             </div>
@@ -918,7 +962,8 @@ export function StationsTab() {
 
             <div className="stn-modal-body-stations">
               <p style={{ fontSize: 16 }}>
-                An OTP has been sent to your email. Please check your inbox and enter it to confirm deletion.
+                An OTP has been sent to your email. Please check your inbox and enter it to
+                confirm deletion.
               </p>
             </div>
 
