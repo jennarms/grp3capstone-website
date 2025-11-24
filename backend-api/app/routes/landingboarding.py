@@ -42,20 +42,13 @@ def calculate_available_seats(vehicle_capacity, departure_date, departure_time):
     """
     Calculate seat availability for a given date + time.
 
-    We treat BoardingDisembarking as the source of truth for who is
-    actually using a seat on that run.
-
       booked_seats = count of BoardingDisembarking rows with:
                        - matching departure_date
                        - matching departure_time
                        - status in ('P','B')    (Pending / Boarded)
       available    = max(0, capacity - booked_seats)
 
-    NOTE:
-      - We ignore Schedule_ID here because your sample data shows it can be
-        NULL or 'NoSchedule' for some rows.
-      - 'C' (Cancelled) and 'D' (Disembarked) do NOT reduce available seats
-        at departure for this view.
+    We pass in capacity from Vehicle via Schedule.Vehicle_ID.
     """
     cursor = mysql.connection.cursor()
     try:
@@ -64,7 +57,7 @@ def calculate_available_seats(vehicle_capacity, departure_date, departure_time):
             FROM BoardingDisembarking bd
             WHERE bd.departure_date = %s
               AND bd.departure_time = %s
-              AND bd.status IN ('P','B')   -- Pending / Boarded consume seats
+              AND bd.status IN ('P','B')
         """, (departure_date, departure_time))
 
         result = cursor.fetchone()
@@ -96,6 +89,8 @@ def get_boarding_schedules():
       booked_seats  = BoardingDisembarking rows on that departure_date + departure_time
                       with status in ('P','B')
       available     = max(0, capacity - booked_seats)
+
+    ❗ Capacity is taken from Vehicle via Schedule.Vehicle_ID
     """
     try:
         station_id = get_jwt_identity()
@@ -109,7 +104,8 @@ def get_boarding_schedules():
         cursor = mysql.connection.cursor()
 
         try:
-            # Get schedules only; seat counts will be computed per row in Python
+            # 🔹 IMPORTANT LINE:
+            # We join Vehicle THROUGH Schedule.Vehicle_ID, not Route.Vehicle_ID.
             cursor.execute("""
                 SELECT 
                     r.Route_ID,
@@ -121,23 +117,24 @@ def get_boarding_schedules():
                     s.Ride_ID,
                     s.departureTime,
                     s.ETA,
+                    s.Vehicle_ID,
                     v.Capacity AS vehicle_capacity
                 FROM Schedule s
                 JOIN RouteStations rs ON s.RouteStation_ID = rs.RouteStation_ID
                 JOIN Route r          ON s.Route_ID        = r.Route_ID
-                JOIN Vehicle v        ON r.Vehicle_ID      = v.Vehicle_ID
+                LEFT JOIN Vehicle v   ON s.Vehicle_ID      = v.Vehicle_ID
                 WHERE rs.Station_ID   = %s
                   AND r.Company_ID    = %s
                   AND s.departureTime IS NOT NULL
                 ORDER BY r.Direction, s.departureTime ASC
             """, (station_id, company_id))
 
-            schedules_data = cursor.fetchall()
+            rows = cursor.fetchall()
 
             forward_schedules = []
             reverse_schedules = []
 
-            for row in schedules_data:
+            for row in rows:
                 (
                     route_id,
                     route_name,
@@ -148,11 +145,16 @@ def get_boarding_schedules():
                     ride_id,
                     departure_time,
                     eta,
+                    schedule_vehicle_id,
                     vehicle_capacity,
                 ) = row
 
+                # If no vehicle is assigned to this schedule, treat capacity as 0
+                vehicle_capacity = vehicle_capacity if vehicle_capacity is not None else 0
+
                 direction = normalize_direction(direction_code)
-                # Compute seat info using BoardingDisembarking (time-based)
+
+                # Calculate seat info (time-based)
                 seat_info = calculate_available_seats(
                     vehicle_capacity,
                     target_date,
@@ -161,18 +163,19 @@ def get_boarding_schedules():
 
                 available_seats = seat_info["available"]
                 booked_seats = seat_info["booked"]
-                vehicle_capacity = seat_info["total"]
+                total_capacity = seat_info["total"]
 
                 schedule_item = {
                     "schedule_id": str(schedule_id),
                     "ride_id": str(ride_id),
                     "route_id": str(route_id),
                     "route_name": route_name,
-                    "direction": direction,                      # 'forward' | 'reverse'
-                    "departure_time": str(departure_time),       # "HH:MM:SS"
+                    "direction": direction,
+                    "departure_time": str(departure_time),  # "HH:MM:SS"
                     "eta_minutes": eta,
+                    "vehicle_id": schedule_vehicle_id,
                     "available_seats": available_seats,
-                    "total_seats": vehicle_capacity,
+                    "total_seats": total_capacity,
                     "booked_seats": booked_seats,
                 }
 
@@ -196,7 +199,6 @@ def get_boarding_schedules():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @landingboarding_bp.route('/debug-routes', methods=['GET'])
 @jwt_required()
@@ -271,7 +273,7 @@ def get_schedule_details(schedule_id):
 
         cursor = mysql.connection.cursor()
         try:
-            # Schedule header
+            # 🔹 IMPORTANT CHANGE: Vehicle joined via Schedule.Vehicle_ID
             cursor.execute("""
                 SELECT 
                     s.Schedule_ID,
@@ -288,7 +290,7 @@ def get_schedule_details(schedule_id):
                 FROM Schedule s
                 JOIN RouteStations rs ON s.RouteStation_ID = rs.RouteStation_ID
                 JOIN Route r          ON s.Route_ID        = r.Route_ID
-                JOIN Vehicle v        ON r.Vehicle_ID      = v.Vehicle_ID
+                LEFT JOIN Vehicle v   ON s.Vehicle_ID      = v.Vehicle_ID
                 WHERE s.Schedule_ID = %s
                   AND rs.Station_ID = %s
             """, (schedule_id, station_id))
@@ -311,14 +313,12 @@ def get_schedule_details(schedule_id):
                 vehicle_type,
             ) = row
 
-            # Seat info (time-based: date + departure_time)
             seat_info = calculate_available_seats(
                 capacity,
                 target_date,
                 departure_time,
             )
 
-            # Bookings list (time-based: by date + time at this station)
             cursor.execute("""
                 SELECT 
                     b.Booking_ID,
@@ -338,7 +338,7 @@ def get_schedule_details(schedule_id):
                       AND bd.Station_ID = %s
                 WHERE b.departure_date = %s
                   AND b.departure_time = %s
-                  AND bd.status IN ('P','B')  -- Pending or Boarded
+                  AND bd.status IN ('P','B')
                 ORDER BY b.Booking_ID
             """, (station_id, target_date, departure_time))
 
@@ -380,7 +380,7 @@ def get_schedule_details(schedule_id):
                     "route_name": route_name,
                     "direction": normalize_direction(dir_code),
                     "station_name": station_name,
-                    "departure_time": str(departure_time),  # "HH:MM:SS"
+                    "departure_time": str(departure_time),
                     "eta_minutes": eta,
                     "stop_order": stop_order,
                     "vehicle_type": vehicle_type,

@@ -24,10 +24,6 @@ def _get_station_info(station_id):
 
 
 def _normalize_direction(dir_code: str) -> str:
-    """
-    Map DB codes to 'forward' | 'reverse' for the API.
-    Accepts FW/FO/FWD/FORWARD → forward; RV/RE/REV/REVERSE → reverse.
-    """
     if not dir_code:
         return "forward"
     code = str(dir_code).upper()
@@ -38,29 +34,9 @@ def _normalize_direction(dir_code: str) -> str:
     return "forward"
 
 
-def _get_vehicle_capacity(route_id):
-    """Fetch vehicle capacity from the Vehicle table based on the route."""
-    cur = mysql.connection.cursor()
-    try:
-        cur.execute("""
-            SELECT v.Capacity
-            FROM Route r
-            JOIN Vehicle v ON r.Vehicle_ID = v.Vehicle_ID
-            WHERE r.Route_ID = %s
-        """, (route_id,))
-        row = cur.fetchone()
-        return row[0] if row else None
-    finally:
-        cur.close()
-
-
 def _count_seats_taken(service_date, station_id, departure_time):
     """
     Count seats taken for a given date, station, and departure time.
-
-    We match Booking.origin (which stores station IDs like ST0009)
-    against the given station_id, and count BoardingDisembarking
-    rows with status 'P' (Pending) or 'B' (Boarded).
     """
     cur = mysql.connection.cursor()
     try:
@@ -78,7 +54,6 @@ def _count_seats_taken(service_date, station_id, departure_time):
     finally:
         cur.close()
 
-
 # -------------------------------------------------------------------
 # endpoints
 # -------------------------------------------------------------------
@@ -87,13 +62,6 @@ def _count_seats_taken(service_date, station_id, departure_time):
 @boarding_routecard_bp.route('/boarding/count-seats-taken', methods=['GET'])
 @jwt_required()
 def count_seats_taken():
-    """
-    Endpoint to count the number of seats taken for a given service date,
-    station, and departure time.
-
-    GET /api/boarding/count-seats-taken?date=YYYY-MM-DD&origin=ST0009&departure_time=HH:MM:SS
-    or use station_id instead of origin; if missing, falls back to JWT identity.
-    """
     try:
         service_date = request.args.get('date')
         station_id = (
@@ -134,7 +102,7 @@ def get_routecard(schedule_id):
 
         cur = mysql.connection.cursor()
         try:
-            # 1) Schedule header for THIS station
+            # 🔹 IMPORTANT CHANGE: Vehicle joined via Schedule.Vehicle_ID
             cur.execute("""
                 SELECT 
                     s.Schedule_ID,
@@ -151,7 +119,7 @@ def get_routecard(schedule_id):
                 FROM Schedule s
                 JOIN RouteStations rs ON s.RouteStation_ID = rs.RouteStation_ID
                 JOIN Route r          ON s.Route_ID        = r.Route_ID
-                JOIN Vehicle v        ON r.Vehicle_ID      = v.Vehicle_ID
+                LEFT JOIN Vehicle v   ON s.Vehicle_ID      = v.Vehicle_ID
                 WHERE s.Schedule_ID = %s
                   AND rs.Station_ID = %s
                   AND r.Company_ID  = %s
@@ -165,10 +133,8 @@ def get_routecard(schedule_id):
              route_id, route_name, dir_code, current_station_name,
              stop_order, capacity, vehicle_type) = head
 
-            # 2) Compute seat info (date + station_id + time)
             seats_taken = _count_seats_taken(service_date, station_id, departure_time)
 
-            # 3) Full route stops
             cur.execute("""
                 SELECT
                     rs.Station_ID,
@@ -207,7 +173,7 @@ def get_routecard(schedule_id):
                     "eta_minutes": eta,
                     "stop_order": int(stop_order or 0),
                     "vehicle_type": vehicle_type,
-                    "total_seats": capacity,
+                    "total_seats": int(capacity or 0),
                     "seats_taken": seats_taken,
                 },
                 "stops": stops

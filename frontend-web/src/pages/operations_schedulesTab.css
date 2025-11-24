@@ -6,15 +6,19 @@
 
   --table-w: 1500px;
   --station-col-min: 180px;
-  --action-col-w: 84px;
+
+  /* widened for Save/Cancel buttons */
+  --action-col-w: 120px;
 }
 
-/* Page shell */
+/* =============================
+   PAGE + TOP BAR
+============================= */
+
 .ops-sch-page { font-size: 16px; }
 .ops-sch-main { max-width: 1200px; margin-left: 0px; margin-right: 40px; color: var(--ops-stn-text); }
 .ops-sch-title { font-size: 50px; font-weight: 800; margin-bottom: -0px; text-align: start; }
 
-/* Top controls: route selector (left) + actions (right) */
 .ops-sch-topbar {
   display: flex;
   align-items: center;
@@ -24,7 +28,7 @@
   width: var(--table-w);
 }
 
-/* Route dropdown — pill style with custom arrow (matching previous page) */
+/* ROUTE SELECTOR */
 .ops-sch-route {
   position: relative;
   display: inline-flex;
@@ -47,16 +51,14 @@
   cursor: pointer;
   width: 280px;
   text-align: center;
-  line-height: 1.2;
 }
 
 .ops-sch-route select:focus {
   outline: none;
   border-color: var(--ops-stn-blue);
-  box-shadow: 0 0 0 2px rgba(11,26,120,0.12);
+  box-shadow: 0 0 0 2px rgba(11, 26, 120, 0.12);
 }
 
-/* custom arrow */
 .ops-sch-route::after {
   content: "▼";
   font-size: 12px;
@@ -67,28 +69,33 @@
   transform: translateY(1px);
 }
 
-/* Right side actions */
-.ops-sch-topbar-actions { display: flex; align-items: center; gap: 10px; }
+.ops-sch-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-/* Buttons */
+/* TOP CHIP BUTTONS */
 .ops-sch-chip {
-  appearance: none; border: none; padding: 10px 28px; border-radius: 999px; width: 250px;
-  background: var(--ops-stn-blue); color: #fff; font-weight: 800; cursor: pointer;
-  transition: filter .15s ease, opacity .15s ease;
-}
-.ops-sch-chip:hover { filter: brightness(1.05); }
-.ops-sch-chip[disabled] { opacity: .5; cursor: not-allowed; }
-
-.ops-sch-edit {
+  appearance: none;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 999px;
   width: 250px;
-  border: 2px solid var(--ops-stn-blue); border-radius: 999px; padding: 10px 18px;
-  background: #fff; color: var(--ops-stn-blue); font-weight: 800; cursor: pointer;
+  background: var(--ops-stn-blue);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.15s ease;
 }
-.ops-sch-edit.is-on { background: var(--ops-stn-blue); color: #fff; }
-.ops-sch-edit.is-on:hover { filter: brightness(1.05); }
-.ops-sch-edit:not(.is-on):hover { background: var(--ops-stn-blue-200); }
 
-/* Table */
+.ops-sch-chip:hover { filter: brightness(1.05); }
+.ops-sch-chip[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* ==========================
+   TABLE + ACTION COLUMN
+========================== */
+
 .ops-sch-table-wrap {
   width: var(--table-w);
   border: 1px solid var(--ops-stn-border);
@@ -101,7 +108,6 @@
 .ops-sch-table {
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: auto;
   width: auto;
 }
 
@@ -123,7 +129,7 @@
   min-width: var(--station-col-min);
 }
 
-/* Sticky ACTION column on right */
+/* Sticky ACTION column */
 .ops-sch-table thead th.action-col,
 .ops-sch-table tbody td.action-col {
   position: sticky;
@@ -137,16 +143,16 @@
   text-align: center;
 }
 
-/* Body cells */
+/* body cells */
 .ops-sch-table tbody td {
   padding: 6px 10px;
   border-bottom: 1px solid var(--ops-stn-border);
   border-right: 1px solid var(--ops-stn-border);
-  vertical-align: middle;
   background: #fdfefe;
 }
 .ops-sch-table tbody tr:hover td { background: #f7faff; }
 
+/* schedule time inputs */
 .sch-cell {
   width: 100%;
   border: 1px solid transparent;
@@ -154,13 +160,18 @@
   padding: 6px 8px;
   border-radius: 8px;
   font-size: 14px;
-  color: #0f172a;
   text-align: center;
 }
-.sch-cell:focus { outline: none; border-color: var(--ops-stn-blue); background: #fff; }
-.sch-cell[disabled] { color: #111; opacity: 1; cursor: default; }
+.sch-cell:focus {
+  outline: none;
+  border-color: var(--ops-stn-blue);
+  background: #fff;
+}
 
-/* Action icon button */
+/* ==========================
+   ICON BUTTONS (edit/delete)
+========================== */
+
 .icon-btn {
   appearance: none;
   border: 1px solid #cfd1d8;
@@ -172,17 +183,72 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background .15s ease, opacity .15s ease;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 18px 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1a78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'/%3E%3Cpath d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/%3E%3Cpath d='M10 11v6M14 11v6'/%3E%3Cpath d='M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E");
+  background-size: 18px;
+  transition: background 0.15s ease;
 }
-.icon-btn:hover { background-color: #f5f6f8; }
-.icon-btn[disabled] { opacity: 1; cursor: not-allowed; }
-.icon-btn svg { display: none !important; }
 
-/* Bottom actions */
+.icon-btn:hover { background-color: #f5f6f8; }
+
+/* ==========================
+   ROW SAVE / CANCEL BUTTONS
+========================== */
+
+.row-actions {
+  display: flex;
+  flex-direction: column;   /* Save on top, Cancel below */
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+/* Base style for row buttons */
+.row-save-btn,
+.row-cancel-btn {
+  appearance: none;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 800;
+  cursor: pointer;
+  min-width: 90px; /* fits your design */
+  transition: 0.15s ease;
+}
+
+/* Save = same as top navy chips */
+.row-save-btn {
+  background: var(--ops-stn-blue);
+  border: 2px solid var(--ops-stn-blue);
+  color: #fff;
+}
+.row-save-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+/* Cancel = same as your outline buttons */
+.row-cancel-btn {
+  background: #fff;
+  color: var(--ops-stn-blue);
+  border: 2px solid var(--ops-stn-blue);
+}
+.row-cancel-btn:hover:not(:disabled) {
+  background: var(--ops-stn-blue-200);
+}
+
+/* disabled */
+.row-save-btn:disabled,
+.row-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==========================
+   FOOTER BUTTONS
+========================== */
+
 .ops-sch-actions {
   display: flex;
   justify-content: flex-end;
@@ -190,6 +256,7 @@
   margin-top: 12px;
   width: var(--table-w);
 }
+
 .ops-sch-secondary {
   border: 2px solid var(--ops-stn-border);
   background: #fff;
@@ -201,17 +268,6 @@
   width: 250px;
 }
 .ops-sch-secondary:hover { background: #f5f6f8; }
-.ops-sch-primary {
-  border: 2px solid var(--ops-stn-blue);
-  background: var(--ops-stn-blue);
-  color: #fff;
-  border-radius: 999px;
-  padding: 10px 18px;
-  font-weight: 800;
-  cursor: pointer;
-  width: 250px;
-}
-.ops-sch-primary:hover { filter: brightness(1.05); }
 
 /* Confirm modal */
 .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 30001; }
