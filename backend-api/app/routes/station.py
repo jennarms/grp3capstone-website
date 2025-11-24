@@ -1,17 +1,20 @@
+# app/routes/station.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app import mysql, mail
-from flask_mail import Message
+from app import mysql
+from app.brevo_email import send_email as brevo_send_email
 import random, string, datetime, uuid, re, os
 import bcrypt
 
 station_bp = Blueprint("station", __name__, url_prefix="/api/station")
+
 
 # ------------------------
 # Utils
 # ------------------------
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
+
 
 def save_otp(user_type, admin_id, station_id=None):
     otp_code = generate_otp()
@@ -27,10 +30,15 @@ def save_otp(user_type, admin_id, station_id=None):
     cur.close()
     return otp_code
 
+
 def send_email(to_email, subject, body):
-    msg = Message(subject, sender=os.getenv("MAIL_DEFAULT_SENDER"), recipients=[to_email])
-    msg.body = body
-    mail.send(msg)
+    # Use Brevo HTTP API instead of SMTP
+    brevo_send_email(
+        to_email=to_email,
+        subject=subject,
+        text_body=body,
+    )
+
 
 def verify_otp(otp_code, station_id=None):
     cur = mysql.connection.cursor()
@@ -63,11 +71,13 @@ def verify_otp(otp_code, station_id=None):
         return False, "OTP expired", None
     return True, None, otp_id
 
+
 def mark_otp_used(otp_id):
     cur = mysql.connection.cursor()
     cur.execute("UPDATE OTP_Admin SET Is_Used=TRUE WHERE OTP_ID=%s", (otp_id,))
     mysql.connection.commit()
     cur.close()
+
 
 def validate_password(password):
     if len(password) < 8:
@@ -82,6 +92,7 @@ def validate_password(password):
         return False, "Password must contain at least one special character (@$!%*?&)."
     return True, None
 
+
 def generate_station_id():
     cur = mysql.connection.cursor()
     cur.execute("SELECT Station_ID FROM Station WHERE Station_ID REGEXP '^ST[0-9]+$' ORDER BY Station_ID DESC LIMIT 1")
@@ -95,6 +106,7 @@ def generate_station_id():
         new_num = 1
 
     return f"ST{new_num:04d}"
+
 
 # ==================================================
 # VIEW
@@ -119,6 +131,7 @@ def get_stations():
 
     return jsonify(stations), 200
 
+
 # ==================================================
 # ADD
 # ==================================================
@@ -130,6 +143,7 @@ def request_add_station():
     otp_code = save_otp("main-admin", admin_id)
     send_email(data["email"], "OTP for Station Creation", f"Your OTP is {otp_code}.")
     return jsonify({"message": "OTP sent to admin"}), 200
+
 
 @station_bp.route("/confirm-add", methods=["POST"])
 @jwt_required()
@@ -175,14 +189,15 @@ def confirm_add_station():
         details["email"],
         details["username"],
         hashed_pw,
-        details["lat"],  # Add latitude
-        details["lon"]   # Add longitude
+        details["lat"],
+        details["lon"]
     ))
     mysql.connection.commit()
     cur.close()
 
     mark_otp_used(otp_id)
     return jsonify({"message": "Station created successfully", "stationId": station_id}), 201
+
 
 # ==================================================
 # UPDATE
@@ -200,6 +215,7 @@ def request_update_station(station_id):
     otp_code = save_otp("main-admin", admin_id, station_id)
     send_email(new_email, "OTP for Station Email Update", f"Your OTP is {otp_code}.")
     return jsonify({"message": "OTP sent to new email"}), 200
+
 
 @station_bp.route("/update/<station_id>", methods=["POST"])
 @jwt_required()
@@ -279,6 +295,7 @@ def update_station(station_id):
 
     return jsonify({"message": "Station updated successfully"}), 200
 
+
 # ==================================================
 # DELETE
 # ==================================================
@@ -299,6 +316,7 @@ def request_delete_station(station_id):
     cur.close()
 
     return jsonify({"message": "OTP sent for deletion"}), 200
+
 
 @station_bp.route("/confirm-delete/<station_id>", methods=["POST"])
 @jwt_required()
