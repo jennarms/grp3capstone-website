@@ -1,19 +1,22 @@
+# app/routes/auth.py
 from flask import Blueprint, request, jsonify
-from app import mysql, mail, jwt
+from app import mysql, jwt
+from app.brevo_email import send_email
 import bcrypt
 import random
 import string
 from datetime import datetime, timedelta
-from flask_mail import Message
 from flask_jwt_extended import create_access_token
 import traceback
 import re
 
 auth = Blueprint('auth', __name__)
 
+
 # Helper function to generate OTP
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
+
 
 # =====================
 # LOGIN (MainAdmin + Station)
@@ -53,7 +56,7 @@ def login():
 
         # Unpack values
         user_id = account[0]
-        username = account[1]  # <-- fetch username directly
+        username = account[1]
         stored_hash = account[2].encode('utf-8')
         role = account[3]
 
@@ -69,7 +72,7 @@ def login():
                 "message": "Login successful!",
                 "role": role,
                 "admin_id": user_id,
-                "username": username,  # <-- now returned correctly
+                "username": username,
                 "token": token
             }), 200
         else:
@@ -126,16 +129,19 @@ def forgot_password():
         mysql.connection.commit()
         cur.close()
 
-        # Send OTP email
-        msg = Message("Password Reset OTP", sender="noreply@example.com", recipients=[email])
-        msg.body = f"Your OTP code is {otp_code}. It will expire in 10 minutes."
-        mail.send(msg)
+        # Send OTP email via Brevo API
+        send_email(
+            to_email=email,
+            subject="Password Reset OTP",
+            text_body=f"Your OTP code is {otp_code}. It will expire in 10 minutes.",
+        )
 
         return jsonify({"message": f"OTP sent to email linked to {role}"}), 200
 
     except Exception as err:
         print(traceback.format_exc())
         return jsonify({"error": str(err)}), 500
+
 
 # Helper: validate password strength
 def is_strong_password(password):

@@ -1,8 +1,8 @@
 # app/routes/accountSettings.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from app import mysql, mail
-from flask_mail import Message
+from app import mysql
+from app.brevo_email import send_email
 import bcrypt
 import random
 import string
@@ -11,6 +11,7 @@ import traceback
 import re
 
 account_settings_bp = Blueprint("account_settings", __name__)
+
 
 # Helper: Generate OTP
 def generate_otp(length=6):
@@ -98,10 +99,12 @@ def request_email_change():
         mysql.connection.commit()
         cur.close()
 
-        # Send OTP email
-        msg = Message("Email Change OTP", sender="noreply@example.com", recipients=[new_email])
-        msg.body = f"Your OTP to change email is {otp_code}. It will expire in 10 minutes."
-        mail.send(msg)
+        # Send OTP email via Brevo API
+        send_email(
+            to_email=new_email,
+            subject="Email Change OTP",
+            text_body=f"Your OTP to change email is {otp_code}. It will expire in 10 minutes.",
+        )
 
         return jsonify({"message": f"OTP sent to {new_email}. Please verify to update email."}), 200
 

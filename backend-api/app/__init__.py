@@ -59,7 +59,7 @@ def create_app():
     mysql.init_app(app)
 
     # ============================
-    # MAIL CONFIG
+    # MAIL CONFIG (no longer used for sending, but safe to keep)
     # ============================
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
     app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -149,7 +149,7 @@ def create_app():
     # ============================
     # APSCHEDULER
     # ============================
-    scheduler.app = app           # IMPORTANT!!!!
+    scheduler.app = app
     scheduler.init_app(app)
     scheduler.start()
 
