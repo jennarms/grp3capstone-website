@@ -189,6 +189,11 @@
   transition: background 0.15s ease;
 }
 
+.icon-btn[title="Delete ride"]:hover:not(:disabled) {
+  background-color: #fef2f2; /* light red */
+  border-color: #fecaca;
+}
+
 .icon-btn:hover { background-color: #f5f6f8; }
 
 /* ==========================
