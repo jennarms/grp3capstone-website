@@ -14,12 +14,12 @@ export function SchedulesTab() {
   const [schedules, setSchedules] = useState([]);
   const [vehicles, setVehicles] = useState([]);
 
-  // Loading flags - separated by operation type
+  // Loading flags
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [loadingStations, setLoadingStations] = useState(false);
   const [loadingSchedules, setLoadingSchedules] = useState(false);
-  const [loadingAction, setLoadingAction] = useState(false); // for save, delete, assign
-  const [loadingSuspend, setLoadingSuspend] = useState(false); // for suspend/resume operations
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [loadingSuspend, setLoadingSuspend] = useState(false);
 
   // UI state
   const [editingRideId, setEditingRideId] = useState(null);
@@ -81,37 +81,40 @@ export function SchedulesTab() {
   // Fetch helpers
   // =========================
 
-  const fetchRoutes = useCallback(async (silentUpdate = false) => {
-    if (!apiUrl) return;
-    try {
-      if (!silentUpdate) {
-        setLoadingRoutes(true);
-      }
-      setError(null);
-      const data = await apiCall("/api/schedules/routes");
-      const arr = Array.isArray(data) ? data : [];
-      setRoutes(arr);
-
-      if (arr.length) {
-        if (selectedRoute) {
-          const match = arr.find(
-            (r) => String(r.Route_ID) === String(selectedRoute.Route_ID)
-          );
-          setSelectedRoute(match || arr[0]);
-        } else {
-          setSelectedRoute(arr[0]);
+  const fetchRoutes = useCallback(
+    async (silentUpdate = false) => {
+      if (!apiUrl) return;
+      try {
+        if (!silentUpdate) {
+          setLoadingRoutes(true);
         }
-      } else {
-        setSelectedRoute(null);
+        setError(null);
+        const data = await apiCall("/api/schedules/routes");
+        const arr = Array.isArray(data) ? data : [];
+        setRoutes(arr);
+
+        if (arr.length) {
+          if (selectedRoute) {
+            const match = arr.find(
+              (r) => String(r.Route_ID) === String(selectedRoute.Route_ID)
+            );
+            setSelectedRoute(match || arr[0]);
+          } else {
+            setSelectedRoute(arr[0]);
+          }
+        } else {
+          setSelectedRoute(null);
+        }
+      } catch (e) {
+        setError(`Failed to fetch routes: ${e.message}`);
+      } finally {
+        if (!silentUpdate) {
+          setLoadingRoutes(false);
+        }
       }
-    } catch (e) {
-      setError(`Failed to fetch routes: ${e.message}`);
-    } finally {
-      if (!silentUpdate) {
-        setLoadingRoutes(false);
-      }
-    }
-  }, [apiCall, apiUrl, selectedRoute]);
+    },
+    [apiCall, apiUrl, selectedRoute]
+  );
 
   const fetchStations = useCallback(
     async (routeId) => {
@@ -308,8 +311,10 @@ export function SchedulesTab() {
 
   const startEditingRide = (rideId) => setEditingRideId(rideId);
 
-  const saveRideChanges = async () => {
-    if (editingRideId) await updateRide(editingRideId);
+  // Save handler can be called with explicit ride ID (from row)
+  const saveRideChanges = async (rideIdOverride) => {
+    const idToSave = rideIdOverride || editingRideId;
+    if (idToSave) await updateRide(idToSave);
   };
 
   const cancelEditing = () => {
@@ -539,16 +544,20 @@ th { background: #eee; }
             </label>
 
             <div className="ops-sch-topbar-actions">
-              {/* Disable/Resume buttons - use separate loading flag */}
               <button
                 type="button"
                 className="ops-sch-chip danger"
                 onClick={openSuspendModal}
                 disabled={
-                  !selectedRoute || isRouteSuspended || !schedules.length || loadingSuspend
+                  !selectedRoute ||
+                  isRouteSuspended ||
+                  !schedules.length ||
+                  loadingSuspend
                 }
               >
-                {loadingSuspend && !isRouteSuspended ? "Disabling..." : "Disable All Schedules"}
+                {loadingSuspend && !isRouteSuspended
+                  ? "Disabling..."
+                  : "Disable All Schedules"}
               </button>
 
               <button
@@ -557,21 +566,26 @@ th { background: #eee; }
                 onClick={resumeRoute}
                 disabled={!selectedRoute || !isRouteSuspended || loadingSuspend}
               >
-                {loadingSuspend && isRouteSuspended ? "Resuming..." : "Resume Operations"}
+                {loadingSuspend && isRouteSuspended
+                  ? "Resuming..."
+                  : "Resume Operations"}
               </button>
 
-              {/* Assign vehicle */}
               <button
                 type="button"
                 className="ops-sch-chip"
                 style={{ width: "320px" }}
-                disabled={!selectedRoute || !schedules.length || isRouteSuspended || loadingAction}
+                disabled={
+                  !selectedRoute ||
+                  !schedules.length ||
+                  isRouteSuspended ||
+                  loadingAction
+                }
                 onClick={() => setShowAssignModal(true)}
               >
                 Assign a Vehicle to a Ride
               </button>
 
-              {/* Add ride */}
               <button
                 type="button"
                 className="ops-sch-chip"
@@ -580,31 +594,9 @@ th { background: #eee; }
               >
                 Add Ride
               </button>
-
-              {editingRideId && !isRouteSuspended && (
-                <>
-                  <button
-                    type="button"
-                    className="ops-sch-edit is-on"
-                    onClick={saveRideChanges}
-                    disabled={loadingAction}
-                  >
-                    {loadingAction ? "Saving..." : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    className="ops-sch-edit"
-                    onClick={cancelEditing}
-                    disabled={loadingAction}
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
+              {/* No Save/Cancel here; Save/Cancel is per-row in the table */}
             </div>
           </div>
-
-
 
           {selectedRoute && stations.length > 0 && (
             <div className="ops-sch-table-wrap">
@@ -659,7 +651,8 @@ th { background: #eee; }
                           <input
                             className="sch-cell"
                             value={
-                              editingRideId === ride.Ride_ID && !isRouteSuspended
+                              editingRideId === ride.Ride_ID &&
+                              !isRouteSuspended
                                 ? st.departureTime || ""
                                 : st.departureTime
                                 ? formatTimeForDisplay(st.departureTime)
@@ -690,14 +683,24 @@ th { background: #eee; }
 
                       <td className="action-col">
                         {editingRideId === ride.Ride_ID && !isRouteSuspended ? (
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={saveRideChanges}
-                            disabled={loadingAction}
-                          >
-                            ✓
-                          </button>
+                          <div className="row-actions">
+                            <button
+                              type="button"
+                              className="row-save-btn"
+                              onClick={() => saveRideChanges(ride.Ride_ID)}
+                              disabled={loadingAction}
+                            >
+                              {loadingAction ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              className="row-cancel-btn"
+                              onClick={cancelEditing}
+                              disabled={loadingAction}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         ) : (
                           <div style={{ display: "flex", gap: "8px" }}>
                             <button
@@ -807,8 +810,8 @@ th { background: #eee; }
               >
                 Cancel
               </button>
-              <button 
-                className="rt-btn rt-btnNavy" 
+              <button
+                className="rt-btn rt-btnNavy"
                 onClick={createRide}
                 disabled={loadingAction}
               >
@@ -821,7 +824,10 @@ th { background: #eee; }
 
       {/* Delete ride */}
       {showDeleteRow && rideIdToDelete && (
-        <div className="rt-modalOverlay" onClick={() => setShowDeleteRow(false)}>
+        <div
+          className="rt-modalOverlay"
+          onClick={() => setShowDeleteRow(false)}
+        >
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Delete Ride</h3>

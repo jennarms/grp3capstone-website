@@ -6,6 +6,13 @@ import "./accountSettings.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
+// Simple email validator
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(email) {
+  return emailRegex.test(email.trim());
+}
+
 export function AccountSettings() {
   const [currentEmail, setCurrentEmail] = useState("");
   const [currentUsername, setCurrentUsername] = useState("");
@@ -49,18 +56,53 @@ export function AccountSettings() {
 
   // 🔹 Request email change
   const saveEmail = async () => {
+    const trimmed = newEmail.trim();
+
+    // Frontend validations
+    if (!trimmed) {
+      showBanner("error", "Please enter a new email address.");
+      return;
+    }
+
+    if (trimmed === currentEmail) {
+      showBanner("error", "Your new email must be different from your current email.");
+      return;
+    }
+
+    if (!isValidEmail(trimmed)) {
+      showBanner(
+        "error",
+        "That doesn’t look like a valid email. Please use a format like name@example.com."
+      );
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       await axios.post(
         `${apiUrl}/api/account/request-email-change`,
-        { new_email: newEmail },
+        { new_email: trimmed },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setShowOtpModal(true);
+      showBanner("success", `We’ve sent an OTP to ${trimmed}.`);
     } catch (err) {
       console.error(err);
-      showBanner("error", err.response?.data?.error || "Failed to request email change.");
-      setNewEmail(""); // ❌ clear email field on error
+
+      const backendMsg = err.response?.data?.error;
+
+      if (backendMsg) {
+        // Show backend error nicely (e.g. "Email already in use")
+        showBanner("error", backendMsg);
+      } else if (err.code === "ERR_NETWORK") {
+        showBanner(
+          "error",
+          "Unable to reach the server right now. Please check your internet connection and try again."
+        );
+      } else {
+        showBanner("error", "We couldn’t process that email change. Please try again.");
+      }
+      // 👉 Do NOT clear newEmail so the user can edit it
     }
   };
 
@@ -70,10 +112,10 @@ export function AccountSettings() {
       const token = localStorage.getItem("token");
       await axios.post(
         `${apiUrl}/api/account/confirm-email-change`,
-        { otp_code: otpCode, new_email: newEmail },
+        { otp_code: otpCode, new_email: newEmail.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setCurrentEmail(newEmail);
+      setCurrentEmail(newEmail.trim());
       setNewEmail("");
       setOtpCode("");
       setShowOtpModal(false);
@@ -81,13 +123,16 @@ export function AccountSettings() {
     } catch (err) {
       console.error(err);
       showBanner("error", err.response?.data?.error || "Invalid OTP.");
-      setOtpCode(""); // ❌ clear OTP field on error
+      setOtpCode(""); // clear OTP field on error so they can retype
     }
   };
 
   // 🔹 Save username → open password modal
   const saveUsername = () => {
-    if (!newUsername) return showBanner("error", "Please enter a new username.");
+    if (!newUsername.trim()) {
+      showBanner("error", "Please enter a new username.");
+      return;
+    }
     setShowPwModal(true);
   };
 
@@ -97,10 +142,10 @@ export function AccountSettings() {
       const token = localStorage.getItem("token");
       await axios.post(
         `${apiUrl}/api/account/update-username`,
-        { new_username: newUsername, password: usernamePw },
+        { new_username: newUsername.trim(), password: usernamePw },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setCurrentUsername(newUsername);
+      setCurrentUsername(newUsername.trim());
       setNewUsername("");
       setUsernamePw("");
       setShowPwModal(false);
@@ -108,18 +153,19 @@ export function AccountSettings() {
     } catch (err) {
       console.error(err);
       showBanner("error", err.response?.data?.error || "Failed to update username.");
-      setNewUsername(""); // ❌ clear username field
-      setUsernamePw(""); // ❌ clear password field
+      setUsernamePw(""); // clear password, keep username so they can retry
     }
   };
 
   // 🔹 Update password
   const updatePassword = async () => {
-    if (!pw.current || !pw.next || !pw.confirm)
-      return showBanner("error", "Please fill out all password fields.");
+    if (!pw.current || !pw.next || !pw.confirm) {
+      showBanner("error", "Please fill out all password fields.");
+      return;
+    }
     if (pw.next !== pw.confirm) {
-      showBanner("error", "Passwords do not match.");
-      setPw((p) => ({ ...p, next: "", confirm: "" })); // ❌ clear mismatch fields
+      showBanner("error", "New password and confirm password do not match.");
+      setPw((p) => ({ ...p, next: "", confirm: "" }));
       return;
     }
 
@@ -139,7 +185,7 @@ export function AccountSettings() {
     } catch (err) {
       console.error(err);
       showBanner("error", err.response?.data?.error || "Failed to update password.");
-      setPw({ current: "", next: "", confirm: "" }); // ❌ clear all password fields
+      setPw({ current: "", next: "", confirm: "" });
     }
   };
 
@@ -174,6 +220,7 @@ export function AccountSettings() {
               className="acct-input"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="name@example.com"
             />
           </div>
           <div className="acct-actions">
@@ -250,7 +297,9 @@ export function AccountSettings() {
       {showOtpModal && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2><strong>Confirm Email Change</strong></h2>
+            <h2>
+              <strong>Confirm Email Change</strong>
+            </h2>
             <p>An OTP has been sent to your new email. Enter it below:</p>
             <input
               type="text"
@@ -274,7 +323,9 @@ export function AccountSettings() {
       {showPwModal && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
-            <h2><strong>Confirm Username Change</strong></h2>
+            <h2>
+              <strong>Confirm Username Change</strong>
+            </h2>
             <p>Please enter your password to confirm:</p>
             <input
               type="password"
