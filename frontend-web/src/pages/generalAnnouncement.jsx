@@ -16,29 +16,54 @@ export function Announcement() {
   const apiUrl = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('token');
   const adminId = localStorage.getItem('admin_id');
-  const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
+
+  const headers = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : {}),
+    [token]
+  );
 
   const fetchAnnouncements = useCallback(async () => {
     try {
       const res = await axios.get(`${apiUrl}/api/announcement`, { headers });
-      const formatted = res.data.announcements.map(a => ({
-        id: a.announce_id,
-        title: a.title,
-        message: a.content,
-        datePosted: new Date(a.date_time).toLocaleDateString(),
-        timePosted: new Date(a.date_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }));
+
+      const formatted = res.data.announcements.map(a => {
+        // a.date_time is "YYYY-MM-DD HH:MM:SS"
+        let datePosted = '';
+        let timePosted = '';
+        if (a.date_time) {
+          const [d, t] = a.date_time.split(' ');
+          datePosted = d || '';
+          timePosted = t ? t.slice(0, 5) : ''; // HH:MM
+        }
+
+        return {
+          id: a.announce_id,
+          title: a.title,
+          message: a.content,
+          datePosted,
+          timePosted,
+          adminName: a.admin_name,
+        };
+      });
+
+      // already sorted by backend (date_time desc, id desc)
       setAnnouncements(formatted);
     } catch (err) {
       console.error('Failed to fetch announcements:', err.response?.data || err.message);
     }
   }, [apiUrl, headers]);
 
-  useEffect(() => { fetchAnnouncements(); }, [fetchAnnouncements]);
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   const handleSubmit = async () => {
     if (!title.trim() || !message.trim()) return;
-    if (!adminId) return console.error('Admin ID missing in localStorage');
+    if (!adminId) {
+      console.error('Admin ID missing in localStorage');
+      return;
+    }
+
     const payload = { title, content: message, admin_id: adminId };
 
     try {
@@ -49,8 +74,11 @@ export function Announcement() {
         await axios.post(`${apiUrl}/api/announcement`, payload, { headers });
         setFeedback({ open: true, message: 'Announcement successfully posted!' });
       }
+
       await fetchAnnouncements();
-      setTitle(''); setMessage(''); setEditingId(null);
+      setTitle('');
+      setMessage('');
+      setEditingId(null);
     } catch (err) {
       console.error('Error saving announcement:', err.response?.data || err.message);
       setFeedback({ open: true, message: 'Failed to save announcement. It may already exist.' });
@@ -58,30 +86,63 @@ export function Announcement() {
   };
 
   const confirmDelete = async () => {
-    if (!pendingDeleteId || !adminId) return console.error('Admin ID missing in localStorage');
+    if (!pendingDeleteId || !adminId) {
+      console.error('Admin ID missing in localStorage');
+      return;
+    }
+
     try {
       await axios.delete(`${apiUrl}/api/announcement/${pendingDeleteId}`, {
-        headers, data: { admin_id: adminId },
+        headers,
+        data: { admin_id: adminId },
       });
+
       setAnnouncements(prev => prev.filter(a => a.id !== pendingDeleteId));
-      if (pendingDeleteId === editingId) { setEditingId(null); setTitle(''); setMessage(''); }
+
+      if (pendingDeleteId === editingId) {
+        setEditingId(null);
+        setTitle('');
+        setMessage('');
+      }
+
       setFeedback({ open: true, message: 'Announcement successfully deleted!' });
     } catch (err) {
       console.error('Error deleting announcement:', err.response?.data || err.message);
       setFeedback({ open: true, message: 'Failed to delete announcement.' });
     }
-    setConfirmOpen(false); setPendingDeleteId(null);
+
+    setConfirmOpen(false);
+    setPendingDeleteId(null);
   };
 
-  const askDelete = id => { setPendingDeleteId(id); setConfirmOpen(true); };
-  const cancelDelete = () => { setConfirmOpen(false); setPendingDeleteId(null); };
-  const handleEdit = a => { setEditingId(a.id); setTitle(a.title); setMessage(a.message); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const cancelEdit = () => { setEditingId(null); setTitle(''); setMessage(''); };
+  const askDelete = id => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  const cancelDelete = () => {
+    setConfirmOpen(false);
+    setPendingDeleteId(null);
+  };
+
+  const handleEdit = a => {
+    setEditingId(a.id);
+    setTitle(a.title);
+    setMessage(a.message);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setTitle('');
+    setMessage('');
+  };
 
   return (
     <>
       <Navbar />
       <HeaderButton />
+
       {confirmOpen && <div className="dark-overlay" />}
       {feedback.open && <div className="dark-overlay" />}
 
@@ -91,6 +152,7 @@ export function Announcement() {
         </div>
 
         <div className="ga-wrap">
+          {/* FORM */}
           <div className="ga-form">
             <input
               type="text"
@@ -108,13 +170,18 @@ export function Announcement() {
                 {editingId ? 'Update' : 'Submit'}
               </button>
               {editingId && (
-                <button className="btn btn-outline" style={{ marginLeft: 8 }} onClick={cancelEdit}>
+                <button
+                  className="btn btn-outline"
+                  style={{ marginLeft: 8 }}
+                  onClick={cancelEdit}
+                >
                   Cancel
                 </button>
               )}
             </div>
           </div>
 
+          {/* LIST */}
           <div className="ga-list">
             {announcements.map(a => (
               <div
@@ -124,23 +191,41 @@ export function Announcement() {
                 <div className="ga-card-header">
                   <h2 className="ga-card-title">{a.title}</h2>
                   <div className="ga-actions">
-                    <button onClick={() => handleEdit(a)} className="ga-icon-btn" aria-label="Edit">
-                      <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="" className="ga-action-icon" />
+                    <button
+                      onClick={() => handleEdit(a)}
+                      className="ga-icon-btn"
+                      aria-label="Edit"
+                    >
+                      <img
+                        src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png"
+                        alt=""
+                        className="ga-action-icon"
+                      />
                     </button>
-                    <button onClick={() => askDelete(a.id)} className="ga-icon-btn" aria-label="Delete">
-                      <img src="https://cdn-icons-png.flaticon.com/512/1214/1214428.png" alt="" className="ga-action-icon" />
+                    <button
+                      onClick={() => askDelete(a.id)}
+                      className="ga-icon-btn"
+                      aria-label="Delete"
+                    >
+                      <img
+                        src="https://cdn-icons-png.flaticon.com/512/1214/1214428.png"
+                        alt=""
+                        className="ga-action-icon"
+                      />
                     </button>
                   </div>
                 </div>
 
                 <hr className="ga-divider" />
 
-                {/* Scrollable body area */}
                 <div className="ga-card-scroll">
                   <p className="ga-message">{a.message}</p>
-                  {a.datePosted && a.timePosted && (
+                  {(a.datePosted || a.timePosted) && (
                     <p className="ga-posted">
-                      <strong>Posted:</strong> {a.datePosted} at {a.timePosted}
+                      <strong>Posted:</strong>{' '}
+                      {a.datePosted}
+                      {a.timePosted && ` at ${a.timePosted}`}
+                      {a.adminName && ` by ${a.adminName}`}
                     </p>
                   )}
                 </div>
@@ -152,23 +237,39 @@ export function Announcement() {
 
       {/* Confirm Delete Modal */}
       {confirmOpen && (
-        <div className="ga-modal-overlay" onClick={cancelDelete} aria-hidden="true">
-          <div className="ga-modal" role="dialog" aria-modal="true" aria-labelledby="del-title" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="ga-modal-overlay"
+          onClick={cancelDelete}
+          aria-hidden="true"
+        >
+          <div
+            className="ga-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="del-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="ga-modal-header">
-              <span className="ga-modal-title" id="del-title">Delete Announcement</span>
+              <span className="ga-modal-title" id="del-title">
+                Delete Announcement
+              </span>
             </div>
             <div className="ga-modal-body">
               Are you sure you want to delete this announcement? This action cannot be undone.
             </div>
             <div className="ga-modal-actions">
-              <button className="btn btn-outline" onClick={cancelDelete}>Cancel</button>
-              <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+              <button className="btn btn-outline" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button className="btn btn-danger" onClick={confirmDelete}>
+                Delete
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Feedback Modal — updated to match the Delete modal (same layout + navy button) */}
+      {/* Feedback Modal */}
       {feedback.open && (
         <div
           className="ga-modal-overlay"
@@ -183,7 +284,9 @@ export function Announcement() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ga-modal-header">
-              <span className="ga-modal-title" id="fb-title">Notice</span>
+              <span className="ga-modal-title" id="fb-title">
+                Notice
+              </span>
             </div>
             <div className="ga-modal-body">{feedback.message}</div>
             <div className="ga-modal-actions">
