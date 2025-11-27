@@ -104,47 +104,150 @@ export function Report() {
     }
   };
 
-  const exportExcel = async () => {
+const exportExcel = async () => {
+  try {
+    // Try to load html2canvas for chart snapshots
+    let html2canvas;
     try {
-      const workbook = new ExcelJS.Workbook();
+      const mod = await import("html2canvas");
+      html2canvas = mod.default || mod;
+    } catch (err) {
+      console.warn("html2canvas not available, exporting data only.", err);
+    }
 
-      const sheet1 = workbook.addWorksheet("Stations");
-      // Removed Peak Day, Peak Time, Off Peak Day, Off Peak Time columns
-      sheet1.columns = [
-        { header: 'Station Name', key: 'StationName', width: 20 },
-        { header: 'Total Bookings', key: 'TotalBookings', width: 15 },
-        { header: 'Canceled Bookings', key: 'CanceledCount', width: 15 },
-        { header: 'Female Count', key: 'FemaleCount', width: 15 },
-        { header: 'Male Count', key: 'MaleCount', width: 15 },
-        { header: 'Other Gender Count', key: 'OtherGenderCount', width: 20 },
-        { header: 'Age 0-18', key: 'Age_0_18', width: 12 },
-        { header: 'Age 19-25', key: 'Age_19_25', width: 12 },
-        { header: 'Age 26-40', key: 'Age_26_40', width: 12 },
-        { header: 'Age 41-60', key: 'Age_41_60', width: 12 },
-        { header: 'Age 60+', key: 'Age_60Plus', width: 12 },
-        { header: 'Student Count', key: 'StudentCount', width: 15 },
-        { header: 'Senior Count', key: 'SeniorCount', width: 15 },
-        { header: 'PWD Count', key: 'PWDCount', width: 12 },
-        { header: 'Mobile App', key: 'MobileAppCount', width: 12 },
-        { header: 'Chatbot', key: 'ChatbotCount', width: 12 },
-        { header: 'Gmail', key: 'EmailCount', width: 12 },
-        { header: 'Manual', key: 'ManualBookingCount', width: 12 }
-      ];
-      sheet1.addRows(rows);
+    const workbook = new ExcelJS.Workbook();
 
+    // ===============================
+    // SHEET 1 – RAW TABLE
+    // ===============================
+    const sheet1 = workbook.addWorksheet("Stations");
+
+    sheet1.columns = [
+      { header: 'Station Name', key: 'StationName', width: 20 },
+      { header: 'Total Bookings', key: 'TotalBookings', width: 15 },
+      { header: 'Canceled Bookings', key: 'CanceledCount', width: 15 },
+      { header: 'Female Count', key: 'FemaleCount', width: 15 },
+      { header: 'Male Count', key: 'MaleCount', width: 15 },
+      { header: 'Other Gender Count', key: 'OtherGenderCount', width: 20 },
+      { header: 'Age 0-18', key: 'Age_0_18', width: 12 },
+      { header: 'Age 19-25', key: 'Age_19_25', width: 12 },
+      { header: 'Age 26-40', key: 'Age_26_40', width: 12 },
+      { header: 'Age 41-60', key: 'Age_41_60', width: 12 },
+      { header: 'Age 60+', key: 'Age_60Plus', width: 12 },
+      { header: 'Student Count', key: 'StudentCount', width: 15 },
+      { header: 'Senior Count', key: 'SeniorCount', width: 15 },
+      { header: 'PWD Count', key: 'PWDCount', width: 12 },
+      { header: 'Mobile App', key: 'MobileAppCount', width: 12 },
+      { header: 'Chatbot', key: 'ChatbotCount', width: 12 },
+      { header: 'Gmail', key: 'EmailCount', width: 12 },
+      { header: 'Manual', key: 'ManualBookingCount', width: 12 }
+    ];
+
+    sheet1.addRows(rows);
+
+    // ===============================
+    // If we can't add images, just export data
+    // ===============================
+    const canAddImages =
+      typeof workbook.addImage === "function" &&
+      typeof html2canvas === "function" &&
+      typeof document !== "undefined";
+
+    if (!canAddImages) {
+      console.warn("Chart images not supported, exporting data only.");
       const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const link = document.createElement('a');
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `StationReport_${fmt(start)}-${fmt(end)}.xlsx`;
       link.click();
 
-      showToast("Success!", "Excel exported successfully!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Export failed", "Please install 'exceljs'.", "error");
+      showToast("Success!", "Excel exported (data only).", "success");
+      return;
     }
-  };
+
+    // ===============================
+    // HELPER — CAPTURE CHART AS IMAGE
+    // ===============================
+    const captureChart = async (chartId, sheet, startRow) => {
+      try {
+        const el = document.getElementById(chartId);
+        if (!el) {
+          console.warn(`Chart element with id=${chartId} not found`);
+          return;
+        }
+
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+        const base64 = canvas.toDataURL("image/png");
+
+        const imgId = workbook.addImage({
+          base64,
+          extension: "png",
+        });
+
+        sheet.addImage(imgId, {
+          tl: { col: 0, row: startRow },
+          ext: { width: 900, height: 400 },
+        });
+      } catch (err) {
+        console.error(`Failed to capture chart ${chartId}`, err);
+      }
+    };
+
+    // ===============================
+    // SHEET 2 – Charts
+    // ===============================
+    const sheet2 = workbook.addWorksheet("Charts");
+
+    // Chart 1
+    sheet2.getCell("A1").value = "Total Bookings vs Cancelled";
+    sheet2.getCell("A1").font = { bold: true, size: 16 };
+    await captureChart("chart-bookings-cancelled", sheet2, 2);
+
+    // Chart 2
+    sheet2.getCell("A27").value = "Gender Distribution";
+    sheet2.getCell("A27").font = { bold: true, size: 16 };
+    await captureChart("chart-gender", sheet2, 28);
+
+    // Chart 3
+    sheet2.getCell("A52").value = "Age Distribution";
+    sheet2.getCell("A52").font = { bold: true, size: 16 };
+    await captureChart("chart-age", sheet2, 53);
+
+    // Chart 4
+    sheet2.getCell("A77").value = "Demographics Distribution";
+    sheet2.getCell("A77").font = { bold: true, size: 16 };
+    await captureChart("chart-demographics", sheet2, 78);
+
+    // Chart 5
+    sheet2.getCell("A102").value = "Platform Source";
+    sheet2.getCell("A102").font = { bold: true, size: 16 };
+    await captureChart("chart-platform", sheet2, 103);
+
+    // ===============================
+    // DOWNLOAD
+    // ===============================
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `StationReport_${fmt(start)}-${fmt(end)}.xlsx`;
+    link.click();
+
+    showToast("Success!", "Excel exported with charts!", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Export failed", "Please install 'exceljs' (and 'html2canvas' for charts).", "error");
+  }
+};
+
+
 
   // 1. Total Bookings and Cancelled Bookings Per Station
   const bookingsCancelledData = rows.map((r) => ({
@@ -277,6 +380,7 @@ export function Report() {
             <div className="rg-charts" style={{ marginTop: '40px' }}>
               {/* Chart 1: Total Bookings and Cancelled Bookings Per Station */}
               <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <div id="chart-bookings-cancelled">
                 <h3 className="chart-title">Total Bookings and Cancelled Bookings Per Station</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={bookingsCancelledData}>
@@ -289,10 +393,12 @@ export function Report() {
                     <Bar dataKey="cancelled" fill="#DA6C6C" name="Cancelled" />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               </section>
 
               {/* Chart 2: Gender Per Station */}
               <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <div id="chart-gender">
                 <h3 className="chart-title">Gender Distribution Per Station</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={genderPerStationData}>
@@ -306,10 +412,12 @@ export function Report() {
                     <Bar dataKey="other" fill="#9B7EBD" name="Other" />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               </section>
 
               {/* Chart 3: Age Per Station */}
               <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <div id="chart-age">
                 <h3 className="chart-title">Age Distribution Per Station</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={agePerStationData}>
@@ -325,10 +433,12 @@ export function Report() {
                     <Bar dataKey="60+" fill="#5F6F65" name="60+" />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               </section>
 
               {/* Chart 4: Demographics Distribution Per Station */}
               <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <div id="chart-demographics">
                 <h3 className="chart-title">Demographics Distribution Per Station</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={demographicsData}>
@@ -342,10 +452,12 @@ export function Report() {
                     <Bar dataKey="pwd" fill="#5d576b" name="PWD" />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               </section>
 
               {/* Chart 5: Platform Source Per Station */}
               <section className="chart-card" style={{ marginBottom: '30px' }}>
+                <div id="chart-platform">
                 <h3 className="chart-title">Preferred Platform Source of Booking Per Station</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={platformSourceData}>
@@ -360,6 +472,7 @@ export function Report() {
                     <Bar dataKey="manual" fill="#FADA7A" name="Manual Booking" />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               </section>
             </div>
           </div>
