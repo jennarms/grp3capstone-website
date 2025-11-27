@@ -31,11 +31,6 @@ export function SchedulesTab() {
   const [showDeleteRow, setShowDeleteRow] = useState(false);
   const [rideIdToDelete, setRideIdToDelete] = useState(null);
 
-  // Assign Vehicle modal
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assignRideId, setAssignRideId] = useState("");
-  const [assignVehicleId, setAssignVehicleId] = useState("");
-
   // Suspend modal
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
@@ -234,7 +229,7 @@ export function SchedulesTab() {
     }
   };
 
-  // KEY FIX: when changing route, clear current route's data & edit state immediately
+  // when changing route, clear current route's data & edit state immediately
   const handleRouteChange = (e) => {
     const value = e.target.value;
 
@@ -244,7 +239,6 @@ export function SchedulesTab() {
     setError(null);
 
     setSelectedRouteId(value || "");
-    // routeDataVersion stays; new selectedRouteId triggers fresh fetch
   };
 
   const onCellChange = (rideId, routeStationId, value) => {
@@ -362,7 +356,6 @@ export function SchedulesTab() {
         setShowAddChooser(false);
         setShowAddRow(false);
         setShowDeleteRow(false);
-        setShowAssignModal(false);
         setShowSuspendModal(false);
       }
     };
@@ -495,34 +488,6 @@ th { background: #eee; }
     }
   };
 
-  // Assign vehicle to ride
-  const saveVehicleAssignment = async () => {
-    if (!assignRideId || !assignVehicleId) return;
-
-    try {
-      setLoadingAction(true);
-      setError(null);
-
-      await apiCall("/api/schedules/assign-vehicle", {
-        method: "PUT",
-        body: JSON.stringify({
-          Ride_ID: assignRideId,
-          Vehicle_ID: assignVehicleId,
-        }),
-      });
-
-      setRouteDataVersion((v) => v + 1);
-
-      setAssignRideId("");
-      setAssignVehicleId("");
-      setShowAssignModal(false);
-    } catch (e) {
-      setError(`Failed to assign vehicle: ${e.message}`);
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
   return (
     <>
       <Navbar />
@@ -600,21 +565,7 @@ th { background: #eee; }
                   : "Resume Operations"}
               </button>
 
-              <button
-                type="button"
-                className="ops-sch-chip"
-                style={{ width: "320px" }}
-                disabled={
-                  !selectedRoute ||
-                  !schedules.length ||
-                  isRouteSuspended ||
-                  loadingAction
-                }
-                onClick={() => setShowAssignModal(true)}
-              >
-                Assign a Vehicle to a Ride
-              </button>
-
+              {/* Removed: Assign Vehicle button */}
               <button
                 type="button"
                 className="ops-sch-chip"
@@ -651,7 +602,7 @@ th { background: #eee; }
                     >
                       <td style={{ fontWeight: "bold" }}>{ride.Ride_ID}</td>
 
-                      {/* Vehicle ID cell - CHANGED TO DROPDOWN WHEN EDITING */}
+                      {/* Vehicle ID cell - dropdown on edit */}
                       <td>
                         {editingRideId === ride.Ride_ID && !isRouteSuspended ? (
                           <select
@@ -911,81 +862,6 @@ th { background: #eee; }
                 disabled={loadingAction}
               >
                 {loadingAction ? "Deleting..." : "Delete Ride"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Vehicle Modal */}
-      {showAssignModal && (
-        <div
-          className="rt-modalOverlay"
-          onClick={() => setShowAssignModal(false)}
-        >
-          <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="rt-modalHeader">
-              <h3 className="rt-modalTitle">Assign a Vehicle to a Ride</h3>
-              <button
-                className="rt-close"
-                onClick={() => setShowAssignModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="rt-modalBody">
-              <div className="assign-row">
-                <label>
-                  <strong>Ride ID</strong>
-                </label>
-                <select
-                  className="rt-input"
-                  value={assignRideId}
-                  onChange={(e) => setAssignRideId(e.target.value)}
-                >
-                  <option value="">Select Ride</option>
-                  {schedules.map((r) => (
-                    <option key={r.Ride_ID} value={r.Ride_ID}>
-                      {r.Ride_ID}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="assign-row">
-                <label>
-                  <strong>Vehicle</strong>
-                </label>
-                <select
-                  className="rt-input"
-                  value={assignVehicleId}
-                  onChange={(e) => setAssignVehicleId(e.target.value)}
-                >
-                  <option value="">Select Vehicle</option>
-                  {vehicles.map((v) => (
-                    <option key={v.Vehicle_ID} value={v.Vehicle_ID}>
-                      {v.Vehicle_ID} ({v.vehicleType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="rt-modalActions">
-              <button
-                className="rt-btn rt-btnOutline"
-                onClick={() => setShowAssignModal(false)}
-                disabled={loadingAction}
-              >
-                Cancel
-              </button>
-              <button
-                className="rt-btn rt-btnNavy"
-                onClick={saveVehicleAssignment}
-                disabled={!assignRideId || !assignVehicleId || loadingAction}
-              >
-                {loadingAction ? "Assigning..." : "Save Assignment"}
               </button>
             </div>
           </div>
