@@ -19,6 +19,7 @@ STATUS_UI_TO_DB = {v: k for k, v in STATUS_DB_TO_UI.items()}
 
 
 def format_time(dt):
+    """Format datetime or ISO string to 'H:MM AM/PM'."""
     if not dt:
         return None
     if isinstance(dt, str):
@@ -44,7 +45,7 @@ def dictfetchone(cursor):
 
 def build_trip_route(origin, destination):
     if origin and destination:
-        return f"{origin} → {destination}"
+        return f"{origin} \u2192 {destination}"
     elif origin:
         return origin
     elif destination:
@@ -76,6 +77,24 @@ def get_station_id_from_token():
         traceback.print_exc()
         return None, None
 
+
+def build_station_item(row):
+    """Build a single SOS item for station view (StationSOS page)."""
+    first = row.get("first_name") or ""
+    last = row.get("last_name") or ""
+    passenger_name = f"{first} {last}".strip() or row.get("User_ID") or "Unknown Rider"
+
+    return {
+        "id": row.get("SOS_ID"),
+        "name": passenger_name,
+        "time": format_time(row.get("timestamp")),
+        "boardingStation": row.get("StationName") or "Unknown Station",
+        "route": build_trip_route(row.get("origin"), row.get("destination")),
+        "status": STATUS_DB_TO_UI.get(row.get("status") or "PN", "New"),
+        "respondingAt": format_time(row.get("responding_at")),
+        "resolvedAt": format_time(row.get("resolved_at")),
+    }
+
 # =========================
 # Routes
 # =========================
@@ -85,14 +104,24 @@ def get_station_id_from_token():
 def get_station_sos():
     role, station_id = get_station_id_from_token()
     if station_id is None:
-        return jsonify({"message": "Unauthorized – station account required"}), 403
+        return jsonify({"message": "Unauthorized \u2013 station account required"}), 403
 
     cursor = mysql.connection.cursor()
     try:
         cursor.execute(
             """
-            SELECT s.SOS_ID, s.User_ID, s.Station_ID, s.timestamp, s.status,
-                   st.StationName, u.first_name, u.last_name, b.origin, b.destination
+            SELECT s.SOS_ID,
+                   s.User_ID,
+                   s.Station_ID,
+                   s.timestamp,
+                   s.status,
+                   s.responding_at,
+                   s.resolved_at,
+                   st.StationName,
+                   u.first_name,
+                   u.last_name,
+                   b.origin,
+                   b.destination
             FROM SOS s
             LEFT JOIN Station st ON st.Station_ID = s.Station_ID
             LEFT JOIN Users u ON u.User_ID = s.User_ID
@@ -105,22 +134,7 @@ def get_station_sos():
         )
         rows = dictfetchall(cursor)
 
-        items = []
-        for row in rows:
-            first = row.get("first_name") or ""
-            last = row.get("last_name") or ""
-            passenger_name = f"{first} {last}".strip() or row.get("User_ID") or "Unknown Rider"
-
-            items.append({
-                "id": row.get("SOS_ID"),
-                "name": passenger_name,
-                "time": format_time(row.get("timestamp")),
-                "boardingStation": row.get("StationName") or "Unknown Station",
-                "route": build_trip_route(row.get("origin"), row.get("destination")),
-                "status": STATUS_DB_TO_UI.get(row.get("status") or "PN", "New"),
-                "respondingAt": None,
-                "resolvedAt": None,
-            })
+        items = [build_station_item(row) for row in rows]
 
         return jsonify({"items": items}), 200
     except Exception as e:
@@ -135,28 +149,62 @@ def get_station_sos():
 def mark_sos_responding(sos_id):
     role, station_id = get_station_id_from_token()
     if station_id is None:
-        return jsonify({"message": "Unauthorized – station account required"}), 403
+        return jsonify({"message": "Unauthorized \u2013 station account required"}), 403
 
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("SELECT status FROM SOS WHERE SOS_ID = %s AND Station_ID = %s", (sos_id, station_id))
+        cursor.execute(
+            "SELECT status FROM SOS WHERE SOS_ID = %s AND Station_ID = %s",
+            (sos_id, station_id),
+        )
         row = dictfetchone(cursor)
-        if not row: return jsonify({"message": "SOS not found for this station"}), 404
-        if row["status"] != "PN": return jsonify({"message": "Only New SOS can be marked as Responding"}), 400
+        if not row:
+            return jsonify({"message": "SOS not found for this station"}), 404
+        if row["status"] != "PN":
+            return jsonify({"message": "Only New SOS can be marked as Responding"}), 400
 
         now = datetime.now()
+        # Try to store responding_at; if fails, at least update status
         try:
             cursor.execute(
                 "UPDATE SOS SET status = %s, responding_at = %s WHERE SOS_ID = %s AND Station_ID = %s",
                 ("RS", now, sos_id, station_id),
             )
-        except:
+        except Exception:
             cursor.execute(
                 "UPDATE SOS SET status = %s WHERE SOS_ID = %s AND Station_ID = %s",
                 ("RS", sos_id, station_id),
             )
         mysql.connection.commit()
-        return jsonify({"message": "SOS marked as Responding"}), 200
+
+        # Fetch updated row for frontend
+        cursor.execute(
+            """
+            SELECT s.SOS_ID,
+                   s.User_ID,
+                   s.Station_ID,
+                   s.timestamp,
+                   s.status,
+                   s.responding_at,
+                   s.resolved_at,
+                   st.StationName,
+                   u.first_name,
+                   u.last_name,
+                   b.origin,
+                   b.destination
+            FROM SOS s
+            LEFT JOIN Station st ON st.Station_ID = s.Station_ID
+            LEFT JOIN Users u ON u.User_ID = s.User_ID
+            LEFT JOIN Booking b ON b.User_ID = s.User_ID 
+                AND DATE(b.departure_date) = DATE(s.timestamp)
+            WHERE s.SOS_ID = %s AND s.Station_ID = %s
+            """,
+            (sos_id, station_id),
+        )
+        updated_row = dictfetchone(cursor)
+        item = build_station_item(updated_row) if updated_row else None
+
+        return jsonify({"message": "SOS marked as Responding", "item": item}), 200
     except Exception as e:
         import traceback; traceback.print_exc()
         mysql.connection.rollback()
@@ -170,28 +218,62 @@ def mark_sos_responding(sos_id):
 def mark_sos_resolved(sos_id):
     role, station_id = get_station_id_from_token()
     if station_id is None:
-        return jsonify({"message": "Unauthorized – station account required"}), 403
+        return jsonify({"message": "Unauthorized \u2013 station account required"}), 403
 
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("SELECT status FROM SOS WHERE SOS_ID = %s AND Station_ID = %s", (sos_id, station_id))
+        cursor.execute(
+            "SELECT status FROM SOS WHERE SOS_ID = %s AND Station_ID = %s",
+            (sos_id, station_id),
+        )
         row = dictfetchone(cursor)
-        if not row: return jsonify({"message": "SOS not found for this station"}), 404
-        if row["status"] != "RS": return jsonify({"message": "Only Responding SOS can be marked as Resolved"}), 400
+        if not row:
+            return jsonify({"message": "SOS not found for this station"}), 404
+        if row["status"] != "RS":
+            return jsonify({"message": "Only Responding SOS can be marked as Resolved"}), 400
 
         now = datetime.now()
+        # Try to store resolved_at; if fails, at least update status
         try:
             cursor.execute(
                 "UPDATE SOS SET status = %s, resolved_at = %s WHERE SOS_ID = %s AND Station_ID = %s",
                 ("RV", now, sos_id, station_id),
             )
-        except:
+        except Exception:
             cursor.execute(
                 "UPDATE SOS SET status = %s WHERE SOS_ID = %s AND Station_ID = %s",
                 ("RV", sos_id, station_id),
             )
         mysql.connection.commit()
-        return jsonify({"message": "SOS marked as Resolved"}), 200
+
+        # Fetch updated row for frontend
+        cursor.execute(
+            """
+            SELECT s.SOS_ID,
+                   s.User_ID,
+                   s.Station_ID,
+                   s.timestamp,
+                   s.status,
+                   s.responding_at,
+                   s.resolved_at,
+                   st.StationName,
+                   u.first_name,
+                   u.last_name,
+                   b.origin,
+                   b.destination
+            FROM SOS s
+            LEFT JOIN Station st ON st.Station_ID = s.Station_ID
+            LEFT JOIN Users u ON u.User_ID = s.User_ID
+            LEFT JOIN Booking b ON b.User_ID = s.User_ID 
+                AND DATE(b.departure_date) = DATE(s.timestamp)
+            WHERE s.SOS_ID = %s AND s.Station_ID = %s
+            """,
+            (sos_id, station_id),
+        )
+        updated_row = dictfetchone(cursor)
+        item = build_station_item(updated_row) if updated_row else None
+
+        return jsonify({"message": "SOS marked as Resolved", "item": item}), 200
     except Exception as e:
         import traceback; traceback.print_exc()
         mysql.connection.rollback()
@@ -211,8 +293,6 @@ def get_sos_by_status():
     Returns SOS entries filtered by status.
     Safe for nulls in Users, Station, Booking, latitude, longitude.
     """
-    from flask import request
-
     try:
         status_param = request.args.get('status', '').upper()
         print(f"[DEBUG] GET /api/sos with status={status_param}")
@@ -241,6 +321,8 @@ def get_sos_by_status():
                     s.status,
                     s.latitude,
                     s.longitude,
+                    s.responding_at,
+                    s.resolved_at,
                     st.StationName,
                     u.first_name,
                     u.last_name,
@@ -280,10 +362,7 @@ def get_sos_by_status():
                 except Exception:
                     lat, lon = None, None
 
-                # Safe route
                 trip_route = build_trip_route(row.get("origin"), row.get("destination"))
-
-                # Map status for UI
                 ui_status = STATUS_DB_TO_UI.get(row.get("status") or "PN", "New")
 
                 items.append({
@@ -296,6 +375,8 @@ def get_sos_by_status():
                     "status": ui_status,
                     "latitude": lat,
                     "longitude": lon,
+                    "respondingAt": format_time(row.get("responding_at")),
+                    "resolvedAt": format_time(row.get("resolved_at")),
                 })
 
             return jsonify({"items": items, "count": len(items)}), 200
@@ -313,5 +394,3 @@ def get_sos_by_status():
         import traceback
         traceback.print_exc()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
-
-

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useBroadcast } from "./BroadcastProvider";
 import "./GlobalBroadcastBanner.css";
@@ -6,7 +6,11 @@ import "./GlobalBroadcastBanner.css";
 /* ---------- helpers ---------- */
 
 const firstNonEmpty = (...vals) =>
-  vals.map(v => (v ?? "")).map(String).map(s => s.trim()).find(Boolean) || "";
+  vals
+    .map((v) => v ?? "")
+    .map(String)
+    .map((s) => s.trim())
+    .find(Boolean) || "";
 
 function stationWithSuffix(name) {
   const n = (name || "").trim();
@@ -20,12 +24,18 @@ function pickStationName(msg) {
 
   // 1) Common backend fields
   const direct = firstNonEmpty(
-    msg.Station_Name, msg.station_name,
-    msg.Station, msg.station,
-    msg.StationName, msg.stationName,
-    msg.Sender_Station_Name, msg.SenderStationName,
-    msg.Location_Name, msg.location_name,
-    msg.Station_Location, msg.station_location
+    msg.Station_Name,
+    msg.station_name,
+    msg.Station,
+    msg.station,
+    msg.StationName,
+    msg.stationName,
+    msg.Sender_Station_Name,
+    msg.SenderStationName,
+    msg.Location_Name,
+    msg.location_name,
+    msg.Station_Location,
+    msg.station_location
   );
   if (direct) return direct;
 
@@ -49,7 +59,12 @@ function pickStationName(msg) {
 /** Audience: "Admins" or "Everyone" */
 function resolveAudience(msg) {
   const raw = String(
-    msg?.audience || msg?.visibility || msg?.target || msg?.scope || msg?.to || ""
+    msg?.audience ||
+      msg?.visibility ||
+      msg?.target ||
+      msg?.scope ||
+      msg?.to ||
+      ""
   ).toLowerCase();
   return ["admins", "admin", "admin_only", "admins_only"].includes(raw)
     ? "Admins"
@@ -63,18 +78,25 @@ function buildHeader(msg) {
   return `${audience} | ${station}`;
 }
 
+const noop = () => {}; // stable fallback
+
 /* ---------- component ---------- */
 
-export default function GlobalBroadcastBanner({ autoHideMs = 3500, offsetTop = 16 }) {
-  const ctx = (typeof useBroadcast === "function" ? useBroadcast() : null) || {};
+export default function GlobalBroadcastBanner({
+  autoHideMs = 3500,
+  offsetTop = 16,
+}) {
+  const ctx = useBroadcast() || {};
   const unreadCount = ctx.unreadCount ?? 0;
   const latest = ctx.latest ?? null;
-  const markAllRead = ctx.markAllRead ?? (() => {});
+  const markAllRead = ctx.markAllRead || noop;
+
   const location = useLocation();
   const navigate = useNavigate();
 
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [lastShownId, setLastShownId] = useState(null);
 
   const onBroadcastPage = location.pathname === "/broadcast";
 
@@ -84,21 +106,45 @@ export default function GlobalBroadcastBanner({ autoHideMs = 3500, offsetTop = 1
     return { title: header || "Broadcast", body: raw };
   }, [latest]);
 
+  // Show banner only once per NEW latest message
   useEffect(() => {
-    setVisible(unreadCount > 0 && !onBroadcastPage);
-  }, [unreadCount, onBroadcastPage]);
+    if (!latest || !latest.id) return;
+    if (onBroadcastPage) return;
+    if (unreadCount <= 0) return;
+    if (lastShownId === latest.id) return; // already shown this message
 
+    setLastShownId(latest.id);
+    setVisible(true);
+  }, [latest, unreadCount, onBroadcastPage, lastShownId]);
+
+  // Auto-hide
   useEffect(() => {
     if (!visible || hovered || autoHideMs <= 0) return;
     const t = setTimeout(() => setVisible(false), autoHideMs);
     return () => clearTimeout(t);
   }, [visible, hovered, autoHideMs]);
 
+  // Extra safety: when on /broadcast, mark all as read and hide
+  useEffect(() => {
+    if (onBroadcastPage && unreadCount > 0) {
+      try {
+        markAllRead();
+      } catch (err) {
+        console.error("markAllRead failed in banner", err);
+      }
+      setVisible(false);
+    }
+  }, [onBroadcastPage, unreadCount, markAllRead]);
+
   if (!visible) return null;
 
   const openBroadcast = () => {
     navigate("/broadcast");
-    try { markAllRead(); } catch {}
+    try {
+      markAllRead();
+    } catch (err) {
+      console.error("markAllRead failed on click", err);
+    }
     setVisible(false);
   };
 

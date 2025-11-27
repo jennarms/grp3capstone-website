@@ -1,4 +1,4 @@
-# broadcast_blueprint.py - COMPLETELY FIXED VERSION
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mysql
@@ -52,7 +52,7 @@ def get_next_message_id(channel_name):
             cur.execute(f"""
                 SELECT Message_ID 
                 FROM {msg_table} 
-                WHERE Message_ID LIKE 'MSG%' 
+                WHERE Message_ID LIKE 'MSG%%' 
                 ORDER BY CAST(SUBSTRING(Message_ID, 4) AS UNSIGNED) DESC 
                 LIMIT 1
             """)
@@ -82,7 +82,7 @@ def get_next_reaction_id(channel_name):
             cur.execute(f"""
                 SELECT Reaction_ID 
                 FROM {reaction_table} 
-                WHERE Reaction_ID LIKE 'REACT%' 
+                WHERE Reaction_ID LIKE 'REACT%%' 
                 ORDER BY CAST(SUBSTRING(Reaction_ID, 6) AS UNSIGNED) DESC 
                 LIMIT 1
             """)
@@ -108,7 +108,7 @@ def cache_table_columns(table_name):
 
     try:
         with mysql.connection.cursor() as cur:
-            cur.execute(f"SHOW TABLES LIKE %s", (table_name,))
+            cur.execute("SHOW TABLES LIKE %s", (table_name,))
             if not cur.fetchone():
                 _schema_cache[table_name] = None
                 return None
@@ -193,6 +193,48 @@ def aggregate_reactions_for_messages(message_ids, reaction_table):
         return {}
 
 # -----------------------------
+# LAST_SEEN HELPERS (DB-BASED)
+# -----------------------------
+def get_last_seen(channel_name):
+    """Return datetime or None from Broadcast_LastSeen."""
+    try:
+        user_id, user_type = get_user_info()
+        with mysql.connection.cursor() as cur:
+            cur.execute("""
+                SELECT LastSeen
+                FROM Broadcast_LastSeen
+                WHERE Identity_Value = %s
+                  AND Identity_Type = %s
+                  AND Channel = %s
+            """, (user_id, user_type, channel_name))
+            row = cur.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"get_last_seen error for {channel_name}: {e}")
+        logger.error(traceback.format_exc())
+        return None
+
+def update_last_seen(channel_name):
+    """Upsert LastSeen for this user + channel in Broadcast_LastSeen."""
+    try:
+        user_id, user_type = get_user_info()
+        now = datetime.now()
+        with mysql.connection.cursor() as cur:
+            cur.execute("""
+                INSERT INTO Broadcast_LastSeen
+                (Identity_Value, Identity_Type, Channel, LastSeen)
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE LastSeen = VALUES(LastSeen)
+            """, (user_id, user_type, channel_name, now))
+            mysql.connection.commit()
+        return now
+    except Exception as e:
+        logger.error(f"update_last_seen error for {channel_name}: {e}")
+        logger.error(traceback.format_exc())
+        mysql.connection.rollback()
+        return None
+
+# -----------------------------
 # UNIFIED MESSAGE RETRIEVAL
 # -----------------------------
 @broadcast_bp.route("/<channel_name>", methods=["GET"])
@@ -271,7 +313,7 @@ def get_messages(channel_name):
         messages = []
         msg_ids = []
         for row in raw:
-            rowd = {colnames[i]: row[i] if i < len(row) else None for i in range(len(colnames))}
+            rowd = {colnames[i]: row[i] if i < len(colnames) else None for i in range(len(colnames))}
             mid = str(rowd.get("Message_ID") or "")
             msg = {
                 "id": mid,
@@ -305,6 +347,124 @@ def get_messages(channel_name):
         logger.error(f"get_messages error for {channel_name}: {e}")
         logger.error(traceback.format_exc())
         return jsonify([]), 200
+
+# -----------------------------
+# CHANNEL SUMMARY (LATEST + UNREAD)
+# -----------------------------
+@broadcast_bp.route("/<channel_name>/summary", methods=["GET"])
+@jwt_required()
+def get_channel_summary(channel_name):
+    """
+    Returns:
+      {
+        "latest": { Message_ID, Message_Content, Sent_At, Sender_MainAdmin_ID, Sender_Station_ID, audience },
+        "unread_count": <int>
+      }
+    Unread count uses Broadcast_LastSeen and ignores self-sent messages.
+    """
+    try:
+        config, error = get_channel_config(channel_name)
+        if error:
+            return jsonify({"error": error}), 403
+
+        msg_table = config["message_table"]
+        cols = cache_table_columns(msg_table)
+        if not cols:
+            return jsonify({"latest": None, "unread_count": 0}), 200
+
+        user_id, user_type = get_user_info()
+
+        # Latest message
+        latest = None
+        with mysql.connection.cursor() as cur:
+            # we assume Sent_At exists; if not, fallback to Message_ID ordering
+            if "Sent_At" in cols:
+                cur.execute(f"""
+                    SELECT Message_ID, Message_Content, Sent_At,
+                           Sender_MainAdmin_ID, Sender_Station_ID
+                    FROM {msg_table}
+                    ORDER BY Sent_At DESC
+                    LIMIT 1
+                """)
+            else:
+                cur.execute(f"""
+                    SELECT Message_ID, Message_Content, NULL as Sent_At,
+                           Sender_MainAdmin_ID, Sender_Station_ID
+                    FROM {msg_table}
+                    ORDER BY Message_ID DESC
+                    LIMIT 1
+                """)
+            row = cur.fetchone()
+
+        if row:
+            latest = {
+                "Message_ID": row[0],
+                "Message_Content": row[1],
+                "Sent_At": row[2].isoformat() if isinstance(row[2], datetime) else str(row[2]),
+                "Sender_MainAdmin_ID": row[3],
+                "Sender_Station_ID": row[4],
+                "audience": channel_name,
+            }
+
+        # Unread count based on Broadcast_LastSeen
+        last_seen = get_last_seen(channel_name)
+
+        unread_count = 0
+        with mysql.connection.cursor() as cur:
+            base = f"SELECT COUNT(*) FROM {msg_table}"
+            conditions = []
+            params = []
+
+            if last_seen and "Sent_At" in cols:
+                conditions.append("Sent_At > %s")
+                params.append(last_seen)
+
+            # Ignore self messages
+            if user_type == "main-admin" and "Sender_MainAdmin_ID" in cols:
+                conditions.append("(Sender_MainAdmin_ID IS NULL OR Sender_MainAdmin_ID <> %s)")
+                params.append(user_id)
+            elif user_type == "station-admin" and "Sender_Station_ID" in cols:
+                conditions.append("(Sender_Station_ID IS NULL OR Sender_Station_ID <> %s)")
+                params.append(user_id)
+
+            if conditions:
+                base += " WHERE " + " AND ".join(conditions)
+
+            logger.info(f"Unread count query for {channel_name}: {base} params={params}")
+            cur.execute(base, tuple(params))
+            row = cur.fetchone()
+            unread_count = row[0] if row else 0
+
+        return jsonify({
+            "latest": latest,
+            "unread_count": int(unread_count or 0),
+        }), 200
+
+    except Exception as e:
+        logger.error(f"get_channel_summary error for {channel_name}: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({"latest": None, "unread_count": 0}), 200
+
+# -----------------------------
+# MARK READ ENDPOINT
+# -----------------------------
+@broadcast_bp.route("/<channel_name>/mark-read", methods=["POST"])
+@jwt_required()
+def mark_read(channel_name):
+    try:
+        config, error = get_channel_config(channel_name)
+        if error:
+            return jsonify({"error": error}), 403
+
+        ts = update_last_seen(channel_name)
+        if not ts:
+            return jsonify({"error": "Failed to update last seen"}), 500
+
+        return jsonify({"status": "ok", "last_seen": ts.isoformat()}), 200
+    except Exception as e:
+        logger.error(f"mark_read error for {channel_name}: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 # -----------------------------
 # UNIFIED MESSAGE SENDING
@@ -472,7 +632,7 @@ def edit_message(channel_name):
         return jsonify({"error": str(e)}), 500
 
 # -----------------------------
-# UNIFIED REACTIONS - FIXED VERSION
+# UNIFIED REACTIONS
 # -----------------------------
 @broadcast_bp.route("/<channel_name>/react", methods=["POST"])
 @jwt_required()
@@ -744,7 +904,6 @@ def debug_tables():
         return jsonify({"error": str(e)}), 500
 
 # =================== BACKWARD COMPATIBILITY ENDPOINTS ===================
-# These ensure old frontend calls still work while routing to new unified system
 
 @broadcast_bp.route("/everyone", methods=["GET"])
 @jwt_required()
@@ -805,3 +964,24 @@ def delete_reaction_everyone():
 @jwt_required()
 def delete_reaction_admins():
     return delete_reaction("admins")
+
+# NEW: summary + mark-read backward-compat
+@broadcast_bp.route("/everyone/summary", methods=["GET"])
+@jwt_required()
+def summary_everyone():
+    return get_channel_summary("everyone")
+
+@broadcast_bp.route("/admins/summary", methods=["GET"])
+@jwt_required()
+def summary_admins():
+    return get_channel_summary("admins")
+
+@broadcast_bp.route("/everyone/mark-read", methods=["POST"])
+@jwt_required()
+def mark_read_everyone():
+    return mark_read("everyone")
+
+@broadcast_bp.route("/admins/mark-read", methods=["POST"])
+@jwt_required()
+def mark_read_admins():
+    return mark_read("admins")
