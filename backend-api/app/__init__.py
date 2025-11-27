@@ -29,6 +29,8 @@ def create_app():
         origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     origins.append("https://grp3capstone-website-1.onrender.com")
+    origins.append("https://www.mctcs.online")
+    origins.append("https://mctcs.online")
 
     CORS(app,
          origins=origins,
