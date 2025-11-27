@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import mysql
 from datetime import date
 
@@ -8,6 +8,29 @@ landingboarding_bp = Blueprint('landingboarding_bp', __name__)
 # -------------------------------------------------------------------
 # helpers
 # -------------------------------------------------------------------
+
+def ensure_station_admin():
+    """
+    Make sure the caller is a station account.
+
+    We look at the 'role' claim in the JWT:
+      - Allowed: 'station-admin', 'station_admin', 'station'
+      - If role is missing, we allow (for backwards compatibility)
+      - Anything else gets HTTP 403
+    """
+    claims = get_jwt()
+    role = (claims.get("role") or "").lower()
+
+    # If there's a role and it's clearly NOT a station role, block it
+    if role and role not in ("station-admin", "station_admin", "station"):
+        return False, (jsonify({
+            "error": "This page is only available for station accounts. "
+                     "Please log in using a station account."
+        }), 403)
+
+    # role is either a station role or missing (old tokens) -> allow
+    return True, None
+
 
 def get_station_info(station_id):
     """Return (Station_ID, Company_ID, StationName) or None."""
@@ -84,15 +107,15 @@ def get_boarding_schedules():
     Landing page source: list forward/reverse schedules for the logged-in station,
     for the provided service date.
 
-    Seat availability is TIME-BASED per schedule row:
-
-      booked_seats  = BoardingDisembarking rows on that departure_date + departure_time
-                      with status in ('P','B')
-      available     = max(0, capacity - booked_seats)
-
-    ❗ Capacity is taken from Vehicle via Schedule.Vehicle_ID
+    Seat availability is TIME-BASED per schedule row.
     """
     try:
+        # 🔐 Station-only guard
+        ok, resp = ensure_station_admin()
+        if not ok:
+            return resp
+
+        # For station accounts, identity should be Station_ID
         station_id = get_jwt_identity()
         target_date = request.args.get('date', date.today().isoformat())
 
@@ -104,8 +127,6 @@ def get_boarding_schedules():
         cursor = mysql.connection.cursor()
 
         try:
-            # 🔹 IMPORTANT LINE:
-            # We join Vehicle THROUGH Schedule.Vehicle_ID, not Route.Vehicle_ID.
             cursor.execute("""
                 SELECT 
                     r.Route_ID,
@@ -149,12 +170,9 @@ def get_boarding_schedules():
                     vehicle_capacity,
                 ) = row
 
-                # If no vehicle is assigned to this schedule, treat capacity as 0
                 vehicle_capacity = vehicle_capacity if vehicle_capacity is not None else 0
-
                 direction = normalize_direction(direction_code)
 
-                # Calculate seat info (time-based)
                 seat_info = calculate_available_seats(
                     vehicle_capacity,
                     target_date,
@@ -200,11 +218,17 @@ def get_boarding_schedules():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @landingboarding_bp.route('/debug-routes', methods=['GET'])
 @jwt_required()
 def debug_routes():
     """Debug helper to see routes/directions visible to this station."""
     try:
+        # 🔐 Station-only guard
+        ok, resp = ensure_station_admin()
+        if not ok:
+            return resp
+
         station_id = get_jwt_identity()
         cursor = mysql.connection.cursor()
         try:
@@ -264,6 +288,11 @@ def get_schedule_details(schedule_id):
     to stay consistent with how BoardingDisembarking rows are stored.
     """
     try:
+        # 🔐 Station-only guard
+        ok, resp = ensure_station_admin()
+        if not ok:
+            return resp
+
         station_id = get_jwt_identity()
         target_date = request.args.get('date', date.today().isoformat())
 
@@ -273,7 +302,6 @@ def get_schedule_details(schedule_id):
 
         cursor = mysql.connection.cursor()
         try:
-            # 🔹 IMPORTANT CHANGE: Vehicle joined via Schedule.Vehicle_ID
             cursor.execute("""
                 SELECT 
                     s.Schedule_ID,
@@ -402,6 +430,11 @@ def get_schedule_details(schedule_id):
 def get_station_routes():
     """Simple dropdown data for routes visible to this station."""
     try:
+        # 🔐 Station-only guard
+        ok, resp = ensure_station_admin()
+        if not ok:
+            return resp
+
         station_id = get_jwt_identity()
 
         station_info = get_station_info(station_id)
