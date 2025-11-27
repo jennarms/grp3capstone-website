@@ -35,7 +35,6 @@ export function RoutesTab() {
     companyId: "",
     routeName: "",
     direction: "FO",
-    vehicleId: "",
   });
   const [routeToDelete, setRouteToDelete] = useState(null);
 
@@ -141,7 +140,6 @@ export function RoutesTab() {
           routeName: routeItem.route_name,
           direction: routeItem.direction,
           directionDisplay: getDirectionDisplay(routeItem.direction),
-          vehicleId: routeItem.vehicle_id || "Not Assigned",
         }));
         setRows(mappedData);
 
@@ -401,8 +399,12 @@ export function RoutesTab() {
       routeId: r.routeId,
       companyId: r.companyId,
       routeName: r.routeName,
-      direction: r.direction === "RE" ? "Reverse" : r.direction === "FO" ? "Forward" : "Null",
-      vehicleId: r.vehicleId,
+      direction:
+        r.direction === "RE"
+          ? "Reverse"
+          : r.direction === "FO"
+          ? "Forward"
+          : "Null",
     });
     setRouteEditOpen(true);
     setError("");
@@ -616,7 +618,6 @@ export function RoutesTab() {
                 <th>Company_ID</th>
                 <th>Route Name</th>
                 <th>Direction</th>
-                <th>Vehicle_ID</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -627,7 +628,6 @@ export function RoutesTab() {
                   <td>{r.companyId}</td>
                   <td>{r.routeName}</td>
                   <td>{r.directionDisplay}</td>
-                  <td>{r.vehicleId}</td>
                   <td className="ops-routes-actions">
                     <button
                       className="ops-routes-action ops-routes-edit"
@@ -648,7 +648,10 @@ export function RoutesTab() {
               ))}
               {filteredRoutes.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>
+                  <td
+                    colSpan={5}
+                    style={{ textAlign: "center", padding: "20px" }}
+                  >
                     No routes found
                   </td>
                 </tr>
@@ -746,7 +749,10 @@ export function RoutesTab() {
               ))}
               {filteredStations.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>
+                  <td
+                    colSpan={6}
+                    style={{ textAlign: "center", padding: "20px" }}
+                  >
                     No stations found for this route
                   </td>
                 </tr>
@@ -762,7 +768,10 @@ export function RoutesTab() {
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Add Route</h3>
-              <button className="rt-close" onClick={() => setRouteAddOpen(false)}>
+              <button
+                className="rt-close"
+                onClick={() => setRouteAddOpen(false)}
+              >
                 ×
               </button>
             </div>
@@ -787,7 +796,10 @@ export function RoutesTab() {
               </select>
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setRouteAddOpen(false)}>
+              <button
+                className="rt-btn rt-btnOutline"
+                onClick={() => setRouteAddOpen(false)}
+              >
                 Cancel
               </button>
               <button
@@ -803,11 +815,17 @@ export function RoutesTab() {
       )}
 
       {routeEditOpen && (
-        <div className="rt-modalOverlay" onClick={() => setRouteEditOpen(false)}>
+        <div
+          className="rt-modalOverlay"
+          onClick={() => setRouteEditOpen(false)}
+        >
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Edit Route</h3>
-              <button className="rt-close" onClick={() => setRouteEditOpen(false)}>
+              <button
+                className="rt-close"
+                onClick={() => setRouteEditOpen(false)}
+              >
                 ×
               </button>
             </div>
@@ -816,8 +834,6 @@ export function RoutesTab() {
               <input value={routeEdit.routeId} disabled />
               <label>Company ID</label>
               <input value={routeEdit.companyId} disabled />
-              <label>Vehicle ID</label>
-              <input value={routeEdit.vehicleId || "Not assigned"} disabled />
               <label>Route Name</label>
               <input
                 value={routeEdit.routeName}
@@ -837,7 +853,10 @@ export function RoutesTab() {
               </select>
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setRouteEditOpen(false)}>
+              <button
+                className="rt-btn rt-btnOutline"
+                onClick={() => setRouteEditOpen(false)}
+              >
                 Cancel
               </button>
               <button className="rt-btn rt-btnNavy" onClick={saveRouteEdit}>
@@ -874,17 +893,29 @@ export function RoutesTab() {
                 Cancel
               </button>
               {routeConfirm.kind === "add" && (
-                <button className="rt-btn rt-btnNavy" onClick={confirmRouteAdd} disabled={loading}>
+                <button
+                  className="rt-btn rt-btnNavy"
+                  onClick={confirmRouteAdd}
+                  disabled={loading}
+                >
                   Add
                 </button>
               )}
               {routeConfirm.kind === "edit" && (
-                <button className="rt-btn rt-btnNavy" onClick={confirmRouteEdit} disabled={loading}>
+                <button
+                  className="rt-btn rt-btnNavy"
+                  onClick={confirmRouteEdit}
+                  disabled={loading}
+                >
                   Save
                 </button>
               )}
               {routeConfirm.kind === "delete" && (
-                <button className="rt-btn rt-btnNavy" onClick={confirmRouteDelete} disabled={loading}>
+                <button
+                  className="rt-btn rt-btnNavy"
+                  onClick={confirmRouteDelete}
+                  disabled={loading}
+                >
                   Delete
                 </button>
               )}
@@ -899,7 +930,10 @@ export function RoutesTab() {
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Add Station for Route</h3>
-              <button className="rt-close" onClick={() => setStAddOpen(false)}>
+              <button
+                className="rt-close"
+                onClick={() => setStAddOpen(false)}
+              >
                 ×
               </button>
             </div>
@@ -907,11 +941,15 @@ export function RoutesTab() {
             <div className="rt-modalBody rt-stAddBody">
               <div className="rt-descRow">
                 <span className="rt-descLabel">Route ID:</span>
-                <span className="rt-descValue">{stDraft.routeId || selectedRouteId}</span>
+                <span className="rt-descValue">
+                  {stDraft.routeId || selectedRouteId}
+                </span>
               </div>
               <div className="rt-descRow">
                 <span className="rt-descLabel">Station ID:</span>
-                <span className="rt-descValue">{stDraft.stationId || "—"}</span>
+                <span className="rt-descValue">
+                  {stDraft.stationId || "—"}
+                </span>
               </div>
 
               <label className="rt-fieldLabel">Station</label>
@@ -919,7 +957,9 @@ export function RoutesTab() {
                 className="rt-select"
                 value={stDraft.stationId}
                 onChange={(e) => {
-                  const st = availableStations.find((s) => s.id === e.target.value);
+                  const st = availableStations.find(
+                    (s) => s.id === e.target.value
+                  );
                   setStDraft((prev) => ({
                     ...prev,
                     stationId: st?.id || "",
@@ -940,12 +980,17 @@ export function RoutesTab() {
                 className="rt-input"
                 min="1"
                 value={stDraft.stopOrder}
-                onChange={(e) => setStDraft({ ...stDraft, stopOrder: e.target.value })}
+                onChange={(e) =>
+                  setStDraft({ ...stDraft, stopOrder: e.target.value })
+                }
               />
             </div>
 
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setStAddOpen(false)}>
+              <button
+                className="rt-btn rt-btnOutline"
+                onClick={() => setStAddOpen(false)}
+              >
                 Cancel
               </button>
               <button
@@ -965,7 +1010,10 @@ export function RoutesTab() {
           <div className="rt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rt-modalHeader">
               <h3 className="rt-modalTitle">Edit Station Route</h3>
-              <button className="rt-close" onClick={() => setStEditOpen(false)}>
+              <button
+                className="rt-close"
+                onClick={() => setStEditOpen(false)}
+              >
                 ×
               </button>
             </div>
@@ -983,11 +1031,16 @@ export function RoutesTab() {
                 type="number"
                 min="1"
                 value={stEdit.stopOrder}
-                onChange={(e) => setStEdit({ ...stEdit, stopOrder: e.target.value })}
+                onChange={(e) =>
+                  setStEdit({ ...stEdit, stopOrder: e.target.value })
+                }
               />
             </div>
             <div className="rt-modalActions">
-              <button className="rt-btn rt-btnOutline" onClick={() => setStEditOpen(false)}>
+              <button
+                className="rt-btn rt-btnOutline"
+                onClick={() => setStEditOpen(false)}
+              >
                 Cancel
               </button>
               <button className="rt-btn rt-btnNavy" onClick={saveStationEdit}>
@@ -1024,17 +1077,29 @@ export function RoutesTab() {
                 Cancel
               </button>
               {stConfirm.kind === "add" && (
-                <button className="rt-btn rt-btnNavy" onClick={confirmStationAdd} disabled={loading}>
+                <button
+                  className="rt-btn rt-btnNavy"
+                  onClick={confirmStationAdd}
+                  disabled={loading}
+                >
                   Add
                 </button>
               )}
               {stConfirm.kind === "edit" && (
-                <button className="rt-btn rt-btnNavy" onClick={confirmStationEdit} disabled={loading}>
+                <button
+                  className="rt-btn rt-btnNavy"
+                  onClick={confirmStationEdit}
+                  disabled={loading}
+                >
                   Save
                 </button>
               )}
               {stConfirm.kind === "delete" && (
-                <button className="rt-btn rt-btnNavy" onClick={confirmStationDelete} disabled={loading}>
+                <button
+                  className="rt-btn rt-btnNavy"
+                  onClick={confirmStationDelete}
+                  disabled={loading}
+                >
                   Delete
                 </button>
               )}
