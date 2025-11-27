@@ -46,7 +46,7 @@ def get_routes():
         cur = mysql.connection.cursor()
         cur.execute(
             """
-            SELECT Route_ID, Company_ID, Route_name, Direction, Vehicle_ID
+            SELECT Route_ID, Company_ID, Route_name, Direction
             FROM Route
             WHERE Company_ID=%s
             ORDER BY Route_ID
@@ -62,7 +62,6 @@ def get_routes():
                 "company_id": r[1],
                 "route_name": r[2],
                 "direction": r[3] if r[3] else None,
-                "vehicle_id": r[4],
             }
             for r in routes_rows
         ]
@@ -90,31 +89,22 @@ def create_route():
 
         cur = mysql.connection.cursor()
 
-        # Fetch first available vehicle
-        cur.execute("SELECT Vehicle_ID FROM Vehicle LIMIT 1")
-        vehicle_row = cur.fetchone()
-        if not vehicle_row:
-            cur.close()
-            return jsonify({"error": "No vehicle found"}), 400
-
-        vehicle_id = vehicle_row[0]
-
-        # REMOVED: Route limits - no longer restricting number of routes
+        # REMOVED: Vehicle selection / Vehicle_ID handling
 
         route_id = generate_route_id(company_id)
 
-        # Insert route
+        # Insert route (no Vehicle_ID column anymore)
         cur.execute(
             """
-            INSERT INTO Route (Route_ID, Company_ID, Route_name, Direction, Vehicle_ID)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO Route (Route_ID, Company_ID, Route_name, Direction)
+            VALUES (%s, %s, %s, %s)
         """,
-            (route_id, company_id, route_name, direction, vehicle_id),
+            (route_id, company_id, route_name, direction),
         )
         mysql.connection.commit()
         cur.close()
 
-        return jsonify({"message": "Route created successfully", "route_id": route_id, "vehicle_id": vehicle_id}), 201
+        return jsonify({"message": "Route created successfully", "route_id": route_id}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
