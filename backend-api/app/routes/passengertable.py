@@ -221,6 +221,7 @@ def get_disembarking_details():
     if not destination_name:
         return jsonify({"error": "destination is required"}), 400
 
+    # 1) Resolve station ID from name coming from frontend ("PUP" -> "ST0004")
     station_id = _get_station_id_by_name(destination_name)
     if not station_id:
         return jsonify({"error": "Invalid station name"}), 400
@@ -230,48 +231,87 @@ def get_disembarking_details():
 
     cursor = mysql.connection.cursor()
 
-    # COUNT VALID PASSENGERS:
-    # - For this destination
-    # - departure_date = today only
-    # - status is B (boarded) or D (disembarked)
-    cursor.execute("""
-        SELECT COUNT(*)
+    # ===========================================
+    # STEP 1: find the latest departure_date that
+    #         has rows for this destination
+    # ===========================================
+    cursor.execute(
+        """
+        SELECT MAX(departure_date)
         FROM BoardingDisembarking
         WHERE destination = %s
-          AND departure_date = CURDATE()
-          AND status IN ('B', 'D')
-    """, (station_id,))
+        """,
+        (station_id,),
+    )
+    row = cursor.fetchone()
+    latest_date = row[0] if row else None
 
+    if not latest_date:
+        cursor.close()
+        return jsonify({
+            "boardingData": [],
+            "totalPages": 0,
+            "currentPage": page
+        })
+
+    # ===========================================
+    # STEP 2: build filters:
+    #   - this destination
+    #   - ONLY that latest_date
+    #   - status B or D
+    #   - optional search
+    # ===========================================
+    where_clauses = [
+        "destination = %s",
+        "departure_date = %s",
+        "status IN ('B', 'D')",
+    ]
+    params = [station_id, latest_date]
+
+    if query:
+        where_clauses.append("(Booking_ID LIKE %s OR User_ID LIKE %s)")
+        params.extend([f"%{query}%", f"%{query}%"])
+
+    where_sql = " AND ".join(where_clauses)
+
+    # ===========================================
+    # STEP 3: count rows
+    # ===========================================
+    count_sql = f"""
+        SELECT COUNT(*)
+        FROM BoardingDisembarking
+        WHERE {where_sql}
+    """
+    cursor.execute(count_sql, params)
     total_records = cursor.fetchone()[0]
-    cursor.close()
 
     if total_records == 0:
-        return jsonify({"boardingData": [], "totalPages": 0, "currentPage": page})
+        cursor.close()
+        return jsonify({
+            "boardingData": [],
+            "totalPages": 0,
+            "currentPage": page
+        })
 
     total_pages = ceil(total_records / records_per_page)
 
-    cursor = mysql.connection.cursor()
-
-    query_sql = """
+    # ===========================================
+    # STEP 4: fetch page data
+    # ===========================================
+    data_sql = f"""
         SELECT BD_ID, Booking_ID, User_ID, boarding_time, disembarking_time,
                status, Qrcode_ID, Schedule_ID, origin, destination,
                departure_date, departure_time
         FROM BoardingDisembarking
-        WHERE destination = %s
-          AND departure_date = CURDATE()
-          AND status IN ('B', 'D')
+        WHERE {where_sql}
+        ORDER BY departure_time DESC
+        LIMIT %s OFFSET %s
     """
 
-    params = [station_id]
+    data_params = list(params)
+    data_params.extend([records_per_page, offset])
 
-    if query:
-        query_sql += " AND (Booking_ID LIKE %s OR User_ID LIKE %s)"
-        params.extend([f"%{query}%", f"%{query}%"])
-
-    query_sql += " ORDER BY departure_time DESC LIMIT %s OFFSET %s"
-    params.extend([records_per_page, offset])
-
-    cursor.execute(query_sql, params)
+    cursor.execute(data_sql, data_params)
     rows = cursor.fetchall()
     cursor.close()
 
@@ -297,6 +337,7 @@ def get_disembarking_details():
         "totalPages": total_pages,
         "currentPage": page
     })
+
 
 
 # ======================================================
