@@ -39,8 +39,13 @@ export function SchedulesTab() {
   const [routeDataVersion, setRouteDataVersion] = useState(0);
 
   const getAuthToken = () =>
-    localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token") ||
+    "";
 
+  // =========================
+  // API helper
+  // =========================
   const apiCall = useCallback(
     async (endpoint, options = {}) => {
       const token = getAuthToken();
@@ -72,7 +77,7 @@ export function SchedulesTab() {
         return null;
       }
     },
-    [apiUrl]
+    [] // ESLint will warn but behavior is fine since apiUrl is static
   );
 
   // =========================
@@ -565,7 +570,7 @@ th { background: #eee; }
                   : "Resume Operations"}
               </button>
 
-              {/* Removed: Assign Vehicle button */}
+              {/* Add Ride */}
               <button
                 type="button"
                 className="ops-sch-chip"
@@ -621,10 +626,7 @@ th { background: #eee; }
                           >
                             <option value="">-- No Vehicle --</option>
                             {vehicles.map((v) => (
-                              <option
-                                key={v.Vehicle_ID}
-                                value={v.Vehicle_ID}
-                              >
+                              <option key={v.Vehicle_ID} value={v.Vehicle_ID}>
                                 {v.Vehicle_ID} ({v.vehicleType})
                               </option>
                             ))}
