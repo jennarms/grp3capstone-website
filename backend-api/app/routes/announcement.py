@@ -15,10 +15,17 @@ def get_announcements():
         cur = mysql.connection.cursor()
         cur.execute(
             """
-            SELECT a.Announce_ID, a.title, a.content, a.date_time, m.username AS admin_name
+            SELECT 
+                a.Announce_ID, 
+                a.title, 
+                a.content, 
+                a.date_time, 
+                m.username AS admin_name
             FROM Announcements a
             JOIN MainAdmin m ON a.Admin_ID = m.Admin_ID
-            ORDER BY a.date_time DESC
+            ORDER BY 
+                a.date_time DESC,
+                CAST(SUBSTRING(a.Announce_ID, 9) AS UNSIGNED) DESC
             """
         )
         result = cur.fetchall()
@@ -26,11 +33,15 @@ def get_announcements():
 
         announcements = []
         for row in result:
+            dt = row[3]
+            # dt is a Python datetime object from MySQL
+            dt_str = dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""
+
             announcements.append({
                 "announce_id": row[0],
                 "title": row[1],
                 "content": row[2],
-                "date_time": row[3].strftime("%Y-%m-%d %H:%M:%S"),
+                "date_time": dt_str,
                 "admin_name": row[4],
             })
 
@@ -58,7 +69,7 @@ def create_announcement():
 
         cur = mysql.connection.cursor()
 
-        # ✅ Get the latest Announce_ID using numeric order
+        # Get the latest Announce_ID using numeric order
         cur.execute(
             """
             SELECT Announce_ID 
@@ -79,8 +90,8 @@ def create_announcement():
             new_num = 1
 
         announce_id = f"Announce{new_num}"
-        
-        # ✅ Use datetime.now() instead of datetime.utcnow()
+
+        # Use server local time (or change to datetime.utcnow() if you prefer UTC)
         date_time = datetime.now()
 
         cur.execute(
@@ -92,7 +103,7 @@ def create_announcement():
         )
         mysql.connection.commit()
 
-        # ✅ Fetch admin_name for the response
+        # Fetch admin_name for the response
         cur.execute("SELECT username FROM MainAdmin WHERE Admin_ID = %s", (current_user,))
         admin_row = cur.fetchone()
         admin_name = admin_row[0] if admin_row else "Unknown"
