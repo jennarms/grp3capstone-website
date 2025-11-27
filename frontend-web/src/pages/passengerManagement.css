@@ -129,7 +129,7 @@ html { scrollbar-gutter: stable; }
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);   /* label | table region */
   gap: 12px;
-  height: calc(100vh - var(--nav-h) - 220px);
+  height: calc(100vh - var(--nav-h) - 250px);
   min-height: 420px;  /* keeps a visible frame even with 0 rows */
 }
 
