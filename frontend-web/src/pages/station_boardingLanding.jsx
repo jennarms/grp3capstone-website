@@ -6,7 +6,7 @@ import "./station_boardingLanding.css";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// ⭐ NEW: local date helper (fixes UTC bug)
+// ⭐ Local date helper (fixes UTC bug)
 function getLocalDateISO() {
   const d = new Date();
   const year = d.getFullYear();
@@ -21,15 +21,25 @@ export function BoardingLandingPage() {
   const [forwardSchedules, setForwardSchedules] = useState([]);
   const [reverseSchedules, setReverseSchedules] = useState([]);
   const [stationName, setStationName] = useState("");
-
-  // ⭐ FIXED: use local date, not UTC ISO
   const [selectedDate, setSelectedDate] = useState(getLocalDateISO());
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const forwardRowRefs = useRef([]);
   const reverseRowRefs = useRef([]);
+
+  // 🔐 Role guard: only allow station-admin on this page
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    console.log("[BLP] role from localStorage:", role);
+
+    // If logged in but NOT station-admin, send to main admin page
+    if (role && role !== "station-admin") {
+      navigate("/announcement", { replace: true });
+    }
+    // If role is null (not logged in), you might want to send to login:
+    // else if (!role) navigate("/", { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     console.log("[BLP] Mounted. apiUrl =", apiUrl);
@@ -72,7 +82,16 @@ export function BoardingLandingPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         console.error("[BLP] Error response body:", body);
-        const msg = body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
+
+        // extra safety: if backend says 403, force redirect
+        if (res.status === 403) {
+          console.log("[BLP] Got 403 from API, redirecting to /announcement");
+          navigate("/announcement", { replace: true });
+          return;
+        }
+
+        const msg =
+          body?.error || `HTTP ${res.status}: Failed to fetch schedules`;
         setError(msg);
         setForwardSchedules([]);
         setReverseSchedules([]);
@@ -96,7 +115,7 @@ export function BoardingLandingPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, navigate]);
 
   useEffect(() => {
     fetchBoardingSchedules();
@@ -109,7 +128,12 @@ export function BoardingLandingPage() {
     const [hh = "0", mm = "0", ss = "0"] = String(hhmmss).split(":");
     const dt = new Date();
     dt.setFullYear(Y, (M || 1) - 1, D || 1);
-    dt.setHours(parseInt(hh, 10) || 0, parseInt(mm, 10) || 0, parseInt(ss, 10) || 0, 0);
+    dt.setHours(
+      parseInt(hh, 10) || 0,
+      parseInt(mm, 10) || 0,
+      parseInt(ss, 10) || 0,
+      0
+    );
     return dt;
   };
 
@@ -159,16 +183,22 @@ export function BoardingLandingPage() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const elF = nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
-      if (elF?.scrollIntoView) elF.scrollIntoView({ behavior: "smooth", block: "center" });
+      const elF =
+        nextForwardIndex >= 0 ? forwardRowRefs.current[nextForwardIndex] : null;
+      if (elF?.scrollIntoView)
+        elF.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
     return () => clearTimeout(t);
   }, [nextForwardIndex, forwardSchedules]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const elR = nextReverseIndex >= 0 ? reverseRowRefs.current[nextReverseIndex] : null;
-      if (elR?.scrollIntoView) elR.scrollIntoView({ behavior: "smooth", block: "center" });
+      const elR =
+        nextReverseIndex >= 0
+          ? reverseRowRefs.current[nextReverseIndex]
+          : null;
+      if (elR?.scrollIntoView)
+        elR.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
     return () => clearTimeout(t);
   }, [nextReverseIndex, reverseSchedules]);
@@ -200,8 +230,7 @@ export function BoardingLandingPage() {
 
     if (window.location.hash)
       window.location.hash = "#" + (path + search).replace(/^\//, "");
-    else
-      navigate({ pathname: path, search });
+    else navigate({ pathname: path, search });
   };
 
   const setForwardRef = (el, idx) => (forwardRowRefs.current[idx] = el);
@@ -272,7 +301,8 @@ export function BoardingLandingPage() {
                 <thead>
                   <tr className="blp-caption-row">
                     <th className="blp-caption-th" colSpan={3}>
-                      {stationName} - FORWARD DIRECTION ({forwardSchedules.length} schedules)
+                      {stationName} - FORWARD DIRECTION (
+                      {forwardSchedules.length} schedules)
                     </th>
                   </tr>
                   <tr className="blp-cols-row">
@@ -284,8 +314,17 @@ export function BoardingLandingPage() {
                 <tbody>
                   {forwardSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={3} style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
-                        {loading ? "Loading..." : "No forward schedules available"}
+                      <td
+                        colSpan={3}
+                        style={{
+                          textAlign: "center",
+                          padding: "1rem",
+                          color: "#666",
+                        }}
+                      >
+                        {loading
+                          ? "Loading..."
+                          : "No forward schedules available"}
                       </td>
                     </tr>
                   ) : (
@@ -315,7 +354,9 @@ export function BoardingLandingPage() {
                                 })
                               }
                               disabled={loading}
-                              title={isNext ? "Next upcoming schedule" : undefined}
+                              title={
+                                isNext ? "Next upcoming schedule" : undefined
+                              }
                             >
                               View
                             </button>
@@ -336,7 +377,8 @@ export function BoardingLandingPage() {
                 <thead>
                   <tr className="blp-caption-row">
                     <th className="blp-caption-th" colSpan={3}>
-                      {stationName} - REVERSE DIRECTION ({reverseSchedules.length} schedules)
+                      {stationName} - REVERSE DIRECTION (
+                      {reverseSchedules.length} schedules)
                     </th>
                   </tr>
                   <tr className="blp-cols-row">
@@ -348,8 +390,17 @@ export function BoardingLandingPage() {
                 <tbody>
                   {reverseSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={3} style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
-                        {loading ? "Loading..." : "No reverse schedules available"}
+                      <td
+                        colSpan={3}
+                        style={{
+                          textAlign: "center",
+                          padding: "1rem",
+                          color: "#666",
+                        }}
+                      >
+                        {loading
+                          ? "Loading..."
+                          : "No reverse schedules available"}
                       </td>
                     </tr>
                   ) : (
@@ -379,7 +430,9 @@ export function BoardingLandingPage() {
                                 })
                               }
                               disabled={loading}
-                              title={isNext ? "Next upcoming schedule" : undefined}
+                              title={
+                                isNext ? "Next upcoming schedule" : undefined
+                              }
                             >
                               View
                             </button>
