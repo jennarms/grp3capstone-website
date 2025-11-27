@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import { OperationsTab } from "../components/operationsTab";
@@ -9,7 +9,7 @@ export function SchedulesTab() {
 
   // Data
   const [routes, setRoutes] = useState([]);
-  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [selectedRouteId, setSelectedRouteId] = useState("");
   const [stations, setStations] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -40,6 +40,9 @@ export function SchedulesTab() {
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
 
+  // Force reload current route data (increment to trigger effect)
+  const [routeDataVersion, setRouteDataVersion] = useState(0);
+
   const getAuthToken = () =>
     localStorage.getItem("token") || sessionStorage.getItem("token") || "";
 
@@ -63,7 +66,7 @@ export function SchedulesTab() {
           const j = await resp.json();
           if (j?.error) msg = j.error;
         } catch {
-          // ignore
+          // ignore parse error
         }
         throw new Error(msg);
       }
@@ -78,88 +81,41 @@ export function SchedulesTab() {
   );
 
   // =========================
+  // Derived
+  // =========================
+
+  const selectedRoute = useMemo(
+    () =>
+      routes.find(
+        (r) => String(r.Route_ID) === String(selectedRouteId || "")
+      ) || null,
+    [routes, selectedRouteId]
+  );
+
+  const isRouteSuspended =
+    selectedRoute && Number(selectedRoute.is_active) === 0;
+
+  const isDataLoading =
+    loadingRoutes || loadingStations || loadingSchedules || false;
+
+  // =========================
   // Fetch helpers
   // =========================
 
-  const fetchRoutes = useCallback(
-    async (silentUpdate = false) => {
-      if (!apiUrl) return;
-      try {
-        if (!silentUpdate) {
-          setLoadingRoutes(true);
-        }
-        setError(null);
-        const data = await apiCall("/api/schedules/routes");
-        const arr = Array.isArray(data) ? data : [];
-        setRoutes(arr);
-
-        if (arr.length) {
-          if (selectedRoute) {
-            const match = arr.find(
-              (r) => String(r.Route_ID) === String(selectedRoute.Route_ID)
-            );
-            setSelectedRoute(match || arr[0]);
-          } else {
-            setSelectedRoute(arr[0]);
-          }
-        } else {
-          setSelectedRoute(null);
-        }
-      } catch (e) {
-        setError(`Failed to fetch routes: ${e.message}`);
-      } finally {
-        if (!silentUpdate) {
-          setLoadingRoutes(false);
-        }
-      }
-    },
-    [apiCall, apiUrl, selectedRoute]
-  );
-
-  const fetchStations = useCallback(
-    async (routeId) => {
-      if (!routeId) return;
-      try {
-        setLoadingStations(true);
-        setError(null);
-        const data = await apiCall(
-          `/api/schedules/stations?Route_ID=${encodeURIComponent(routeId)}`
-        );
-        setStations(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setError(`Failed to fetch stations: ${e.message}`);
-      } finally {
-        setLoadingStations(false);
-      }
-    },
-    [apiCall]
-  );
-
-  const fetchSchedules = useCallback(
-    async (routeId) => {
-      if (!routeId) return;
-      try {
-        setLoadingSchedules(true);
-        setError(null);
-        const data = await apiCall(
-          `/api/schedules/by-route?Route_ID=${encodeURIComponent(routeId)}`
-        );
-        setSchedules(
-          Array.isArray(data)
-            ? data.map((r) => ({
-                ...r,
-                Vehicle_ID: r.Vehicle_ID || "",
-              }))
-            : []
-        );
-      } catch (e) {
-        setError(`Failed to fetch schedules: ${e.message}`);
-      } finally {
-        setLoadingSchedules(false);
-      }
-    },
-    [apiCall]
-  );
+  const fetchRoutes = useCallback(async () => {
+    if (!apiUrl) return;
+    try {
+      setLoadingRoutes(true);
+      setError(null);
+      const data = await apiCall("/api/schedules/routes");
+      const arr = Array.isArray(data) ? data : [];
+      setRoutes(arr);
+    } catch (e) {
+      setError(`Failed to fetch routes: ${e.message}`);
+    } finally {
+      setLoadingRoutes(false);
+    }
+  }, [apiCall, apiUrl]);
 
   const fetchVehicles = useCallback(async () => {
     try {
@@ -170,25 +126,94 @@ export function SchedulesTab() {
     }
   }, [apiCall]);
 
+  // initial load of routes & vehicles
   useEffect(() => {
     fetchRoutes();
     fetchVehicles();
   }, [fetchRoutes, fetchVehicles]);
 
+  // adjust selectedRouteId whenever routes list changes
   useEffect(() => {
-    if (selectedRoute?.Route_ID) {
-      fetchStations(selectedRoute.Route_ID);
-      fetchSchedules(selectedRoute.Route_ID);
-    } else {
+    if (!routes.length) {
+      setSelectedRouteId("");
       setStations([]);
       setSchedules([]);
+      return;
     }
-  }, [selectedRoute, fetchStations, fetchSchedules]);
 
-  const isDataLoading =
-    loadingRoutes || loadingStations || loadingSchedules || false;
-  const isRouteSuspended =
-    selectedRoute && Number(selectedRoute.is_active) === 0;
+    // If nothing selected yet, pick first
+    if (!selectedRouteId) {
+      setSelectedRouteId(routes[0].Route_ID);
+      return;
+    }
+
+    // If currently selected route doesn't exist anymore, fall back to first
+    const exists = routes.some(
+      (r) => String(r.Route_ID) === String(selectedRouteId)
+    );
+    if (!exists) {
+      setSelectedRouteId(routes[0].Route_ID);
+    }
+  }, [routes, selectedRouteId]);
+
+  // Load stations + schedules whenever route changes OR we bump routeDataVersion
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRouteData = async () => {
+      if (!selectedRouteId) {
+        setStations([]);
+        setSchedules([]);
+        return;
+      }
+
+      try {
+        setLoadingStations(true);
+        setLoadingSchedules(true);
+        setError(null);
+
+        const [stationsData, schedulesData] = await Promise.all([
+          apiCall(
+            `/api/schedules/stations?Route_ID=${encodeURIComponent(
+              selectedRouteId
+            )}`
+          ),
+          apiCall(
+            `/api/schedules/by-route?Route_ID=${encodeURIComponent(
+              selectedRouteId
+            )}`
+          ),
+        ]);
+
+        if (cancelled) return;
+
+        setStations(Array.isArray(stationsData) ? stationsData : []);
+        setSchedules(
+          Array.isArray(schedulesData)
+            ? schedulesData.map((r) => ({
+                ...r,
+                Vehicle_ID: r.Vehicle_ID || "",
+              }))
+            : []
+        );
+      } catch (e) {
+        if (!cancelled) {
+          setError(`Failed to load data for route: ${e.message}`);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingStations(false);
+          setLoadingSchedules(false);
+        }
+      }
+    };
+
+    loadRouteData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRouteId, apiCall, routeDataVersion]);
 
   // =========================
   // Helpers & handlers
@@ -209,12 +234,17 @@ export function SchedulesTab() {
     }
   };
 
+  // KEY FIX: when changing route, clear current route's data & edit state immediately
   const handleRouteChange = (e) => {
     const value = e.target.value;
-    const found = routes.find((r) => String(r.Route_ID) === String(value));
-    setSelectedRoute(found || null);
-    setSchedules([]);
+
     setEditingRideId(null);
+    setStations([]);
+    setSchedules([]);
+    setError(null);
+
+    setSelectedRouteId(value || "");
+    // routeDataVersion stays; new selectedRouteId triggers fresh fetch
   };
 
   const onCellChange = (rideId, routeStationId, value) => {
@@ -235,7 +265,7 @@ export function SchedulesTab() {
   };
 
   const createRide = async () => {
-    if (!selectedRoute?.Route_ID || !stations.length) return;
+    if (!selectedRouteId || !stations.length) return;
     const departureTimes = stations.map((st) => ({
       RouteStation_ID: st.RouteStation_ID,
       StopOrder: st.StopOrder,
@@ -248,11 +278,13 @@ export function SchedulesTab() {
       await apiCall("/api/schedules/create", {
         method: "POST",
         body: JSON.stringify({
-          Route_ID: selectedRoute.Route_ID,
+          Route_ID: selectedRouteId,
           departureTimes,
         }),
       });
-      await fetchSchedules(selectedRoute.Route_ID);
+
+      // reload current route data
+      setRouteDataVersion((v) => v + 1);
       setShowAddRow(false);
     } catch (e) {
       setError(`Failed to create ride: ${e.message}`);
@@ -283,7 +315,7 @@ export function SchedulesTab() {
         }),
       });
 
-      await fetchSchedules(selectedRoute.Route_ID);
+      setRouteDataVersion((v) => v + 1);
       setEditingRideId(null);
     } catch (e) {
       setError(`Failed to update ride: ${e.message}`);
@@ -299,7 +331,8 @@ export function SchedulesTab() {
       await apiCall(`/api/schedules/delete/${rideId}`, {
         method: "DELETE",
       });
-      await fetchSchedules(selectedRoute.Route_ID);
+
+      setRouteDataVersion((v) => v + 1);
       setRideIdToDelete(null);
       setShowDeleteRow(false);
     } catch (e) {
@@ -311,7 +344,6 @@ export function SchedulesTab() {
 
   const startEditingRide = (rideId) => setEditingRideId(rideId);
 
-  // Save handler can be called with explicit ride ID (from row)
   const saveRideChanges = async (rideIdOverride) => {
     const idToSave = rideIdOverride || editingRideId;
     if (idToSave) await updateRide(idToSave);
@@ -319,7 +351,8 @@ export function SchedulesTab() {
 
   const cancelEditing = () => {
     setEditingRideId(null);
-    if (selectedRoute?.Route_ID) fetchSchedules(selectedRoute.Route_ID);
+    // reload current route schedules to discard local edits
+    setRouteDataVersion((v) => v + 1);
   };
 
   // ESC to close modals
@@ -409,13 +442,12 @@ th { background: #eee; }
   };
 
   const confirmSuspend = async () => {
-    if (!selectedRoute?.Route_ID) return;
+    if (!selectedRouteId) return;
     if (!suspendReason.trim()) {
       setError("Please provide a reason for suspension.");
       return;
     }
 
-    const routeId = selectedRoute.Route_ID;
     try {
       setLoadingSuspend(true);
       setError(null);
@@ -423,13 +455,13 @@ th { background: #eee; }
       await apiCall("/api/schedules/suspend-route", {
         method: "POST",
         body: JSON.stringify({
-          Route_ID: routeId,
+          Route_ID: selectedRouteId,
           Reason: suspendReason.trim(),
         }),
       });
 
       await fetchRoutes();
-      await fetchSchedules(routeId);
+      setRouteDataVersion((v) => v + 1);
 
       setShowSuspendModal(false);
       setSuspendReason("");
@@ -441,8 +473,7 @@ th { background: #eee; }
   };
 
   const resumeRoute = async () => {
-    if (!selectedRoute?.Route_ID) return;
-    const routeId = selectedRoute.Route_ID;
+    if (!selectedRouteId) return;
 
     try {
       setLoadingSuspend(true);
@@ -451,12 +482,12 @@ th { background: #eee; }
       await apiCall("/api/schedules/resume-route", {
         method: "POST",
         body: JSON.stringify({
-          Route_ID: routeId,
+          Route_ID: selectedRouteId,
         }),
       });
 
       await fetchRoutes();
-      await fetchSchedules(routeId);
+      setRouteDataVersion((v) => v + 1);
     } catch (e) {
       setError(`Failed to resume route: ${e.message}`);
     } finally {
@@ -480,9 +511,7 @@ th { background: #eee; }
         }),
       });
 
-      if (selectedRoute?.Route_ID) {
-        await fetchSchedules(selectedRoute.Route_ID);
-      }
+      setRouteDataVersion((v) => v + 1);
 
       setAssignRideId("");
       setAssignVehicleId("");
@@ -531,7 +560,7 @@ th { background: #eee; }
               Route:
               <select
                 id="route-select"
-                value={selectedRoute?.Route_ID ?? ""}
+                value={selectedRouteId}
                 onChange={handleRouteChange}
               >
                 <option value="">Choose a route...</option>
@@ -594,7 +623,6 @@ th { background: #eee; }
               >
                 Add Ride
               </button>
-              {/* No Save/Cancel here; Save/Cancel is per-row in the table */}
             </div>
           </div>
 
@@ -716,7 +744,7 @@ th { background: #eee; }
                                   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1a78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/%3E%3Cpath d='M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/%3E%3C/svg%3E\")",
                               }}
                             />
-                              <button
+                            <button
                               type="button"
                               className="icon-btn"
                               title="Delete ride"
