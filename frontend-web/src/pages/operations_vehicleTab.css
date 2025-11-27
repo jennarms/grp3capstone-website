@@ -20,7 +20,7 @@
   display: flex;
   gap: 40px;
   justify-content: center;
-  align-items: flex-start;
+  align-items: stretch;      /* stretch both boxes to same height */
   width: 100%;
   max-width: 1900px;
   padding: 10px;
@@ -34,9 +34,12 @@
   padding: 25px;
   border: 3px solid #000;
   border-radius: 14px;
-  min-height: 320px;
   background: white;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 520px;             /* fixed equal height */
+  overflow: hidden;          /* no outer scrollbars for the box itself */
 }
 
 /* Search + Add vehicle */
@@ -52,7 +55,7 @@
   border: 2px solid #000;
 }
 
-/* Table */
+/* Table title */
 .vehicle-list-title {
   font-weight: 700;
   margin-top: 20px;
@@ -61,20 +64,46 @@
   text-align: start;
 }
 
+/* SCROLLABLE WRAPPERS */
+
+
+/* Vehicle list: only vertical scrollbar, fixed height */
+.vehicle-table-wrapper {
+  max-height: 260px;        /* adjust if you want it taller/shorter */
+  overflow-y: auto;         /* vertical scrollbar inside the table area */
+  overflow-x: hidden;
+  border-radius: 6px;
+}
+
+/* GPS assignments: vertical + horizontal scrollbars, fixed height */
+.gps-table-wrapper {
+  max-height: 260px;        /* adjust as you like */
+  overflow-y: auto;         /* vertical scroll */
+  overflow-x: auto;         /* horizontal scroll if columns overflow */
+  border-radius: 6px;
+}
+
+/* TABLE STYLING */
 .vehicle-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 14px;
 }
 
 .vehicle-table th,
 .vehicle-table td {
-  border: 1px solid #444;
+  border: 1px solid #cccccc;  /* thinner, lighter lines */
   padding: 8px;
 }
 
 .vehicle-table th {
-  background: #eaeaea;
-  font-weight: bold;
+  background: #f3f3f3;
+  font-weight: 600;
+}
+
+/* Make GPS table wider so horizontal scroll appears when needed */
+.gps-table {
+  min-width: 750px;
 }
 
 /* GPS Dropdowns */
@@ -199,19 +228,43 @@
   background: #0b1a78;
 }
 
-/* -------------------- SELECT DROPDOWN COLOR FIX -------------------- */
+/* SELECT DROPDOWN COLOR FIX */
 
-/* Selected value (vehicle/gps) should always show black text */
 .input {
   color: #000 !important;
 }
 
-/* Placeholder option (value="") should appear gray */
 .input option[value=""] {
   color: #777 !important;
 }
 
-/* All real options should be black */
 .input option {
   color: #000 !important;
+}
+
+/* Action buttons in tables */
+.vehicle-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Smaller buttons for table actions */
+.small-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Red delete button */
+.red-btn {
+  background-color: #c62828;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.red-btn:hover {
+  opacity: 0.9;
 }
