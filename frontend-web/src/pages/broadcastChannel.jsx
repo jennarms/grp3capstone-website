@@ -285,6 +285,7 @@ export function Broadcast() {
   const [error, setError] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const feedRef = useRef(null);
+  const isInitialLoad = useRef(true);
 
   const role = useRole();
   const userId = localStorage.getItem("admin_id");
@@ -325,12 +326,21 @@ export function Broadcast() {
     return () => clearTimeout(t);
   }, [error]);
 
-  // Only auto-scroll if user is already at/near bottom
+  // Track if this is the initial load
+  // Auto-scroll: always on initial load, then only if user is at/near bottom
   useEffect(() => {
     const el = feedRef.current;
     if (!el) return;
-    const atBottom = Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 4;
-    if (atBottom) el.scrollTop = el.scrollHeight;
+    
+    if (isInitialLoad.current && messages.length > 0) {
+      // First load: always scroll to bottom
+      el.scrollTop = el.scrollHeight;
+      isInitialLoad.current = false;
+    } else {
+      // Subsequent updates: only scroll if already at bottom
+      const atBottom = Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 4;
+      if (atBottom) el.scrollTop = el.scrollHeight;
+    }
   }, [messages]);
 
   // =================== API CALL ===================
@@ -424,7 +434,7 @@ export function Broadcast() {
         setUnseen((u) => ({ ...u, [tab]: fromOthersNew }));
         setBannerVisible(fromOthersNew > 0);
 
-        // opportunistically update the other tab’s unseen count
+        // opportunistically update the other tab's unseen count
         const otherTab = tab === "everyone" ? "admins" : "everyone";
         const canSeeAdmins = role === ROLES.MAIN_ADMIN || role === ROLES.STATION_ADMIN;
         if (otherTab === "everyone" || canSeeAdmins) {
@@ -473,6 +483,11 @@ export function Broadcast() {
     },
     [tab, apiCall, loadMessages]
   );
+
+  // Reset isInitialLoad flag when tab changes
+  useEffect(() => {
+    isInitialLoad.current = true;
+  }, [tab]);
 
   // initial + tab change loads
   useEffect(() => {
@@ -650,7 +665,7 @@ export function Broadcast() {
               className={`bc-tab ${tab === "admins" ? "active" : ""}`}
               onClick={() => {
                 setTab("admins");
-                const now = Date.now(); // FIX: use Date.now(), not Date.Now()
+                const now = Date.now();
                 writeLastSeen("admins", now);
                 setUnseen((u) => ({ ...u, admins: 0 }));
                 localStorage.setItem("bc:lastOpenAt", String(now));

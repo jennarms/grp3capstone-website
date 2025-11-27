@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom"; // 👈 NEW
 import "./station_dashboard.css";
 
 import { LogoutButton } from "../components/logout_button";
@@ -8,18 +9,39 @@ import { dashboardService } from "../services/api"; // ✅ ADDED
 const apiUrl = import.meta.env.VITE_API_URL;
 
 function StationDashboard() {
+  const navigate = useNavigate(); // 👈 NEW
+
   const [forwardSchedules, setForwardSchedules] = useState([]);
   const [reverseSchedules, setReverseSchedules] = useState([]);
   const [stationName, setStationName] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [totals, setTotals] = useState({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
+  const [totals, setTotals] = useState({
+    total_forward: 0,
+    total_reverse: 0,
+    total_schedules: 0,
+  });
 
   // Announcements state
   const [announcements, setAnnouncements] = useState([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(false);
   const [announcementsError, setAnnouncementsError] = useState("");
+
+  // 🔐 ROLE GUARD: only allow station-admin on this page
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    console.log("[StationDashboard] role from localStorage:", role);
+
+    // If logged in but NOT station-admin, send to main-admin home
+    if (role && role !== "station-admin") {
+      navigate("/announcement", { replace: true });
+    }
+    // Optional: if no role at all, you could send to login instead:
+    // else if (!role) navigate("/", { replace: true });
+  }, [navigate]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -35,7 +57,7 @@ function StationDashboard() {
     setAnnouncementsError("");
     try {
       const res = await fetch(`${apiUrl}/api/announcement`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
 
       if (!res.ok) {
@@ -48,13 +70,13 @@ function StationDashboard() {
 
       const data = await res.json();
       // Transform API data to match the display format
-      const transformedAnnouncements = (data.announcements || []).map(a => ({
+      const transformedAnnouncements = (data.announcements || []).map((a) => ({
         title: a.title,
-        body: a.content.split('\n').filter(line => line.trim()), // Split content by newlines
+        body: a.content.split("\n").filter((line) => line.trim()), // Split content by newlines
         date_time: a.date_time,
-        admin_name: a.admin_name
+        admin_name: a.admin_name,
       }));
-      
+
       setAnnouncements(transformedAnnouncements);
     } catch (e) {
       setAnnouncementsError(`Network error: ${e.message}`);
@@ -68,26 +90,39 @@ function StationDashboard() {
     setLoading(true);
     setError("");
     try {
-      // ✅ UPDATED: Using API service instead of direct fetch
+      // ✅ Using API service instead of direct fetch
       const data = await dashboardService.getBoardingSchedules(selectedDate);
 
-      const f = Array.isArray(data.forward_schedules) ? data.forward_schedules : [];
-      const r = Array.isArray(data.reverse_schedules) ? data.reverse_schedules : [];
+      const f = Array.isArray(data.forward_schedules)
+        ? data.forward_schedules
+        : [];
+      const r = Array.isArray(data.reverse_schedules)
+        ? data.reverse_schedules
+        : [];
 
       setStationName(data.station_name || "Unknown Station");
       setForwardSchedules(f);
       setReverseSchedules(r);
 
       // Prefer API totals if present, else compute
-      const tf = typeof data.total_forward === "number" ? data.total_forward : f.length;
-      const tr = typeof data.total_reverse === "number" ? data.total_reverse : r.length;
-      const ts = typeof data.total_schedules === "number" ? data.total_schedules : tf + tr;
+      const tf =
+        typeof data.total_forward === "number" ? data.total_forward : f.length;
+      const tr =
+        typeof data.total_reverse === "number" ? data.total_reverse : r.length;
+      const ts =
+        typeof data.total_schedules === "number"
+          ? data.total_schedules
+          : tf + tr;
       setTotals({ total_forward: tf, total_reverse: tr, total_schedules: ts });
     } catch (e) {
       setError(e.message);
       setForwardSchedules([]);
       setReverseSchedules([]);
-      setTotals({ total_forward: 0, total_reverse: 0, total_schedules: 0 });
+      setTotals({
+        total_forward: 0,
+        total_reverse: 0,
+        total_schedules: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -141,7 +176,11 @@ function StationDashboard() {
                 onChange={(e) => setSelectedDate(e.target.value)}
               />
             </label>
-            <button className="sd-refresh" onClick={fetchBoardingSchedules} disabled={loading}>
+            <button
+              className="sd-refresh"
+              onClick={fetchBoardingSchedules}
+              disabled={loading}
+            >
               {loading ? "Loading..." : "Refresh"}
             </button>
             <LogoutButton />
@@ -156,7 +195,11 @@ function StationDashboard() {
           </div>
         </section>
 
-        {error && <div className="sd-error"><strong>Error:</strong> {error}</div>}
+        {error && (
+          <div className="sd-error">
+            <strong>Error:</strong> {error}
+          </div>
+        )}
 
         {/* ONE combined table: Forward (left) | Reverse (right) — TIME ONLY */}
         <section className="sd-card">
@@ -165,12 +208,17 @@ function StationDashboard() {
               <thead>
                 <tr>
                   <th className="sd-caption-th" colSpan={2}>
-                    {stationName} — Forward / Reverse Schedules (Total: {totals.total_schedules})
+                    {stationName} — Forward / Reverse Schedules (Total:{" "}
+                    {totals.total_schedules})
                   </th>
                 </tr>
                 <tr>
-                  <th className="sd-side-head">Forward ({totals.total_forward})</th>
-                  <th className="sd-side-head">Reverse ({totals.total_reverse})</th>
+                  <th className="sd-side-head">
+                    Forward ({totals.total_forward})
+                  </th>
+                  <th className="sd-side-head">
+                    Reverse ({totals.total_reverse})
+                  </th>
                 </tr>
                 <tr>
                   <th className="sd-col-head">Time</th>
@@ -181,7 +229,9 @@ function StationDashboard() {
                 {combinedRows.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="sd-empty">
-                      {loading ? "Loading schedules..." : "No schedules available for the selected date"}
+                      {loading
+                        ? "Loading schedules..."
+                        : "No schedules available for the selected date"}
                     </td>
                   </tr>
                 ) : (
@@ -200,7 +250,9 @@ function StationDashboard() {
         {/* ====== Announcements (from API) ====== */}
         <h2 className="station-title-announcement">GENERAL ANNOUNCEMENTS</h2>
         {announcementsError && (
-          <div className="sd-error"><strong>Error:</strong> {announcementsError}</div>
+          <div className="sd-error">
+            <strong>Error:</strong> {announcementsError}
+          </div>
         )}
         <section className="station-announcements station-announcements--scroll">
           {announcementsLoading ? (
@@ -220,7 +272,9 @@ function StationDashboard() {
                 ))}
                 {a.date_time && (
                   <p className="announcement-meta">
-                    <small>Posted: {new Date(a.date_time).toLocaleString()}</small>
+                    <small>
+                      Posted: {new Date(a.date_time).toLocaleString()}
+                    </small>
                   </p>
                 )}
               </div>
@@ -234,3 +288,4 @@ function StationDashboard() {
 
 export default StationDashboard;
 export { StationDashboard };
+
