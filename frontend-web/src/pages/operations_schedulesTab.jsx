@@ -651,10 +651,10 @@ th { background: #eee; }
                     >
                       <td style={{ fontWeight: "bold" }}>{ride.Ride_ID}</td>
 
-                      {/* Vehicle ID cell */}
+                      {/* Vehicle ID cell - CHANGED TO DROPDOWN WHEN EDITING */}
                       <td>
                         {editingRideId === ride.Ride_ID && !isRouteSuspended ? (
-                          <input
+                          <select
                             className="sch-cell"
                             value={ride.Vehicle_ID || ""}
                             onChange={(e) => {
@@ -662,15 +662,36 @@ th { background: #eee; }
                               setSchedules((prev) =>
                                 prev.map((r) =>
                                   r.Ride_ID === ride.Ride_ID
-                                    ? { ...r, Vehicle_ID: val }
+                                    ? { ...r, Vehicle_ID: val || "" }
                                     : r
                                 )
                               );
                             }}
-                            placeholder="--"
-                          />
+                          >
+                            <option value="">-- No Vehicle --</option>
+                            {vehicles.map((v) => (
+                              <option
+                                key={v.Vehicle_ID}
+                                value={v.Vehicle_ID}
+                              >
+                                {v.Vehicle_ID} ({v.vehicleType})
+                              </option>
+                            ))}
+                          </select>
                         ) : (
-                          <span>{ride.Vehicle_ID || "--"}</span>
+                          <span>
+                            {ride.Vehicle_ID && vehicles.length
+                              ? (() => {
+                                  const v = vehicles.find(
+                                    (veh) =>
+                                      veh.Vehicle_ID === ride.Vehicle_ID
+                                  );
+                                  return v
+                                    ? `${v.Vehicle_ID} (${v.vehicleType})`
+                                    : ride.Vehicle_ID;
+                                })()
+                              : ride.Vehicle_ID || "--"}
+                          </span>
                         )}
                       </td>
 

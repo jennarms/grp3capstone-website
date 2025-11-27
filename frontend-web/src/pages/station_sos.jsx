@@ -7,17 +7,18 @@ import { StationNavbar } from "../components/station_navbar";
 import { useSOSStore } from "../sos/SOSContext";
 import "./station_sos.css";
 
-const apiUrl = import.meta.env.VITE_API_URL; 
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const FILTERS = ["New", "All", "Responding", "Resolved"];
 
+// Use explicit Asia/Manila timezone to match station ops
 function nowTimeString() {
-  const d = new Date();
-  let h = d.getHours();
-  const m = d.getMinutes().toString().padStart(2, "0");
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${m} ${ampm}`;
+  return new Intl.DateTimeFormat("en-PH", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Manila",
+  }).format(new Date());
 }
 
 export function StationSOS() {
@@ -85,22 +86,18 @@ export function StationSOS() {
       setLoading(true);
       setError("");
       try {
-        // Get JWT token from localStorage - try multiple possible keys
-        const token = localStorage.getItem("access_token") 
-                   || localStorage.getItem("token")
-                   || localStorage.getItem("station_token")
-                   || localStorage.getItem("authToken");
-        
-        console.log("Token found:", token ? "Yes" : "No");
-        console.log("Token value:", token);
-        
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("token") ||
+          localStorage.getItem("station_token") ||
+          localStorage.getItem("authToken");
+
         if (!token) {
           setError("No authentication token found. Please log in again.");
           setLoading(false);
           return;
         }
-        
-        // FIXED: Added /api prefix and Authorization header
+
         const res = await axios.get(`${apiUrl}/api/sos/station`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -115,8 +112,6 @@ export function StationSOS() {
       } catch (err) {
         if (!isMounted) return;
         console.error("Failed to load SOS reports:", err);
-        console.error("Error response:", err.response?.data);
-        console.error("Error status:", err.response?.status);
         setError("Failed to load SOS reports. Please try again.");
       } finally {
         if (isMounted) setLoading(false);
@@ -141,41 +136,46 @@ export function StationSOS() {
     setUpdatingId(sosId);
     setError("");
 
-    // FIXED: Added /api prefix to match PATCH /api/sos/station/<id>/respond or /resolve
     const endpoint =
       action === "toResponding"
         ? `${apiUrl}/api/sos/station/${sosId}/respond`
         : `${apiUrl}/api/sos/station/${sosId}/resolve`;
 
     try {
-      // Get JWT token from localStorage - try multiple possible keys
-      const token = localStorage.getItem("access_token") 
-                 || localStorage.getItem("token")
-                 || localStorage.getItem("station_token")
-                 || localStorage.getItem("authToken");
-      
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token") ||
+        localStorage.getItem("station_token") ||
+        localStorage.getItem("authToken");
+
       if (!token) {
         setError("No authentication token found. Please log in again.");
         setUpdatingId(null);
         return;
       }
-      
-      const res = await axios.patch(endpoint, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+
+      const res = await axios.patch(
+        endpoint,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const updated = res.data?.item;
 
       if (updated) {
-        // Use item returned by backend if present
+        // Merge backend item into existing one so times/status are correct
         setItems((prev) =>
           prev.map((it) =>
-            String(it.id) === String(updated.id) ? updated : it
+            String(it.id) === String(updated.id)
+              ? { ...it, ...updated }
+              : it
           )
         );
       } else {
-        // Fallback: optimistic local update (same logic as original)
+        // Fallback: very rare; keep as last resort
         setItems((prev) =>
           prev.map((it) => {
             if (String(it.id) !== String(sosId)) return it;
@@ -228,7 +228,7 @@ export function StationSOS() {
       : "";
 
   // =========================
-  // Global SOS: prepend a 'New' card
+  // Global SOS: prepend a 'New' card from useSOSStore()
   // =========================
   const { latest } = useSOSStore();
 
@@ -242,9 +242,15 @@ export function StationSOS() {
     const newItem = {
       id: alertId,
       name: latest.userName || latest.userId || "Unknown Rider",
-      time: nowTimeString(),
+      // Prefer any backend timestamp field if present, else local PH time
+      time:
+        latest.timestamp ||
+        latest.time ||
+        latest.createdAt ||
+        latest.created_at ||
+        nowTimeString(),
       boardingStation: latest.boardingStation || "Sta. Ana",
-      route: latest.tripRoute || "Sta. Ana → Escolta",
+      route: latest.tripRoute || "Sta. Ana \u2192 Escolta",
       status: "New",
       _enter: true,
     };
@@ -326,11 +332,7 @@ export function StationSOS() {
           </div>
         </div>
 
-        {error && (
-          <div className="station-sos-error-banner">
-            {error}
-          </div>
-        )}
+        {error && <div className="station-sos-error-banner">{error}</div>}
 
         <section className="station-sos-list">
           {loading ? (
@@ -348,7 +350,7 @@ export function StationSOS() {
                       : "is-resolved"
                   } ${r._enter ? "enter" : ""}`}
                 >
-                  {/* Left status icon (triangle=new, dot=responding, check=resolved) */}
+                  {/* Left status icon */}
                   <div className="station-sos-card-icon" aria-hidden>
                     {r.status === "New" && (
                       <span className="station-sos-triangle" title="New">
@@ -378,7 +380,7 @@ export function StationSOS() {
                     )}
                   </div>
 
-                  {/* Details + centered action */}
+                  {/* Details + action */}
                   <div className="station-sos-card-content">
                     <div className="station-sos-details">
                       <div>
@@ -482,10 +484,7 @@ export function StationSOS() {
             >
               {modalTitle}
             </h3>
-            <p
-              id="station-sos-modal-desc"
-              className="station-sos-modal-text"
-            >
+            <p id="station-sos-modal-desc" className="station-sos-modal-text">
               {modalBody}
             </p>
 
