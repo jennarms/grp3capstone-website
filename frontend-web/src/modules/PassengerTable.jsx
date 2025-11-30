@@ -1,5 +1,5 @@
 // ===============================
-// PassengerTable.jsx (FIXED)
+// PassengerTable.jsx (with Passenger Name)
 // ===============================
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -12,7 +12,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
   const [totalPages, setTotalPages] = useState(0);
   const [query, setQuery] = useState("");
 
-  // 🔥 useRef to STOP flicker (loading message never hides table)
+  // useRef to STOP flicker (loading message never hides table)
   const loadingRef = useRef(false);
 
   // Modal state
@@ -32,7 +32,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
         Qrcode_ID: qrcodeId,
       });
 
-      // Update instantly
+      // Update instantly in UI
       setPassengerData((prev) =>
         prev.map((p) =>
           p.BD_ID === passengerId
@@ -83,7 +83,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
 
     const formatTime = (t) => {
       const [h, m] = t.split(":");
-      return `${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
     };
 
     loadingRef.current = true;
@@ -97,14 +97,17 @@ export default function PassengerTable({ origin, scheduleTime }) {
 
       if (query) params.query = query;
 
-      const res = await axios.get(`${apiUrl}/api/passengertable/get_boarding_details`, { params });
+      const res = await axios.get(
+        `${apiUrl}/api/passengertable/get_boarding_details`,
+        { params }
+      );
 
+      // ✅ backend must send { boardingData: [...], totalPages: n }
       setPassengerData(res.data.boardingData || []);
       setTotalPages(res.data.totalPages || 0);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
-      // 🔥 Do NOT trigger UI flicker — just silently finish
       loadingRef.current = false;
     }
   }, [origin, scheduleTime, query, currentPage]);
@@ -127,6 +130,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
   // Remove expired dates AND status D
   // --------------------------------------------------
   const isExpired = (dateStr) => {
+    if (!dateStr) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -147,7 +151,11 @@ export default function PassengerTable({ origin, scheduleTime }) {
 
   const filteredData = activePassengers.filter((p) => {
     const q = query.toLowerCase();
-    return Object.values(p).some((v) => normalize(v).includes(q));
+    if (!q) return true;
+    return Object.values({
+      ...p,
+      passenger_name: p.passenger_name, // make sure it's included
+    }).some((v) => normalize(v).includes(q));
   });
 
   return (
@@ -179,6 +187,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
                   <th>BD_ID</th>
                   <th>Booking_ID</th>
                   <th>User_ID</th>
+                  <th>Passenger Name</th>
                   <th>Boarding Time</th>
                   <th>Disembarking Time</th>
                   <th>Status</th>
@@ -198,6 +207,7 @@ export default function PassengerTable({ origin, scheduleTime }) {
                     <td>{p.BD_ID}</td>
                     <td>{p.Booking_ID}</td>
                     <td>{p.User_ID}</td>
+                    <td>{p.passenger_name || "—"}</td>
                     <td>{p.boarding_time || "—"}</td>
                     <td>{p.disembarking_time || "—"}</td>
                     <td>{p.status}</td>
@@ -215,10 +225,16 @@ export default function PassengerTable({ origin, scheduleTime }) {
                         <span>Cancelled</span>
                       ) : (
                         <>
-                          <button className="actionbtn" onClick={() => openModal("accept", p)}>
+                          <button
+                            className="actionbtn"
+                            onClick={() => openModal("accept", p)}
+                          >
                             Accept
                           </button>
-                          <button className="actionbtn" onClick={() => openModal("cancel", p)}>
+                          <button
+                            className="actionbtn"
+                            onClick={() => openModal("cancel", p)}
+                          >
                             Cancel
                           </button>
                         </>
@@ -234,11 +250,17 @@ export default function PassengerTable({ origin, scheduleTime }) {
 
       {/* PAGINATION */}
       <div className="pagination">
-        <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((p) => p - 1)}
+        >
           Prev
         </button>
         <span>{currentPage}</span>
-        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage((p) => p + 1)}
+        >
           Next
         </button>
       </div>
