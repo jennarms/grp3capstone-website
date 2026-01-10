@@ -20,20 +20,43 @@ def scan_qrcode():
 
     cursor = mysql.connection.cursor()
     try:
-        # Check if QR exists in BoardingDisembarking for boarding (status 'P')
+        # 🔹 Get boarding/disembarking info + origin/destination station names
         cursor.execute("""
-            SELECT BD_ID, status, User_ID, Schedule_ID, origin, destination
-            FROM BoardingDisembarking 
-            WHERE QRCode_ID=%s
+            SELECT 
+                bd.BD_ID,
+                bd.status,
+                bd.User_ID,
+                bd.Schedule_ID,
+                bd.origin,
+                bd.destination,
+                s_from.StationName AS origin_name,
+                s_to.StationName AS destination_name
+            FROM BoardingDisembarking bd
+            LEFT JOIN Station s_from ON bd.origin = s_from.Station_ID
+            LEFT JOIN Station s_to   ON bd.destination = s_to.Station_ID
+            WHERE bd.QRCode_ID = %s
         """, (qr_id,))
         bd = cursor.fetchone()
 
         if not bd:
             return jsonify({"error": "QR Code not found in boarding list"}), 404
 
-        bd_id, status, user_id, schedule_id, origin, destination = bd
+        (
+            bd_id,
+            status,
+            user_id,
+            schedule_id,
+            origin_id,
+            destination_id,
+            origin_name,
+            destination_name,
+        ) = bd
 
-        # Fetch the passenger's full name from the Users table by concatenating first_name and last_name
+        # Fallback to ID if name is missing (in case station row doesn't exist)
+        from_station = origin_name or origin_id
+        to_station = destination_name or destination_id
+
+        # Fetch the passenger's full name from the Users table
         cursor.execute("""
             SELECT CONCAT(first_name, ' ', last_name) AS full_name
             FROM Users 
@@ -44,7 +67,7 @@ def scan_qrcode():
         if not user:
             return jsonify({"error": "Passenger not found"}), 404
 
-        name = user[0]  # This will contain the full name
+        name = user[0]  # full name
 
         # Handle Boarding action
         if action == 'boarding':
@@ -91,13 +114,15 @@ def scan_qrcode():
         # Commit changes to the database
         mysql.connection.commit()
 
-        # Return the passenger's details to the frontend
+        # ✅ Return station *names* instead of IDs
         return jsonify({
             "message": message,
             "name": name,
             "code": qr_id,
-            "from": origin,
-            "to": destination,
+            "from": from_station,          # Station name
+            "to": to_station,              # Station name
+            "from_id": origin_id,          # (optional) keep IDs if frontend needs them
+            "to_id": destination_id,       # (optional)
             "boarding_time" if action == 'boarding' else "disembarking_time": now
         }), 200
 

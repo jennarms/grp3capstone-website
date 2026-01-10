@@ -1,8 +1,19 @@
-import axios from 'axios';
-import ExcelJS from 'exceljs';
+// reportGeneration.jsx
+import axios from "axios";
+import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useEffect, useRef, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
 import "./reportGeneration.css";
@@ -13,8 +24,6 @@ const fmt = (d) =>
     day: "2-digit",
     year: "numeric",
   });
-
-const COLORS = ["#2E5BFF", "#1BC882", "#FFB020", "#E66C6C", "#8C54FF", "#FF6B9D", "#00D4FF", "#FFC837"];
 
 function Toast({ open, title, message, tone = "success" }) {
   if (!open) return null;
@@ -39,12 +48,20 @@ export function Report() {
 
   const reportRef = useRef(null);
 
-  const [toast, setToast] = useState({ open: false, title: "", message: "", tone: "success" });
+  const [toast, setToast] = useState({
+    open: false,
+    title: "",
+    message: "",
+    tone: "success",
+  });
   const toastTimer = useRef(null);
   const showToast = (title, message, tone = "success") => {
     setToast({ open: true, title, message, tone });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, open: false })), 2800);
+    toastTimer.current = setTimeout(
+      () => setToast((t) => ({ ...t, open: false })),
+      2800
+    );
   };
 
   useEffect(() => {
@@ -54,13 +71,16 @@ export function Report() {
   useEffect(() => {
     const fetchReportData = async () => {
       try {
-        const response = await axios.get(`${apiUrl}/api/generatereport/generate_report`, {
-          params: {
-            start_date: start,
-            end_date: end,
+        const response = await axios.get(
+          `${apiUrl}/api/generatereport/generate_report`,
+          {
+            params: {
+              start_date: start,
+              end_date: end,
+            },
           }
-        });
-        setRows(response.data);
+        );
+        setRows(response.data || []);
         showToast("Report refreshed", `Range: ${fmt(start)} — ${fmt(end)}`, "success");
       } catch (error) {
         console.error("Error fetching report data:", error);
@@ -71,90 +91,736 @@ export function Report() {
     fetchReportData();
   }, [start, end, apiUrl]);
 
-  const exportPDF = async () => {
-    try {
-      const { default: html2canvas } = await import("html2canvas");
-      const node = reportRef.current;
-      const canvas = await html2canvas(node, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      let heightLeft = imgH;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgH;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-        heightLeft -= pageH;
-      }
-
-      pdf.save(`StationReport_${fmt(start)}-${fmt(end)}.pdf`);
-      showToast("Success!", "PDF exported successfully!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Export failed", "Please install 'jspdf' and 'html2canvas'.", "error");
-    }
+  // ===========================
+  // Helpers (format + theme)
+  // ===========================
+  const THEME = {
+    white: "#FFFFFF",
+    green: "#3fe19b",
+    blue: "#3c65e6",
   };
 
-const exportExcel = async () => {
+  const formatExportDateTime = () => {
+    const d = new Date();
+    return d.toLocaleString(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const buildFilterText = () => `Date Range: ${fmt(start)} — ${fmt(end)}`;
+
+  // ===========================
+  // DATA for Charts
+  // ===========================
+  const bookingsCancelledData = rows.map((r) => ({
+    name: r.StationName,
+    totalBookings: r.TotalBookings,
+    cancelled: r.CanceledCount,
+  }));
+
+  const genderPerStationData = rows.map((r) => ({
+    name: r.StationName,
+    female: r.FemaleCount,
+    male: r.MaleCount,
+    other: r.OtherGenderCount,
+  }));
+
+  const agePerStationData = rows.map((r) => ({
+    name: r.StationName,
+    "0-18": r.Age_0_18,
+    "19-25": r.Age_19_25,
+    "26-40": r.Age_26_40,
+    "41-60": r.Age_41_60,
+    "60+": r.Age_60Plus,
+  }));
+
+  const demographicsData = rows.map((r) => ({
+    name: r.StationName,
+    student: r.StudentCount,
+    senior: r.SeniorCount,
+    pwd: r.PWDCount,
+  }));
+
+  const platformSourceData = rows.map((r) => ({
+    name: r.StationName,
+    mobileApp: r.MobileAppCount,
+    chatbot: r.ChatbotCount,
+    email: r.EmailCount,
+    manual: r.ManualBookingCount,
+  }));
+
+  // ===========================
+  // ✅ exportPDF (FIXED)
+  // ===========================
+const exportPDF = async () => {
+  if (!rows?.length) {
+    showToast("Error", "No data to export", "error");
+    return;
+  }
+
   try {
-    // Try to load html2canvas for chart snapshots
-    let html2canvas;
-    try {
-      const mod = await import("html2canvas");
-      html2canvas = mod.default || mod;
-    } catch (err) {
-      console.warn("html2canvas not available, exporting data only.", err);
+    const { default: html2canvas } = await import("html2canvas");
+
+    const THEME = {
+      white: "#FFFFFF",
+      green: "#3fe19b",
+      blue: "#3c65e6",
+    };
+
+    const formatExportDateTime = () => {
+      const d = new Date();
+      return d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    const buildFilterText = () => `Date Range: ${fmt(start)} — ${fmt(end)}`;
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+
+    const exportedAt = formatExportDateTime();
+    const filterText = buildFilterText();
+
+    const drawHeader = (title) => {
+      doc.setFillColor(THEME.blue);
+      doc.rect(0, 0, pageW, 18, "F");
+      doc.setFillColor(THEME.green);
+      doc.rect(0, 18, pageW, 2, "F");
+
+      doc.setTextColor(THEME.white);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(title, 12, 12);
+    };
+
+    const drawFooter = () => {
+      const page = doc.getCurrentPageInfo().pageNumber;
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(`Page ${page}`, pageW - 20, pageH - 6);
+    };
+
+    // --------------------------
+    // PAGE 1 — TABLE (NEVER CUTS)
+    // --------------------------
+    drawHeader("Comprehensive Report");
+
+    doc.setTextColor(20);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+
+    const maxTextW = pageW - 24;
+    const filterLines = doc.splitTextToSize(`Filter Applied: ${filterText}`, maxTextW);
+
+    let y = 28;
+    doc.text(filterLines, 12, y);
+    y += filterLines.length * 5;
+
+    doc.text(`Exported At: ${exportedAt}`, 12, y);
+    y += 6;
+
+    const head = [[
+      "#",
+      "Station Name",
+      "Total Bookings",
+      "Canceled",
+      "Female",
+      "Male",
+      "Other",
+      "Age 0-18",
+      "Age 19-25",
+      "Age 26-40",
+      "Age 41-60",
+      "Age 60+",
+      "Student",
+      "Senior",
+      "PWD",
+      "Mobile App",
+      "Chatbot",
+      "Gmail",
+      "Manual",
+    ]];
+
+    const body = rows.map((r, idx) => ([
+      String(idx + 1),
+      r.StationName ?? "",
+      String(r.TotalBookings ?? 0),
+      String(r.CanceledCount ?? 0),
+      String(r.FemaleCount ?? 0),
+      String(r.MaleCount ?? 0),
+      String(r.OtherGenderCount ?? 0),
+      String(r.Age_0_18 ?? 0),
+      String(r.Age_19_25 ?? 0),
+      String(r.Age_26_40 ?? 0),
+      String(r.Age_41_60 ?? 0),
+      String(r.Age_60Plus ?? 0),
+      String(r.StudentCount ?? 0),
+      String(r.SeniorCount ?? 0),
+      String(r.PWDCount ?? 0),
+      String(r.MobileAppCount ?? 0),
+      String(r.ChatbotCount ?? 0),
+      String(r.EmailCount ?? 0),
+      String(r.ManualBookingCount ?? 0),
+    ]));
+
+    autoTable(doc, {
+      startY: y,
+      head,
+      body,
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 8,          // compact for many columns
+        cellPadding: 1.5,
+        valign: "middle",
+        textColor: 20,
+        lineColor: 220,
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: THEME.blue,
+        textColor: THEME.white,
+        fontStyle: "bold",
+        halign: "center",
+      },
+      alternateRowStyles: {
+        fillColor: [240, 253, 248],
+      },
+      margin: { left: 6, right: 6 },
+      didDrawPage: drawFooter,
+    });
+
+    // Ensure footer on first page
+    drawFooter();
+
+    // --------------------------
+    // Chart capture helpers
+    // --------------------------
+    const captureEl = async (id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      return { canvas, imgData: canvas.toDataURL("image/png") };
+    };
+
+    // 2 charts per page
+    const addTwoChartsPage = async (pageTitle, top, bottom) => {
+      const topCap = await captureEl(top.id);
+      const bottomCap = await captureEl(bottom.id);
+
+      if (!topCap && !bottomCap) return;
+
+      doc.addPage();
+      drawHeader(pageTitle);
+
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const lines = doc.splitTextToSize(`Filter Applied: ${filterText}`, maxTextW);
+      const metaY = 28;
+      doc.text(lines, 12, metaY);
+
+      const marginX = 12;
+      const gap = 6;
+      const labelH = 5;
+
+      let yStart = metaY + lines.length * 5 + 6;
+
+      const bottomMargin = 14;
+      const availableH = pageH - yStart - bottomMargin;
+
+      const chartBoxH = (availableH - gap - labelH * 2) / 2;
+      const maxW = pageW - marginX * 2;
+
+      const drawChartBlock = (cap, title, yy) => {
+        if (!cap) return yy + chartBoxH + labelH + gap;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(30);
+        doc.text(title, marginX, yy);
+
+        const imgTopY = yy + labelH;
+
+        let drawW = maxW;
+        let drawH = (cap.canvas.height * drawW) / cap.canvas.width;
+
+        // fit by height
+        if (drawH > chartBoxH) {
+          drawH = chartBoxH;
+          drawW = (cap.canvas.width * drawH) / cap.canvas.height;
+        }
+        // fit by width safety
+        if (drawW > maxW) {
+          drawW = maxW;
+          drawH = (cap.canvas.height * drawW) / cap.canvas.width;
+        }
+
+        const x = (pageW - drawW) / 2;
+        doc.addImage(cap.imgData, "PNG", x, imgTopY, drawW, drawH);
+
+        return imgTopY + chartBoxH + gap;
+      };
+
+      yStart = drawChartBlock(topCap, top.title, yStart);
+      yStart = drawChartBlock(bottomCap, bottom.title, yStart);
+
+      drawFooter();
+    };
+
+    // 1 chart per page (no duplicates)
+    const addOneChartPage = async (pageTitle, chart) => {
+      const cap = await captureEl(chart.id);
+      if (!cap) return;
+
+      doc.addPage();
+      drawHeader(pageTitle);
+
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const lines = doc.splitTextToSize(`Filter Applied: ${filterText}`, maxTextW);
+      const metaY = 28;
+      doc.text(lines, 12, metaY);
+
+      const marginX = 12;
+      const labelH = 6;
+      const bottomMargin = 14;
+
+      let yStart = metaY + lines.length * 5 + 8;
+
+      const availableH = pageH - yStart - bottomMargin;
+      const maxW = pageW - marginX * 2;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30);
+      doc.text(chart.title, marginX, yStart);
+
+      const imgTopY = yStart + labelH;
+
+      let drawW = maxW;
+      let drawH = (cap.canvas.height * drawW) / cap.canvas.width;
+
+      // fit by height
+      if (drawH > availableH - labelH) {
+        drawH = availableH - labelH;
+        drawW = (cap.canvas.width * drawH) / cap.canvas.height;
+      }
+      // fit by width safety
+      if (drawW > maxW) {
+        drawW = maxW;
+        drawH = (cap.canvas.height * drawW) / cap.canvas.width;
+      }
+
+      const x = (pageW - drawW) / 2;
+      doc.addImage(cap.imgData, "PNG", x, imgTopY, drawW, drawH);
+
+      drawFooter();
+    };
+
+    // --------------------------
+    // CHART PAGES
+    // --------------------------
+    await addTwoChartsPage("Charts",
+      { id: "chart-bookings-cancelled", title: "Total vs Cancelled Bookings Per Station" },
+      { id: "chart-gender", title: "Gender Distribution Per Station" }
+    );
+
+    await addTwoChartsPage("Charts",
+      { id: "chart-age", title: "Age Distribution Per Station" },
+      { id: "chart-demographics", title: "Demographics Distribution Per Station" }
+    );
+
+    // ✅ last one is single chart (NO DUPLICATE)
+    await addOneChartPage("Charts", {
+      id: "chart-platform",
+      title: "Preferred Platform Source Per Station",
+    });
+
+    // --------------------------
+    // FINAL PAGE — APPROVAL
+    // --------------------------
+    doc.addPage();
+    drawHeader("Report Approval");
+
+    doc.setTextColor(20);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+
+    const approvalMeta = doc.splitTextToSize(
+      `Report Range: ${fmt(start)} — ${fmt(end)}\nExported At: ${exportedAt}`,
+      maxTextW
+    );
+    doc.text(approvalMeta, 12, 30);
+
+    const signY = 70;
+
+    doc.setDrawColor(170);
+    doc.setTextColor(40);
+    doc.setFontSize(11);
+
+    doc.text("Report Approved:", 12, signY);
+    doc.line(45, signY, 120, signY);
+
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text("Signature over Printed Name", 45, signY + 5);
+
+    doc.setTextColor(40);
+    doc.setFontSize(11);
+    doc.text("Date:", 130, signY);
+    doc.line(142, signY, 170, signY);
+
+    drawFooter();
+
+    // Save
+    doc.save(`StationReport_${start}-${end}.pdf`);
+    showToast("Success!", "PDF exported with charts!", "success");
+  } catch (err) {
+    console.error(err);
+    showToast(
+      "Export failed",
+      "Please install 'html2canvas' and 'jspdf-autotable'.",
+      "error"
+    );
+  }
+};
+
+
+  // ===========================
+  // ✅ exportExcel (FIXED + Styled + Charts)
+  // ===========================
+  const exportExcel = async () => {
+    if (!rows?.length) {
+      showToast("Error", "No data to export", "error");
+      return;
     }
 
-    const workbook = new ExcelJS.Workbook();
+    try {
+      const { default: html2canvas } = await import("html2canvas");
 
-    // ===============================
-    // SHEET 1 – RAW TABLE
-    // ===============================
-    const sheet1 = workbook.addWorksheet("Stations");
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "MCTS";
+      workbook.created = new Date();
 
-    sheet1.columns = [
-      { header: 'Station Name', key: 'StationName', width: 20 },
-      { header: 'Total Bookings', key: 'TotalBookings', width: 15 },
-      { header: 'Canceled Bookings', key: 'CanceledCount', width: 15 },
-      { header: 'Female Count', key: 'FemaleCount', width: 15 },
-      { header: 'Male Count', key: 'MaleCount', width: 15 },
-      { header: 'Other Gender Count', key: 'OtherGenderCount', width: 20 },
-      { header: 'Age 0-18', key: 'Age_0_18', width: 12 },
-      { header: 'Age 19-25', key: 'Age_19_25', width: 12 },
-      { header: 'Age 26-40', key: 'Age_26_40', width: 12 },
-      { header: 'Age 41-60', key: 'Age_41_60', width: 12 },
-      { header: 'Age 60+', key: 'Age_60Plus', width: 12 },
-      { header: 'Student Count', key: 'StudentCount', width: 15 },
-      { header: 'Senior Count', key: 'SeniorCount', width: 15 },
-      { header: 'PWD Count', key: 'PWDCount', width: 12 },
-      { header: 'Mobile App', key: 'MobileAppCount', width: 12 },
-      { header: 'Chatbot', key: 'ChatbotCount', width: 12 },
-      { header: 'Gmail', key: 'EmailCount', width: 12 },
-      { header: 'Manual', key: 'ManualBookingCount', width: 12 }
-    ];
+      // ARGB theme colors
+      const BLUE = "FF3C65E6";
+      const GREEN = "FF3FE19B";
+      const WHITE = "FFFFFFFF";
+      const LIGHT_GREEN = "FFF0FDF8";
+      const BORDER = "FFD9D9D9";
+      const GREY = "FF666666";
 
-    sheet1.addRows(rows);
+      const exportedAt = formatExportDateTime();
+      const filterText = buildFilterText();
 
-    // ===============================
-    // If we can't add images, just export data
-    // ===============================
-    const canAddImages =
-      typeof workbook.addImage === "function" &&
-      typeof html2canvas === "function" &&
-      typeof document !== "undefined";
+      const setCommonPrint = (sheet) => {
+        sheet.pageSetup = {
+          orientation: "landscape",
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 0,
+          paperSize: 9,
+          margins: {
+            left: 0.3,
+            right: 0.3,
+            top: 0.5,
+            bottom: 0.5,
+            header: 0.2,
+            footer: 0.2,
+          },
+        };
+      };
 
-    if (!canAddImages) {
-      console.warn("Chart images not supported, exporting data only.");
+      const addHeaderBlock = (sheet, lastColLetter, title) => {
+        sheet.mergeCells(`A1:${lastColLetter}1`);
+        const t = sheet.getCell("A1");
+        t.value = title;
+        t.font = { name: "Calibri", size: 16, bold: true, color: { argb: WHITE } };
+        t.alignment = { vertical: "middle", horizontal: "left" };
+        t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+        sheet.getRow(1).height = 26;
+
+        sheet.mergeCells(`A2:${lastColLetter}2`);
+        const a = sheet.getCell("A2");
+        a.value = "";
+        a.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN } };
+        sheet.getRow(2).height = 6;
+
+        sheet.mergeCells(`A3:${lastColLetter}3`);
+        const f = sheet.getCell("A3");
+        f.value = `Filter Applied: ${filterText}`;
+        f.font = { name: "Calibri", size: 11 };
+        f.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+        sheet.getRow(3).height = 30;
+
+        sheet.mergeCells(`A4:${lastColLetter}4`);
+        const e = sheet.getCell("A4");
+        e.value = `Exported At: ${exportedAt}`;
+        e.font = { name: "Calibri", size: 11 };
+        e.alignment = { vertical: "middle", horizontal: "left" };
+        sheet.getRow(4).height = 18;
+
+        sheet.mergeCells(`A5:${lastColLetter}5`);
+        sheet.getRow(5).height = 6;
+      };
+
+      const addSignatureBlock = (sheet, lastColLetter, signRow) => {
+        sheet.getRow(signRow).height = 18;
+
+        sheet.getCell(`A${signRow}`).value = "Report Approved:";
+        sheet.getCell(`A${signRow}`).font = { name: "Calibri", size: 11, bold: true };
+
+        sheet.mergeCells(`B${signRow}:E${signRow}`);
+        sheet.getCell(`B${signRow}`).border = {
+          bottom: { style: "thin", color: { argb: GREY } },
+        };
+
+        sheet.mergeCells(`B${signRow + 1}:E${signRow + 1}`);
+        sheet.getCell(`B${signRow + 1}`).value = "Signature over Printed Name";
+        sheet.getCell(`B${signRow + 1}`).font = {
+          name: "Calibri",
+          size: 10,
+          color: { argb: GREY },
+        };
+
+        sheet.getCell(`F${signRow}`).value = "Date:";
+        sheet.getCell(`F${signRow}`).font = { name: "Calibri", size: 11, bold: true };
+
+        sheet.mergeCells(`G${signRow}:H${signRow}`);
+        sheet.getCell(`G${signRow}`).border = {
+          bottom: { style: "thin", color: { argb: GREY } },
+        };
+
+        sheet.pageSetup.printArea = `A1:${lastColLetter}${signRow + 2}`;
+      };
+
+      const captureBase64 = async (id) => {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+        return canvas.toDataURL("image/png");
+      };
+
+      // --------------------------
+      // Sheet 1: Stations (styled table)
+      // --------------------------
+      const sheet1 = workbook.addWorksheet("Stations", {
+        views: [{ state: "frozen", ySplit: 6 }],
+      });
+      setCommonPrint(sheet1);
+
+      const cols = [
+        { header: "#", key: "__row", width: 6 },
+        { header: "Station Name", key: "StationName", width: 20 },
+        { header: "Total Bookings", key: "TotalBookings", width: 15 },
+        { header: "Canceled", key: "CanceledCount", width: 12 },
+        { header: "Female", key: "FemaleCount", width: 10 },
+        { header: "Male", key: "MaleCount", width: 10 },
+        { header: "Other", key: "OtherGenderCount", width: 10 },
+        { header: "Age 0-18", key: "Age_0_18", width: 10 },
+        { header: "Age 19-25", key: "Age_19_25", width: 10 },
+        { header: "Age 26-40", key: "Age_26_40", width: 10 },
+        { header: "Age 41-60", key: "Age_41_60", width: 10 },
+        { header: "Age 60+", key: "Age_60Plus", width: 10 },
+        { header: "Student", key: "StudentCount", width: 10 },
+        { header: "Senior", key: "SeniorCount", width: 10 },
+        { header: "PWD", key: "PWDCount", width: 10 },
+        { header: "Mobile App", key: "MobileAppCount", width: 12 },
+        { header: "Chatbot", key: "ChatbotCount", width: 10 },
+        { header: "Gmail", key: "EmailCount", width: 10 },
+        { header: "Manual", key: "ManualBookingCount", width: 10 },
+      ];
+      sheet1.columns = cols;
+
+      const lastColLetter1 = sheet1.getColumn(cols.length).letter;
+      addHeaderBlock(sheet1, lastColLetter1, "Comprehensive Station Report");
+
+      const headerRowIndex = 6;
+      const headerRow = sheet1.getRow(headerRowIndex);
+      cols.forEach((c, i) => {
+        const cell = headerRow.getCell(i + 1);
+        cell.value = c.header;
+        cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: WHITE } };
+        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+        cell.border = {
+          top: { style: "thin", color: { argb: BORDER } },
+          left: { style: "thin", color: { argb: BORDER } },
+          bottom: { style: "thin", color: { argb: BORDER } },
+          right: { style: "thin", color: { argb: BORDER } },
+        };
+      });
+      headerRow.height = 20;
+
+      sheet1.autoFilter = {
+        from: { row: headerRowIndex, column: 1 },
+        to: { row: headerRowIndex, column: cols.length },
+      };
+
+      const dataRows = rows.map((r, idx) => ({
+        __row: idx + 1,
+        StationName: r.StationName ?? "",
+        TotalBookings: r.TotalBookings ?? 0,
+        CanceledCount: r.CanceledCount ?? 0,
+        FemaleCount: r.FemaleCount ?? 0,
+        MaleCount: r.MaleCount ?? 0,
+        OtherGenderCount: r.OtherGenderCount ?? 0,
+        Age_0_18: r.Age_0_18 ?? 0,
+        Age_19_25: r.Age_19_25 ?? 0,
+        Age_26_40: r.Age_26_40 ?? 0,
+        Age_41_60: r.Age_41_60 ?? 0,
+        Age_60Plus: r.Age_60Plus ?? 0,
+        StudentCount: r.StudentCount ?? 0,
+        SeniorCount: r.SeniorCount ?? 0,
+        PWDCount: r.PWDCount ?? 0,
+        MobileAppCount: r.MobileAppCount ?? 0,
+        ChatbotCount: r.ChatbotCount ?? 0,
+        EmailCount: r.EmailCount ?? 0,
+        ManualBookingCount: r.ManualBookingCount ?? 0,
+      }));
+
+      sheet1.addRows(dataRows);
+
+      const startData = headerRowIndex + 1;
+      const endData = sheet1.rowCount;
+
+      const centerKeys = new Set([
+        "__row",
+        "TotalBookings",
+        "CanceledCount",
+        "FemaleCount",
+        "MaleCount",
+        "OtherGenderCount",
+        "Age_0_18",
+        "Age_19_25",
+        "Age_26_40",
+        "Age_41_60",
+        "Age_60Plus",
+        "StudentCount",
+        "SeniorCount",
+        "PWDCount",
+        "MobileAppCount",
+        "ChatbotCount",
+        "EmailCount",
+        "ManualBookingCount",
+      ]);
+
+      for (let r = startData; r <= endData; r++) {
+        const row = sheet1.getRow(r);
+        row.height = 18;
+        const isAlt = (r - startData) % 2 === 1;
+
+        for (let c = 1; c <= cols.length; c++) {
+          const cell = row.getCell(c);
+          const key = cols[c - 1].key;
+
+          cell.fill = isAlt
+            ? { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GREEN } }
+            : { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
+
+          cell.border = {
+            top: { style: "thin", color: { argb: BORDER } },
+            left: { style: "thin", color: { argb: BORDER } },
+            bottom: { style: "thin", color: { argb: BORDER } },
+            right: { style: "thin", color: { argb: BORDER } },
+          };
+
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: centerKeys.has(key) ? "center" : "left",
+            wrapText: true,
+          };
+
+          cell.font = { name: "Calibri", size: 10 };
+        }
+      }
+
+      // signature right after table
+      addSignatureBlock(sheet1, lastColLetter1, endData + 3);
+
+      // --------------------------
+      // Sheet 2: Charts (styled header + 2 charts per block + signature)
+      // --------------------------
+      const sheet2 = workbook.addWorksheet("Charts", {
+        views: [{ state: "frozen", ySplit: 5 }],
+      });
+      setCommonPrint(sheet2);
+
+      // create A..H columns so header merges reliably
+      sheet2.columns = Array.from({ length: 8 }, (_, i) => ({
+        header: "",
+        key: `c${i + 1}`,
+        width: i === 0 ? 34 : 18,
+      }));
+
+      const lastColLetter2 = "H";
+      addHeaderBlock(sheet2, lastColLetter2, "Comprehensive Station Report — Charts");
+
+      const putTitle = (row, title) => {
+        sheet2.getCell(`A${row}`).value = title;
+        sheet2.getCell(`A${row}`).font = { name: "Calibri", size: 14, bold: true };
+        sheet2.getRow(row).height = 20;
+      };
+
+      const putImage = (base64, row1Based) => {
+        if (!base64) return;
+        const imgId = workbook.addImage({ base64, extension: "png" });
+        // exceljs image coords use 0-based row indexes
+        sheet2.addImage(imgId, {
+          tl: { col: 0, row: row1Based - 1 },
+          ext: { width: 900, height: 360 },
+        });
+      };
+
+      // Chart block 1 (two charts)
+      putTitle(6, "Total Bookings vs Cancelled");
+      putImage(await captureBase64("chart-bookings-cancelled"), 7);
+
+      putTitle(26, "Gender Distribution");
+      putImage(await captureBase64("chart-gender"), 27);
+
+      // Chart block 2 (two charts)
+      putTitle(46, "Age Distribution");
+      putImage(await captureBase64("chart-age"), 47);
+
+      putTitle(66, "Demographics Distribution");
+      putImage(await captureBase64("chart-demographics"), 67);
+
+      // Chart block 3 (one chart)
+      putTitle(86, "Platform Source");
+      putImage(await captureBase64("chart-platform"), 87);
+
+      // signature under charts
+      addSignatureBlock(sheet2, lastColLetter2, 107);
+
+      // --------------------------
+      // Download
+      // --------------------------
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -162,140 +828,25 @@ const exportExcel = async () => {
 
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `StationReport_${fmt(start)}-${fmt(end)}.xlsx`;
+      link.download = `StationReport_${start}-${end}.xlsx`;
       link.click();
 
-      showToast("Success!", "Excel exported (data only).", "success");
-      return;
+      showToast("Success!", "Excel exported with charts!", "success");
+    } catch (err) {
+      console.error(err);
+      showToast(
+        "Export failed",
+        "Please install 'exceljs' and 'html2canvas' for charts.",
+        "error"
+      );
     }
-
-    // ===============================
-    // HELPER — CAPTURE CHART AS IMAGE
-    // ===============================
-    const captureChart = async (chartId, sheet, startRow) => {
-      try {
-        const el = document.getElementById(chartId);
-        if (!el) {
-          console.warn(`Chart element with id=${chartId} not found`);
-          return;
-        }
-
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-        const base64 = canvas.toDataURL("image/png");
-
-        const imgId = workbook.addImage({
-          base64,
-          extension: "png",
-        });
-
-        sheet.addImage(imgId, {
-          tl: { col: 0, row: startRow },
-          ext: { width: 900, height: 400 },
-        });
-      } catch (err) {
-        console.error(`Failed to capture chart ${chartId}`, err);
-      }
-    };
-
-    // ===============================
-    // SHEET 2 – Charts
-    // ===============================
-    const sheet2 = workbook.addWorksheet("Charts");
-
-    // Chart 1
-    sheet2.getCell("A1").value = "Total Bookings vs Cancelled";
-    sheet2.getCell("A1").font = { bold: true, size: 16 };
-    await captureChart("chart-bookings-cancelled", sheet2, 2);
-
-    // Chart 2
-    sheet2.getCell("A27").value = "Gender Distribution";
-    sheet2.getCell("A27").font = { bold: true, size: 16 };
-    await captureChart("chart-gender", sheet2, 28);
-
-    // Chart 3
-    sheet2.getCell("A52").value = "Age Distribution";
-    sheet2.getCell("A52").font = { bold: true, size: 16 };
-    await captureChart("chart-age", sheet2, 53);
-
-    // Chart 4
-    sheet2.getCell("A77").value = "Demographics Distribution";
-    sheet2.getCell("A77").font = { bold: true, size: 16 };
-    await captureChart("chart-demographics", sheet2, 78);
-
-    // Chart 5
-    sheet2.getCell("A102").value = "Platform Source";
-    sheet2.getCell("A102").font = { bold: true, size: 16 };
-    await captureChart("chart-platform", sheet2, 103);
-
-    // ===============================
-    // DOWNLOAD
-    // ===============================
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `StationReport_${fmt(start)}-${fmt(end)}.xlsx`;
-    link.click();
-
-    showToast("Success!", "Excel exported with charts!", "success");
-  } catch (err) {
-    console.error(err);
-    showToast("Export failed", "Please install 'exceljs' (and 'html2canvas' for charts).", "error");
-  }
-};
-
-
-
-  // 1. Total Bookings and Cancelled Bookings Per Station
-  const bookingsCancelledData = rows.map((r) => ({
-    name: r.StationName,
-    totalBookings: r.TotalBookings,
-    cancelled: r.CanceledCount
-  }));
-
-  // 2. Gender Per Station
-  const genderPerStationData = rows.map((r) => ({
-    name: r.StationName,
-    female: r.FemaleCount,
-    male: r.MaleCount,
-    other: r.OtherGenderCount
-  }));
-
-  // 3. Age Per Station
-  const agePerStationData = rows.map((r) => ({
-    name: r.StationName,
-    "0-18": r.Age_0_18,
-    "19-25": r.Age_19_25,
-    "26-40": r.Age_26_40,
-    "41-60": r.Age_41_60,
-    "60+": r.Age_60Plus
-  }));
-
-  // 4. Demographics Distribution Per Station
-  const demographicsData = rows.map((r) => ({
-    name: r.StationName,
-    student: r.StudentCount,
-    senior: r.SeniorCount,
-    pwd: r.PWDCount
-  }));
-
-  // 5. Platform Source Per Station
-  const platformSourceData = rows.map((r) => ({
-    name: r.StationName,
-    mobileApp: r.MobileAppCount,
-    chatbot: r.ChatbotCount,
-    email: r.EmailCount,
-    manual: r.ManualBookingCount
-  }));
+  };
 
   return (
     <>
       <Navbar />
       <HeaderButton />
-      <Toast open={toast.open} title={toast.title} message={toast.message} tone={toast.tone} onClose={() => setToast((t) => ({ ...t, open: false }))} />
+      <Toast open={toast.open} title={toast.title} message={toast.message} tone={toast.tone} />
 
       <div className="reports-page" id="reportsPage">
         <main className="reports-main">
@@ -309,16 +860,27 @@ const exportExcel = async () => {
           <div className="reports-controls">
             <div className="rg-dates">
               <span>Date range:</span>
-              <input type="date" value={start} onChange={(e) => setStart(e.target.value)} aria-label="start date" />
+              <input
+                type="date"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                aria-label="start date"
+              />
               <span>—</span>
-              <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="end date" />
+              <input
+                type="date"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                aria-label="end date"
+              />
             </div>
           </div>
 
           <div ref={reportRef}>
-            {/* Removed the Generate Report button from here */}
             <div className="rg-table-head">
-              <div className="rg-range-label">Report for <b>{fmt(start)}</b> — <b>{fmt(end)}</b></div>
+              <div className="rg-range-label">
+                Report for <b>{fmt(start)}</b> — <b>{fmt(end)}</b>
+              </div>
             </div>
 
             <div className="rg-table-wrap" role="region" aria-label="Station totals">
@@ -340,7 +902,6 @@ const exportExcel = async () => {
                     <th>Student Count</th>
                     <th>Senior Count</th>
                     <th>PWD Count</th>
-                    {/* Removed Peak Day, Peak Time, Off Peak Day, Off Peak Time columns */}
                     <th>Mobile App</th>
                     <th>Chatbot</th>
                     <th>Gmail</th>
@@ -349,7 +910,7 @@ const exportExcel = async () => {
                 </thead>
                 <tbody>
                   {rows.map((r, idx) => (
-                    <tr key={r.StationName}>
+                    <tr key={`${r.StationName}-${idx}`}>
                       <td>{idx + 1}</td>
                       <td>{r.StationName}</td>
                       <td>{r.TotalBookings}</td>
@@ -365,7 +926,6 @@ const exportExcel = async () => {
                       <td>{r.StudentCount}</td>
                       <td>{r.SeniorCount}</td>
                       <td>{r.PWDCount}</td>
-                      {/* Removed Peak/Off-Peak data cells */}
                       <td>{r.MobileAppCount}</td>
                       <td>{r.ChatbotCount}</td>
                       <td>{r.EmailCount}</td>
@@ -377,109 +937,108 @@ const exportExcel = async () => {
             </div>
 
             {/* Charts Section */}
-            <div className="rg-charts" style={{ marginTop: '40px' }}>
-              {/* Chart 1: Total Bookings and Cancelled Bookings Per Station */}
-              <section className="chart-card" style={{ marginBottom: '30px' }}>
+            <div className="rg-charts" style={{ marginTop: "40px" }}>
+              <section className="chart-card" style={{ marginBottom: "30px" }}>
                 <div id="chart-bookings-cancelled">
-                <h3 className="chart-title">Total Bookings and Cancelled Bookings Per Station</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={bookingsCancelledData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="totalBookings" fill="#41A67E" name="Total Bookings" />
-                    <Bar dataKey="cancelled" fill="#DA6C6C" name="Cancelled" />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <h3 className="chart-title">Total Bookings and Cancelled Bookings Per Station</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={bookingsCancelledData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="totalBookings" fill="#41A67E" name="Total Bookings" />
+                      <Bar dataKey="cancelled" fill="#DA6C6C" name="Cancelled" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </section>
 
-              {/* Chart 2: Gender Per Station */}
-              <section className="chart-card" style={{ marginBottom: '30px' }}>
+              <section className="chart-card" style={{ marginBottom: "30px" }}>
                 <div id="chart-gender">
-                <h3 className="chart-title">Gender Distribution Per Station</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={genderPerStationData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="female" fill="#FF6B9D" name="Female" />
-                    <Bar dataKey="male" fill="#9FB3DF" name="Male" />
-                    <Bar dataKey="other" fill="#9B7EBD" name="Other" />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <h3 className="chart-title">Gender Distribution Per Station</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={genderPerStationData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="female" fill="#FF6B9D" name="Female" />
+                      <Bar dataKey="male" fill="#9FB3DF" name="Male" />
+                      <Bar dataKey="other" fill="#9B7EBD" name="Other" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </section>
 
-              {/* Chart 3: Age Per Station */}
-              <section className="chart-card" style={{ marginBottom: '30px' }}>
+              <section className="chart-card" style={{ marginBottom: "30px" }}>
                 <div id="chart-age">
-                <h3 className="chart-title">Age Distribution Per Station</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={agePerStationData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="0-18" fill="#8967B3" name="0-18" />
-                    <Bar dataKey="19-25" fill="#FADFA1" name="19-25" />
-                    <Bar dataKey="26-40" fill="#b8f2e6" name="26-40" />
-                    <Bar dataKey="41-60" fill="#FF8A8A" name="41-60" />
-                    <Bar dataKey="60+" fill="#5F6F65" name="60+" />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <h3 className="chart-title">Age Distribution Per Station</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={agePerStationData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="0-18" fill="#8967B3" name="0-18" />
+                      <Bar dataKey="19-25" fill="#FADFA1" name="19-25" />
+                      <Bar dataKey="26-40" fill="#b8f2e6" name="26-40" />
+                      <Bar dataKey="41-60" fill="#FF8A8A" name="41-60" />
+                      <Bar dataKey="60+" fill="#5F6F65" name="60+" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </section>
 
-              {/* Chart 4: Demographics Distribution Per Station */}
-              <section className="chart-card" style={{ marginBottom: '30px' }}>
+              <section className="chart-card" style={{ marginBottom: "30px" }}>
                 <div id="chart-demographics">
-                <h3 className="chart-title">Demographics Distribution Per Station</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={demographicsData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="student" fill="#cc8b86" name="Student" />
-                    <Bar dataKey="senior" fill="#d496a7" name="Senior" />
-                    <Bar dataKey="pwd" fill="#5d576b" name="PWD" />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <h3 className="chart-title">Demographics Distribution Per Station</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={demographicsData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="student" fill="#cc8b86" name="Student" />
+                      <Bar dataKey="senior" fill="#d496a7" name="Senior" />
+                      <Bar dataKey="pwd" fill="#5d576b" name="PWD" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </section>
 
-              {/* Chart 5: Platform Source Per Station */}
-              <section className="chart-card" style={{ marginBottom: '30px' }}>
+              <section className="chart-card" style={{ marginBottom: "30px" }}>
                 <div id="chart-platform">
-                <h3 className="chart-title">Preferred Platform Source of Booking Per Station</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={platformSourceData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="mobileApp" fill="#1BC882" name="Mobile App" />
-                    <Bar dataKey="chatbot" fill="#2E5BFF" name="Chatbot" />
-                    <Bar dataKey="email" fill="#EA4335" name="Email" />
-                    <Bar dataKey="manual" fill="#FADA7A" name="Manual Booking" />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <h3 className="chart-title">Preferred Platform Source of Booking Per Station</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={platformSourceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="mobileApp" fill="#1BC882" name="Mobile App" />
+                      <Bar dataKey="chatbot" fill="#2E5BFF" name="Chatbot" />
+                      <Bar dataKey="email" fill="#EA4335" name="Email" />
+                      <Bar dataKey="manual" fill="#FADA7A" name="Manual Booking" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </section>
             </div>
           </div>
 
           <div className="rg-export-row">
-            <button className="rg-export" onClick={exportPDF}>Export as PDF</button>
-            <button className="rg-export" onClick={exportExcel}>Export as Excel</button>
+            <button className="rg-export" onClick={exportPDF}>
+              Export as PDF
+            </button>
+            <button className="rg-export" onClick={exportExcel}>
+              Export as Excel
+            </button>
           </div>
         </main>
       </div>

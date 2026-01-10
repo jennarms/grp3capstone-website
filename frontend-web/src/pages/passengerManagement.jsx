@@ -1,8 +1,8 @@
 // passengerManagement.jsx
-
 import axios from "axios";
-import ExcelJS from 'exceljs';
+import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HeaderButton } from "../components/headerButton";
 import { Navbar } from "../components/navBar";
@@ -49,7 +49,6 @@ function Toast({ open, title, message, tone = "success" }) {
 }
 
 // ---------- Shared mini components (same vibe as BookingInfo) ----------
-
 const SelectField = ({ label, value, onChange, error, options, span2 }) => {
   return (
     <div className={span2 ? "boarding-manual-span2" : ""}>
@@ -129,14 +128,22 @@ export function Passenger() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Toast state
-  const [toast, setToast] = useState({ open: false, title: "", message: "", tone: "success" });
+  const [toast, setToast] = useState({
+    open: false,
+    title: "",
+    message: "",
+    tone: "success",
+  });
   const toastTimer = useRef(null);
   const reportRef = useRef(null);
 
   const showToast = (title, message, tone = "success") => {
     setToast({ open: true, title, message, tone });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, open: false })), 2800);
+    toastTimer.current = setTimeout(
+      () => setToast((t) => ({ ...t, open: false })),
+      2800
+    );
   };
 
   useEffect(() => {
@@ -177,23 +184,18 @@ export function Passenger() {
   }, [origin, destination]);
 
   // ------------- Fetch manifest from backend -------------
-  const fetchManifest = useCallback(
-    async (params = {}) => {
-      try {
-        setIsLoading(true);
-        const res = await axios.get(`${apiUrl}/api/users/manifest`, {
-          params,
-        });
-        setRows(res.data || []);
-      } catch (error) {
-        console.error("Failed to fetch passenger manifest:", error);
-        setRows([]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
+  const fetchManifest = useCallback(async (params = {}) => {
+    try {
+      setIsLoading(true);
+      const res = await axios.get(`${apiUrl}/api/users/manifest`, { params });
+      setRows(res.data || []);
+    } catch (error) {
+      console.error("Failed to fetch passenger manifest:", error);
+      setRows([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Initial load: all boarded passengers (no filters)
   useEffect(() => {
@@ -203,7 +205,6 @@ export function Passenger() {
   // ------------- Apply filters when user clicks "Apply Filter" -------------
   const validateFilters = () => {
     const nextErrors = {};
-    // For accident scenarios, you usually want a specific trip, so all four are recommended.
     if (!origin) nextErrors.origin = "Please select origin";
     if (!destination) nextErrors.destination = "Please select destination";
     if (!depDate) nextErrors.depDate = "Please select departure date";
@@ -239,87 +240,377 @@ export function Passenger() {
   }, [rows, query]);
 
   // ------------- Export Functions -------------
-  const exportPDF = async () => {
+  const COLORS = {
+    white: "#FFFFFF",
+    green: "#3fe19b",
+    blue: "#3c65e6",
+  };
+
+  const formatExportDateTime = () => {
+    const d = new Date();
+    return d.toLocaleString(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const buildFilterAppliedText = () => {
+    const parts = [];
+    if (origin) parts.push(`Origin: ${origin}`);
+    if (destination) parts.push(`Destination: ${destination}`);
+    if (depDate) parts.push(`Departure Date: ${fmt(depDate)}`);
+    if (depTime) parts.push(`Departure Time: ${depTime}`);
+    return parts.length ? parts.join("  |  ") : "None (All Boarded Passengers)";
+  };
+
+  // ✅ NEW PDF EXPORT (NO html2canvas screenshot)
+  const exportPDF = () => {
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const node = reportRef.current;
-      const canvas = await html2canvas(node, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
 
-      const pdf = new jsPDF("l", "mm", "a4"); // landscape for wide table
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      let heightLeft = imgH;
-      let position = 0;
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
 
-      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
+      // Header band
+      doc.setFillColor(COLORS.blue);
+      doc.rect(0, 0, pageW, 18, "F");
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgH;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-        heightLeft -= pageH;
-      }
+      // Accent line
+      doc.setFillColor(COLORS.green);
+      doc.rect(0, 18, pageW, 2, "F");
 
-      const filename = origin && destination && depDate
-        ? `PassengerManifest_${origin}-${destination}_${depDate}.pdf`
-        : `PassengerManifest_${new Date().toISOString().slice(0, 10)}.pdf`;
+      // Title
+      doc.setTextColor(COLORS.white);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("Passenger Manifest Report", 12, 12);
 
-      pdf.save(filename);
+      // Meta info
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const filterText = buildFilterAppliedText();
+      const exportedAt = formatExportDateTime();
+
+      doc.text(`Filter Applied: ${filterText}`, 12, 28);
+      doc.text(`Exported At: ${exportedAt}`, 12, 34);
+
+      // Table
+      const head = [
+        ["#", ...columns.map((c) => c.replace(/_/g, " ").toUpperCase())],
+      ];
+
+      const body = filtered.map((r, idx) => [
+        String(idx + 1),
+        ...columns.map((c) => String(r?.[c] ?? "")),
+      ]);
+
+      autoTable(doc, {
+        startY: 40,
+        head,
+        body,
+        theme: "grid",
+        styles: {
+          font: "helvetica",
+          fontSize: 8,
+          cellPadding: 2,
+          valign: "middle",
+          textColor: 20,
+          lineColor: 220,
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: COLORS.blue,
+          textColor: COLORS.white,
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [240, 253, 248], // light green tint for readability
+        },
+        margin: { left: 8, right: 8 },
+        tableWidth: "auto",
+        didDrawPage: () => {
+          const page = doc.getCurrentPageInfo().pageNumber;
+          doc.setFontSize(9);
+          doc.setTextColor(120);
+          doc.text(`Page ${page}`, pageW - 20, pageH - 6);
+        },
+      });
+
+      // Approval / Signature section
+      const lastY = doc.lastAutoTable?.finalY ?? 40;
+      const signY = Math.min(lastY + 12, pageH - 22);
+
+      doc.setDrawColor(170);
+      doc.setTextColor(40);
+      doc.setFontSize(10);
+      doc.text("Report Approved:", 12, signY);
+
+      // Signature line
+      doc.line(45, signY, 120, signY);
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text("Signature over Printed Name", 45, signY + 5);
+
+      // Date line
+      doc.setTextColor(40);
+      doc.setFontSize(10);
+      doc.text("Date:", 130, signY);
+      doc.line(142, signY, 170, signY);
+
+      const filename =
+        origin && destination && depDate
+          ? `PassengerManifest_${origin}-${destination}_${depDate}.pdf`
+          : `PassengerManifest_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      doc.save(filename);
       showToast("Success!", "PDF exported successfully!", "success");
     } catch (err) {
       console.error(err);
-      showToast("Export failed", "Please install 'jspdf' and 'html2canvas'.", "error");
+      showToast(
+        "Export failed",
+        "Please install 'jspdf-autotable' (npm i jspdf-autotable).",
+        "error"
+      );
     }
   };
 
-  const exportExcel = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet("Passenger Manifest");
+const exportExcel = async () => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "MCTS";
+    workbook.created = new Date();
 
-      sheet.columns = [
-        { header: 'User ID', key: 'User_ID', width: 12 },
-        { header: 'Full Name', key: 'full_name', width: 25 },
-        { header: 'Age', key: 'age', width: 8 },
-        { header: 'Gender', key: 'gender', width: 10 },
-        { header: 'Contact Number', key: 'contact_number', width: 18 },
-        { header: 'Address', key: 'address', width: 30 },
-        { header: 'Profession', key: 'profession', width: 20 },
-        { header: 'Platform Source', key: 'platform_source', width: 15 },
-        { header: 'Origin', key: 'origin_name', width: 20 },
-        { header: 'Destination', key: 'destination_name', width: 20 },
-        { header: 'Departure Date', key: 'departure_date', width: 15 },
-        { header: 'Departure Time', key: 'departure_time', width: 15 },
-        { header: 'Booking ID', key: 'Booking_ID', width: 15 },
-        { header: 'Schedule ID', key: 'Schedule_ID', width: 15 },
-      ];
+    const sheet = workbook.addWorksheet("Passenger Manifest", {
+      views: [{ state: "frozen", ySplit: 6 }], // freeze pane after meta + header
+      pageSetup: {
+        orientation: "landscape",
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        paperSize: 9, // A4
+        margins: {
+          left: 0.3,
+          right: 0.3,
+          top: 0.5,
+          bottom: 0.5,
+          header: 0.2,
+          footer: 0.2,
+        },
+      },
+    });
 
-      sheet.addRows(filtered);
+    // ----- Theme colors -----
+    const BLUE = "FF3C65E6";
+    const GREEN = "FF3FE19B";
+    const WHITE = "FFFFFFFF";
+    const LIGHT_GREEN = "FFF0FDF8";
+    const BORDER = "FFD9D9D9";
 
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
+    const exportedAt = new Date().toLocaleString(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-      const filename = origin && destination && depDate
+    const filterText = (() => {
+      const parts = [];
+      if (origin) parts.push(`Origin: ${origin}`);
+      if (destination) parts.push(`Destination: ${destination}`);
+      if (depDate) parts.push(`Departure Date: ${fmt(depDate)}`);
+      if (depTime) parts.push(`Departure Time: ${depTime}`);
+      return parts.length ? parts.join(" | ") : "None (All Boarded Passengers)";
+    })();
+
+    // ----- Column setup (includes # column) -----
+    const excelCols = [
+      { header: "#", key: "__row", width: 6 },
+      { header: "User ID", key: "User_ID", width: 12 },
+      { header: "Full Name", key: "full_name", width: 24 },
+      { header: "Age", key: "age", width: 6 },
+      { header: "Gender", key: "gender", width: 10 },
+      { header: "Contact Number", key: "contact_number", width: 18 },
+      { header: "Address", key: "address", width: 28 },
+      { header: "Profession", key: "profession", width: 18 },
+      { header: "Platform Source", key: "platform_source", width: 16 },
+      { header: "Origin", key: "origin_name", width: 18 },
+      { header: "Destination", key: "destination_name", width: 18 },
+      { header: "Departure Date", key: "departure_date", width: 14 },
+      { header: "Departure Time", key: "departure_time", width: 14 },
+      { header: "Booking ID", key: "Booking_ID", width: 14 },
+      { header: "Schedule ID", key: "Schedule_ID", width: 14 },
+    ];
+
+    sheet.columns = excelCols;
+
+    const lastColLetter = sheet.getColumn(excelCols.length).letter;
+
+    // ----- Title band -----
+    sheet.mergeCells(`A1:${lastColLetter}1`);
+    const titleCell = sheet.getCell("A1");
+    titleCell.value = "Passenger Manifest Report";
+    titleCell.font = { name: "Calibri", size: 16, bold: true, color: { argb: WHITE } };
+    titleCell.alignment = { vertical: "middle", horizontal: "left" };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+    sheet.getRow(1).height = 26;
+
+    // Accent line
+    sheet.mergeCells(`A2:${lastColLetter}2`);
+    const accentCell = sheet.getCell("A2");
+    accentCell.value = "";
+    accentCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN } };
+    sheet.getRow(2).height = 6;
+
+    // ----- Meta lines -----
+    sheet.mergeCells(`A3:${lastColLetter}3`);
+    sheet.getCell("A3").value = `Filter Applied: ${filterText}`;
+    sheet.getCell("A3").font = { name: "Calibri", size: 11 };
+    sheet.getCell("A3").alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    sheet.getRow(3).height = 20;
+
+    sheet.mergeCells(`A4:${lastColLetter}4`);
+    sheet.getCell("A4").value = `Exported At: ${exportedAt}`;
+    sheet.getCell("A4").font = { name: "Calibri", size: 11 };
+    sheet.getCell("A4").alignment = { vertical: "middle", horizontal: "left" };
+    sheet.getRow(4).height = 18;
+
+    // Spacer row
+    sheet.mergeCells(`A5:${lastColLetter}5`);
+    sheet.getRow(5).height = 6;
+
+    // ----- Header row (Row 6) -----
+    const headerRowIndex = 6;
+    const headerRow = sheet.getRow(headerRowIndex);
+
+    excelCols.forEach((c, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = c.header;
+      cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: WHITE } };
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+      cell.border = {
+        top: { style: "thin", color: { argb: BORDER } },
+        left: { style: "thin", color: { argb: BORDER } },
+        bottom: { style: "thin", color: { argb: BORDER } },
+        right: { style: "thin", color: { argb: BORDER } },
+      };
+    });
+    headerRow.height = 20;
+
+    // AutoFilter
+    sheet.autoFilter = {
+      from: { row: headerRowIndex, column: 1 },
+      to: { row: headerRowIndex, column: excelCols.length },
+    };
+
+    // ----- Data rows start at Row 7 -----
+    const startRow = headerRowIndex + 1;
+
+    const data = filtered.map((r, idx) => ({
+      __row: idx + 1,
+      ...r,
+    }));
+
+    sheet.addRows(data);
+
+    // Style data rows (zebra + borders + alignment)
+    const endRow = sheet.rowCount;
+
+    for (let r = startRow; r <= endRow; r++) {
+      const row = sheet.getRow(r);
+      row.height = 18;
+
+      const isAlt = (r - startRow) % 2 === 1;
+
+      for (let c = 1; c <= excelCols.length; c++) {
+        const cell = row.getCell(c);
+
+        // zebra fill
+        cell.fill = isAlt
+          ? { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GREEN } }
+          : { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
+
+        // borders
+        cell.border = {
+          top: { style: "thin", color: { argb: BORDER } },
+          left: { style: "thin", color: { argb: BORDER } },
+          bottom: { style: "thin", color: { argb: BORDER } },
+          right: { style: "thin", color: { argb: BORDER } },
+        };
+
+        // alignment
+        const key = excelCols[c - 1].key;
+        const centerKeys = ["__row", "age", "gender", "departure_date", "departure_time"];
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: centerKeys.includes(key) ? "center" : "left",
+          wrapText: true,
+        };
+
+        cell.font = { name: "Calibri", size: 10 };
+      }
+      row.commit?.();
+    }
+
+    // ----- “Report Approved” section (after table) -----
+    const signStart = sheet.rowCount + 3;
+    sheet.getRow(signStart).height = 18;
+    sheet.getCell(`A${signStart}`).value = "Report Approved:";
+    sheet.getCell(`A${signStart}`).font = { name: "Calibri", size: 11, bold: true };
+
+    // signature line (B..E)
+    sheet.mergeCells(`B${signStart}:E${signStart}`);
+    sheet.getCell(`B${signStart}`).border = {
+      bottom: { style: "thin", color: { argb: "FF666666" } },
+    };
+
+    // printed name hint
+    sheet.mergeCells(`B${signStart + 1}:E${signStart + 1}`);
+    sheet.getCell(`B${signStart + 1}`).value = "Signature over Printed Name";
+    sheet.getCell(`B${signStart + 1}`).font = { name: "Calibri", size: 10, color: { argb: "FF666666" } };
+
+    // date line (F..G)
+    sheet.getCell(`F${signStart}`).value = "Date:";
+    sheet.getCell(`F${signStart}`).font = { name: "Calibri", size: 11, bold: true };
+    sheet.mergeCells(`G${signStart}:H${signStart}`);
+    sheet.getCell(`G${signStart}`).border = {
+      bottom: { style: "thin", color: { argb: "FF666666" } },
+    };
+
+    // ----- Export file -----
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+
+    const filename =
+      origin && destination && depDate
         ? `PassengerManifest_${origin}-${destination}_${depDate}.xlsx`
         : `PassengerManifest_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
-      link.download = filename;
-      link.click();
+    link.download = filename;
+    link.click();
 
-      showToast("Success!", "Excel exported successfully!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Export failed", "Please install 'exceljs'.", "error");
-    }
-  };
+    showToast("Success!", "Excel exported successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Export failed", "Excel export failed. Please check ExcelJS install.", "error");
+  }
+};
+
 
   return (
     <>
@@ -330,21 +621,21 @@ export function Passenger() {
         message={toast.message}
         tone={toast.tone}
       />
-      
+
       <div className="pmc-main">
         <div className="pmc-header-row">
           <h1 className="pmc-title">Passenger Report</h1>
           <HeaderButton />
         </div>
 
-      <div className="pmc-section-label">
+        <div className="pmc-section-label">
           Passenger Manifest (Boarded Passengers Only)
           {origin && destination && depDate && (
-            <span style={{ fontWeight: 'normal', marginLeft: '10px' }}>
-            — {origin} to {destination} on {fmt(depDate)} at {depTime}
+            <span style={{ fontWeight: "normal", marginLeft: "10px" }}>
+              — {origin} to {destination} on {fmt(depDate)} at {depTime}
             </span>
           )}
-      </div>
+        </div>
 
         {/* Controls row: Search + Filter Button - NOT included in PDF */}
         <div className="pmc-controls no-print">
@@ -422,7 +713,7 @@ export function Passenger() {
 
         {/* Export Buttons - NOT included in PDF */}
         {filtered.length > 0 && (
-          <div className="rg-export-row no-print" style={{ marginTop: '20px' }}>
+          <div className="rg-export-row no-print" style={{ marginTop: "20px" }}>
             <button className="rg-export" onClick={exportPDF}>
               Export as PDF
             </button>
@@ -452,8 +743,8 @@ export function Passenger() {
 
             <div className="pmc-confirmBody">
               <p id="pmc-filter-desc" className="pmc-confirmText">
-                Select origin, destination, departure date, and time to view
-                the list of passengers who boarded that specific trip. This is
+                Select origin, destination, departure date, and time to view the
+                list of passengers who boarded that specific trip. This is
                 useful for incident and accident reporting.
               </p>
 
