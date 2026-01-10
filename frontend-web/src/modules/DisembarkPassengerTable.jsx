@@ -1,5 +1,5 @@
 // ===============================
-// DisembarkPassengerTable.jsx — FINAL, NO FLICKER
+// DisembarkPassengerTable.jsx — FINAL, NO FLICKER, MATCHES BACKEND
 // ===============================
 import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +14,7 @@ export default function DisembarkPassengerTable({ destination }) {
   const [totalPages, setTotalPages] = useState(0);
   const [query, setQuery] = useState("");
 
-  const [initialLoad, setInitialLoad] = useState(true); // 🔥 NEW
+  const [initialLoad, setInitialLoad] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -37,7 +37,7 @@ export default function DisembarkPassengerTable({ destination }) {
       }
 
       try {
-        if (initialLoad) setLoading(true); // 👈 Only show loading on FIRST load
+        if (initialLoad) setLoading(true); // show loading only on first load
 
         const params = { page, destination };
         if (query) params.query = query;
@@ -47,15 +47,20 @@ export default function DisembarkPassengerTable({ destination }) {
           { params }
         );
 
+        // ✅ backend returns { boardingData, totalPages, currentPage }
         if (res.data?.boardingData) {
           setPassengerData(res.data.boardingData);
-          setTotalPages(res.data.totalPages);
+          setTotalPages(res.data.totalPages || 0);
+        } else {
+          setPassengerData([]);
+          setTotalPages(0);
         }
       } catch (err) {
         console.error("❌ API ERROR:", err);
         setPassengerData([]);
+        setTotalPages(0);
       } finally {
-        if (initialLoad) setInitialLoad(false); // Stop showing loading forever
+        if (initialLoad) setInitialLoad(false);
         setLoading(false);
       }
     },
@@ -133,10 +138,12 @@ export default function DisembarkPassengerTable({ destination }) {
     }
   };
 
-  // Search filter
+  // Search filter (includes passenger_name since it's part of p)
   const normalize = (v) => String(v || "").toLowerCase();
   const filteredData = passengerData.filter((p) =>
-    Object.values(p).some((val) => normalize(val).includes(query.toLowerCase()))
+    Object.values(p).some((val) =>
+      normalize(val).includes(query.toLowerCase())
+    )
   );
 
   return (
@@ -159,7 +166,6 @@ export default function DisembarkPassengerTable({ destination }) {
       {/* TABLE */}
       <section className="boarding-table-section">
         <div className="table-wrapper">
-          {/* 🔥 REAL FIX — show loading ONLY once */}
           {initialLoad && loading ? (
             <div className="loading-message">Loading...</div>
           ) : filteredData.length === 0 ? (
@@ -171,6 +177,7 @@ export default function DisembarkPassengerTable({ destination }) {
                   <th>BD_ID</th>
                   <th>Booking_ID</th>
                   <th>User_ID</th>
+                  <th>Passenger Name</th>
                   <th>Boarding Time</th>
                   <th>Disembarking Time</th>
                   <th>Status</th>
@@ -190,6 +197,7 @@ export default function DisembarkPassengerTable({ destination }) {
                     <td>{p.BD_ID}</td>
                     <td>{p.Booking_ID}</td>
                     <td>{p.User_ID}</td>
+                    <td>{p.passenger_name || "—"}</td>
                     <td>{p.boarding_time || "—"}</td>
                     <td>{p.disembarking_time || "—"}</td>
                     <td>{p.status}</td>
@@ -202,7 +210,10 @@ export default function DisembarkPassengerTable({ destination }) {
 
                     <td>
                       {p.status === "B" ? (
-                        <button className="actionbtn" onClick={() => openModal(p)}>
+                        <button
+                          className="actionbtn"
+                          onClick={() => openModal(p)}
+                        >
                           Mark as Disembark
                         </button>
                       ) : (
@@ -219,11 +230,17 @@ export default function DisembarkPassengerTable({ destination }) {
 
       {/* PAGINATION */}
       <div className="pagination">
-        <button disabled={currentPage === 1} onClick={() => handlePageChange("prev")}>
+        <button
+          disabled={currentPage === 1}
+          onClick={() => handlePageChange("prev")}
+        >
           Prev
         </button>
         <span>{currentPage}</span>
-        <button disabled={currentPage === totalPages} onClick={() => handlePageChange("next")}>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => handlePageChange("next")}
+        >
           Next
         </button>
       </div>
