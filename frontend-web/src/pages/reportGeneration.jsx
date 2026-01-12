@@ -97,7 +97,7 @@ export function Report() {
   const THEME = {
     white: "#FFFFFF",
     green: "#3fe19b",
-    blue: "#3c65e6",
+    blue: "#000c6f",
   };
 
   const formatExportDateTime = () => {
@@ -168,7 +168,7 @@ const exportPDF = async () => {
     const THEME = {
       white: "#FFFFFF",
       green: "#3fe19b",
-      blue: "#3c65e6",
+      blue: "#000c6f",
     };
 
     const formatExportDateTime = () => {
@@ -528,7 +528,7 @@ const exportPDF = async () => {
       workbook.created = new Date();
 
       // ARGB theme colors
-      const BLUE = "FF3C65E6";
+      const BLUE = "FF000C6F";
       const GREEN = "FF3FE19B";
       const WHITE = "FFFFFFFF";
       const LIGHT_GREEN = "FFF0FDF8";

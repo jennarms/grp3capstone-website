@@ -267,7 +267,7 @@ export default function PeakReport() {
   const COLORS = {
     white: "#FFFFFF",
     green: "#3fe19b",
-    blue: "#3c65e6",
+    blue: "#000c6f",
   };
 
   const buildFilterText = () => {
@@ -302,7 +302,7 @@ const exportPDF = async () => {
     const COLORS = {
       white: "#FFFFFF",
       green: "#3fe19b",
-      blue: "#3c65e6",
+      blue: "#000c6f",
     };
 
     const exportedAt = formatExportDateTime();
@@ -591,7 +591,7 @@ const exportExcel = async () => {
     workbook.created = new Date();
 
     // Theme ARGB colors
-    const BLUE = "FF3C65E6";
+    const BLUE = "FF000C6F";
     const GREEN = "FF3FE19B";
     const WHITE = "FFFFFFFF";
     const LIGHT_GREEN = "FFF0FDF8";

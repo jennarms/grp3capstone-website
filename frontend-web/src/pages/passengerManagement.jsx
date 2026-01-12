@@ -240,7 +240,7 @@ export function Passenger() {
   const COLORS = {
     white: "#FFFFFF",
     green: "#3fe19b",
-    blue: "#3c65e6",
+    blue: "#000c6f",
   };
 
   const formatExportDateTime = () => {
@@ -264,121 +264,177 @@ export function Passenger() {
   };
 
   // ✅ NEW PDF EXPORT (NO html2canvas screenshot)
-  const exportPDF = () => {
-    try {
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
+  const exportPDF = async () => {
+  try {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [215.9, 330.2], // 8.5 x 13 inches (LONG)
+    });
+
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+
+    /* ================= LOGOS ================= */
+    const leftLogo =
+      "https://upload.wikimedia.org/wikipedia/commons/6/6d/Metropolitan_Manila_Development_Authority_%28MMDA%29.png";
+    const rightLogo =
+      "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bagong_Pilipinas_logo.png";
+
+    const loadImage = (url) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.src = url;
       });
 
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
+    const [mmdaLogo, bpLogo] = await Promise.all([
+      loadImage(leftLogo),
+      loadImage(rightLogo),
+    ]);
 
-      // Header band
-      doc.setFillColor(COLORS.blue);
-      doc.rect(0, 0, pageW, 18, "F");
+    /* ================= HEADER ================= */
+    const startY = 15;
 
-      // Accent line
-      doc.setFillColor(COLORS.green);
-      doc.rect(0, 18, pageW, 2, "F");
+    doc.addImage(mmdaLogo, "PNG", 15, startY, 25, 25);
+    doc.addImage(bpLogo, "PNG", pageW - 40, startY, 25, 25);
 
-      // Title
-      doc.setTextColor(COLORS.white);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text("Passenger Manifest Report", 12, 12);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Republic of the Philippines", pageW / 2, startY + 4, {
+      align: "center",
+    });
 
-      // Meta info
-      doc.setTextColor(20);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
+    doc.setFontSize(10);
+    doc.text("Office of the President", pageW / 2, startY + 9, {
+      align: "center",
+    });
 
-      const filterText = buildFilterAppliedText();
-      const exportedAt = formatExportDateTime();
+    doc.setFontSize(13);
+    doc.text(
+      "METROPOLITAN MANILA DEVELOPMENT AUTHORITY",
+      pageW / 2,
+      startY + 16,
+      { align: "center" }
+    );
 
-      doc.text(`Filter Applied: ${filterText}`, 12, 28);
-      doc.text(`Exported At: ${exportedAt}`, 12, 34);
+    doc.setFontSize(9);
+    doc.text(
+      "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)",
+      pageW / 2,
+      startY + 22,
+      { align: "center" }
+    );
 
-      // Table
-      const head = [
-        ["#", ...columns.map((c) => c.replace(/_/g, " ").toUpperCase())],
-      ];
+    doc.text("ISO 9001:2015 CERTIFIED", pageW / 2, startY + 27, {
+      align: "center",
+    });
 
-      const body = filtered.map((r, idx) => [
-        String(idx + 1),
-        ...columns.map((c) => String(r?.[c] ?? "")),
-      ]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("PASSENGER MANIFEST REPORT", pageW / 2, startY + 36, {
+      align: "center",
+    });
 
-      autoTable(doc, {
-        startY: 40,
-        head,
-        body,
-        theme: "grid",
-        styles: {
-          font: "helvetica",
-          fontSize: 8,
-          cellPadding: 2,
-          valign: "middle",
-          textColor: 20,
-          lineColor: 220,
-          lineWidth: 0.1,
-        },
-        headStyles: {
-          fillColor: COLORS.blue,
-          textColor: COLORS.white,
-          fontStyle: "bold",
-        },
-        alternateRowStyles: {
-          fillColor: [240, 253, 248], // light green tint for readability
-        },
-        margin: { left: 8, right: 8 },
-        tableWidth: "auto",
-        didDrawPage: () => {
-          const page = doc.getCurrentPageInfo().pageNumber;
-          doc.setFontSize(9);
-          doc.setTextColor(120);
-          doc.text(`Page ${page}`, pageW - 20, pageH - 6);
-        },
-      });
+    /* ================= META ================= */
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
 
-      // Approval / Signature section
-      const lastY = doc.lastAutoTable?.finalY ?? 40;
-      const signY = Math.min(lastY + 12, pageH - 22);
+    let yMeta = startY + 46;
 
-      doc.setDrawColor(170);
-      doc.setTextColor(40);
-      doc.setFontSize(10);
-      doc.text("Report Approved:", 12, signY);
+    doc.text(`Filter Applied: ${buildFilterAppliedText()}`, 15, yMeta);
+    yMeta += 6;
+    doc.text(`Exported At: ${formatExportDateTime()}`, 15, yMeta);
 
-      // Signature line
-      doc.line(45, signY, 120, signY);
-      doc.setFontSize(9);
-      doc.setTextColor(120);
-      doc.text("Signature over Printed Name", 45, signY + 5);
+    /* ================= TABLE ================= */
+    const head = [
+      ["#", ...columns.map((c) => c.replace(/_/g, " ").toUpperCase())],
+    ];
 
-      // Date line
-      doc.setTextColor(40);
-      doc.setFontSize(10);
-      doc.text("Date:", 130, signY);
-      doc.line(142, signY, 170, signY);
+    const body = filtered.map((r, i) => [
+      i + 1,
+      ...columns.map((c) => String(r[c] ?? "")),
+    ]);
 
-      const filename =
-        origin && destination && depDate
-          ? `PassengerManifest_${origin}-${destination}_${depDate}.pdf`
-          : `PassengerManifest_${new Date().toISOString().slice(0, 10)}.pdf`;
+    autoTable(doc, {
+  startY: yMeta + 6,
+  head,
+  body,
 
-      doc.save(filename);
-      showToast("Success!", "PDF exported successfully!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast(
-        "Export failed",
-        "Please install 'jspdf-autotable' (npm i jspdf-autotable).",
-        "error"
-      );
-    }
-  };
+  styles: {
+    fontSize: 8,           // body font
+    cellPadding: 2,
+    valign: "middle",
+  },
+
+  headStyles: {
+    fillColor: [0, 12, 111],
+    textColor: 255,
+    fontStyle: "bold",
+    fontSize: 7,           // ✅ smaller header font
+    cellPadding: {         // ✅ thinner header height
+      top: 1,
+      bottom: 1,
+      left: 1,
+      right: 1,
+    },
+    halign: "center",
+    valign: "middle",
+  },
+
+  alternateRowStyles: {
+    fillColor: [240, 253, 248],
+  },
+
+  margin: { left: 10, right: 10 },
+
+  didDrawPage: () => {
+    doc.setFontSize(9);
+    doc.text(
+      `Page ${doc.getCurrentPageInfo().pageNumber}`,
+      pageW - 20,
+      pageH - 10
+    );
+  },
+});
+
+
+   /* ================= REMARKS + SIGNATURE ================= */
+const baseY = doc.lastAutoTable.finalY + 20;
+
+/* ---------- Remarks (ON TOP) ---------- */
+doc.setFontSize(10);
+doc.text("Remarks:", 15, baseY);
+
+// remarks box
+doc.rect(35, baseY - 5, pageW - 50, 20);
+
+/* ---------- Signature Section ---------- */
+const signY = baseY + 30;
+
+doc.text("Report Approved:", 15, signY);
+
+// signature line
+doc.line(55, signY, 130, signY);
+
+doc.setFontSize(9);
+doc.text("Signature over Printed Name", 55, signY + 5);
+
+/* ---------- Date ---------- */
+doc.setFontSize(10);
+doc.text("Date:", 145, signY);
+doc.line(158, signY, 190, signY);
+
+
+    doc.save("Passenger_Manifest_Report.pdf");
+    showToast("Success!", "PDF exported successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Export failed", "PDF export failed.", "error");
+  }
+};
+
 
 const exportExcel = async () => {
   try {
@@ -387,226 +443,206 @@ const exportExcel = async () => {
     workbook.created = new Date();
 
     const sheet = workbook.addWorksheet("Passenger Manifest", {
-      views: [{ state: "frozen", ySplit: 6 }], // freeze pane after meta + header
       pageSetup: {
         orientation: "landscape",
         fitToPage: true,
         fitToWidth: 1,
-        fitToHeight: 0,
-        paperSize: 9, // A4
-        margins: {
-          left: 0.3,
-          right: 0.3,
-          top: 0.5,
-          bottom: 0.5,
-          header: 0.2,
-          footer: 0.2,
-        },
+        paperSize: 9,
       },
+      views: [{ state: "frozen", ySplit: 8 }],
     });
 
-    // ----- Theme colors -----
-    const BLUE = "FF3C65E6";
-    const GREEN = "FF3FE19B";
-    const WHITE = "FFFFFFFF";
-    const LIGHT_GREEN = "FFF0FDF8";
-    const BORDER = "FFD9D9D9";
+    /* ================== STYLES ================== */
+    const center = { vertical: "middle", horizontal: "center", wrapText: true };
+    const left = { vertical: "top", horizontal: "left", wrapText: true };
+    const thin = { style: "thin" };
 
-    const exportedAt = new Date().toLocaleString(undefined, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const headerBlue = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF000C6F" },
+    };
 
-    const filterText = (() => {
-      const parts = [];
-      if (origin) parts.push(`Origin: ${origin}`);
-      if (destination) parts.push(`Destination: ${destination}`);
-      if (depDate) parts.push(`Departure Date: ${fmt(depDate)}`);
-      if (depTime) parts.push(`Departure Time: ${depTime}`);
-      return parts.length ? parts.join(" | ") : "None (All Boarded Passengers)";
-    })();
+    const lightGreenFill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF0FDF8" }, // ✅ alternating row color
+    };
 
-    // ----- Column setup (includes # column) -----
-    const excelCols = [
-      { header: "#", key: "__row", width: 6 },
-      { header: "User ID", key: "User_ID", width: 12 },
-      { header: "Full Name", key: "full_name", width: 24 },
-      { header: "Age", key: "age", width: 6 },
-      { header: "Gender", key: "gender", width: 10 },
-      { header: "Contact Number", key: "contact_number", width: 18 },
-      { header: "Address", key: "address", width: 28 },
-      { header: "Profession", key: "profession", width: 18 },
-      { header: "Platform Source", key: "platform_source", width: 16 },
-      { header: "Origin", key: "origin_name", width: 18 },
-      { header: "Destination", key: "destination_name", width: 18 },
-      { header: "Departure Date", key: "departure_date", width: 14 },
-      { header: "Departure Time", key: "departure_time", width: 14 },
-      { header: "Booking ID", key: "Booking_ID", width: 14 },
-      { header: "Schedule ID", key: "Schedule_ID", width: 14 },
+    /* ================== HEADER ================== */
+    sheet.mergeCells("A1:L1");
+    sheet.getCell("A1").value = "Republic of the Philippines";
+    sheet.getCell("A1").alignment = center;
+    sheet.getCell("A1").font = { bold: true, size: 11 };
+
+    sheet.mergeCells("A2:L2");
+    sheet.getCell("A2").value = "Office of the President";
+    sheet.getCell("A2").alignment = center;
+    sheet.getCell("A2").font = { size: 10 };
+
+    sheet.mergeCells("A3:L3");
+    sheet.getCell("A3").value =
+      "METROPOLITAN MANILA DEVELOPMENT AUTHORITY";
+    sheet.getCell("A3").alignment = center;
+    sheet.getCell("A3").font = { bold: true, size: 13 };
+
+    sheet.mergeCells("A4:L4");
+    sheet.getCell("A4").value =
+      "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)";
+    sheet.getCell("A4").alignment = center;
+    sheet.getCell("A4").font = { size: 9 };
+
+    sheet.mergeCells("A5:L5");
+    sheet.getCell("A5").value = "ISO 9001:2015 CERTIFIED";
+    sheet.getCell("A5").alignment = center;
+    sheet.getCell("A5").font = { size: 9 };
+
+    sheet.mergeCells("A6:L6");
+    sheet.getCell("A6").value = "PASSENGER MANIFEST REPORT";
+    sheet.getCell("A6").alignment = center;
+    sheet.getCell("A6").font = { bold: true, size: 14 };
+
+    sheet.mergeCells("A7:L7");
+    sheet.getCell("A7").value = `Filter Applied: ${buildFilterAppliedText()}`;
+    sheet.getCell("A7").alignment = left;
+
+    sheet.mergeCells("A8:L8");
+    sheet.getCell("A8").value = `Exported At: ${formatExportDateTime()}`;
+    sheet.getCell("A8").alignment = left;
+
+    /* ================== TABLE HEADER ================== */
+    const headers = [
+      "#",
+      "FULL NAME",
+      "AGE",
+      "GENDER",
+      "CONTACT NUMBER",
+      "ADDRESS",
+      "PROFESSION",
+      "PLATFORM SOURCE",
+      "ORIGIN",
+      "DESTINATION",
+      "DEPARTURE DATE",
+      "DEPARTURE TIME",
     ];
 
-    sheet.columns = excelCols;
-
-    const lastColLetter = sheet.getColumn(excelCols.length).letter;
-
-    // ----- Title band -----
-    sheet.mergeCells(`A1:${lastColLetter}1`);
-    const titleCell = sheet.getCell("A1");
-    titleCell.value = "Passenger Manifest Report";
-    titleCell.font = { name: "Calibri", size: 16, bold: true, color: { argb: WHITE } };
-    titleCell.alignment = { vertical: "middle", horizontal: "left" };
-    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
-    sheet.getRow(1).height = 26;
-
-    // Accent line
-    sheet.mergeCells(`A2:${lastColLetter}2`);
-    const accentCell = sheet.getCell("A2");
-    accentCell.value = "";
-    accentCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN } };
-    sheet.getRow(2).height = 6;
-
-    // ----- Meta lines -----
-    sheet.mergeCells(`A3:${lastColLetter}3`);
-    sheet.getCell("A3").value = `Filter Applied: ${filterText}`;
-    sheet.getCell("A3").font = { name: "Calibri", size: 11 };
-    sheet.getCell("A3").alignment = { vertical: "middle", horizontal: "left", wrapText: true };
-    sheet.getRow(3).height = 20;
-
-    sheet.mergeCells(`A4:${lastColLetter}4`);
-    sheet.getCell("A4").value = `Exported At: ${exportedAt}`;
-    sheet.getCell("A4").font = { name: "Calibri", size: 11 };
-    sheet.getCell("A4").alignment = { vertical: "middle", horizontal: "left" };
-    sheet.getRow(4).height = 18;
-
-    // Spacer row
-    sheet.mergeCells(`A5:${lastColLetter}5`);
-    sheet.getRow(5).height = 6;
-
-    // ----- Header row (Row 6) -----
-    const headerRowIndex = 6;
-    const headerRow = sheet.getRow(headerRowIndex);
-
-    excelCols.forEach((c, i) => {
-      const cell = headerRow.getCell(i + 1);
-      cell.value = c.header;
-      cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: WHITE } };
-      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+    const headerRow = sheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 9 };
+      cell.fill = headerBlue;
+      cell.alignment = center;
       cell.border = {
-        top: { style: "thin", color: { argb: BORDER } },
-        left: { style: "thin", color: { argb: BORDER } },
-        bottom: { style: "thin", color: { argb: BORDER } },
-        right: { style: "thin", color: { argb: BORDER } },
+        top: thin,
+        bottom: thin,
+        left: thin,
+        right: thin,
       };
     });
-    headerRow.height = 20;
 
-    // AutoFilter
-    sheet.autoFilter = {
-      from: { row: headerRowIndex, column: 1 },
-      to: { row: headerRowIndex, column: excelCols.length },
-    };
+    /* ================== DATA ================== */
+    filtered.forEach((r, i) => {
+      const row = sheet.addRow([
+        i + 1,
+        r.full_name ?? "",
+        r.age ?? "",
+        r.gender ?? "",
+        r.contact_number ?? "",
+        r.address ?? "",
+        r.profession ?? "",
+        r.platform_source ?? "",
+        r.origin_name ?? "",
+        r.destination_name ?? "",
+        r.departure_date ?? "",
+        r.departure_time ?? "",
+      ]);
 
-    // ----- Data rows start at Row 7 -----
-    const startRow = headerRowIndex + 1;
-
-    const data = filtered.map((r, idx) => ({
-      __row: idx + 1,
-      ...r,
-    }));
-
-    sheet.addRows(data);
-
-    // Style data rows (zebra + borders + alignment)
-    const endRow = sheet.rowCount;
-
-    for (let r = startRow; r <= endRow; r++) {
-      const row = sheet.getRow(r);
-      row.height = 18;
-
-      const isAlt = (r - startRow) % 2 === 1;
-
-      for (let c = 1; c <= excelCols.length; c++) {
-        const cell = row.getCell(c);
-
-        // zebra fill
-        cell.fill = isAlt
-          ? { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GREEN } }
-          : { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
-
-        // borders
+      row.eachCell((cell) => {
+        cell.alignment = left;
         cell.border = {
-          top: { style: "thin", color: { argb: BORDER } },
-          left: { style: "thin", color: { argb: BORDER } },
-          bottom: { style: "thin", color: { argb: BORDER } },
-          right: { style: "thin", color: { argb: BORDER } },
+          top: thin,
+          bottom: thin,
+          left: thin,
+          right: thin,
         };
 
-        // alignment
-        const key = excelCols[c - 1].key;
-        const centerKeys = ["__row", "age", "gender", "departure_date", "departure_time"];
-        cell.alignment = {
-          vertical: "middle",
-          horizontal: centerKeys.includes(key) ? "center" : "left",
-          wrapText: true,
-        };
+        // ✅ ALTERNATING LIGHT GREEN ROWS
+        if (i % 2 === 0) {
+          cell.fill = lightGreenFill;
+        }
+      });
+    });
 
-        cell.font = { name: "Calibri", size: 10 };
-      }
-      row.commit?.();
-    }
+    /* ================== COLUMN WIDTHS ================== */
+    sheet.columns = [
+      { width: 5 },
+      { width: 24 },
+      { width: 6 },
+      { width: 10 },
+      { width: 18 },
+      { width: 30 },
+      { width: 18 },
+      { width: 16 },
+      { width: 14 },
+      { width: 14 },
+      { width: 14 },
+      { width: 14 },
+    ];
 
-    // ----- “Report Approved” section (after table) -----
-    const signStart = sheet.rowCount + 3;
-    sheet.getRow(signStart).height = 18;
-    sheet.getCell(`A${signStart}`).value = "Report Approved:";
-    sheet.getCell(`A${signStart}`).font = { name: "Calibri", size: 11, bold: true };
-
-    // signature line (B..E)
-    sheet.mergeCells(`B${signStart}:E${signStart}`);
-    sheet.getCell(`B${signStart}`).border = {
-      bottom: { style: "thin", color: { argb: "FF666666" } },
+    /* ================== REMARKS ================== */
+    sheet.addRow([]);
+    sheet.mergeCells(
+      `A${sheet.lastRow.number + 1}:L${sheet.lastRow.number + 3}`
+    );
+    sheet.getCell(`A${sheet.lastRow.number - 2}`).value = "Remarks:";
+    sheet.getCell(`A${sheet.lastRow.number - 2}`).alignment = left;
+    sheet.getCell(`A${sheet.lastRow.number - 2}`).border = {
+      top: thin,
+      bottom: thin,
+      left: thin,
+      right: thin,
     };
 
-    // printed name hint
-    sheet.mergeCells(`B${signStart + 1}:E${signStart + 1}`);
-    sheet.getCell(`B${signStart + 1}`).value = "Signature over Printed Name";
-    sheet.getCell(`B${signStart + 1}`).font = { name: "Calibri", size: 10, color: { argb: "FF666666" } };
+    /* ================== SIGNATURE ================== */
+    sheet.addRow([]);
+    sheet.addRow(["Report Approved:"]);
+    sheet.addRow([
+      "______________________________",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Date:",
+      "____________",
+    ]);
+    sheet.addRow(["Signature over Printed Name"]);
 
-    // date line (F..G)
-    sheet.getCell(`F${signStart}`).value = "Date:";
-    sheet.getCell(`F${signStart}`).font = { name: "Calibri", size: 11, bold: true };
-    sheet.mergeCells(`G${signStart}:H${signStart}`);
-    sheet.getCell(`G${signStart}`).border = {
-      bottom: { style: "thin", color: { argb: "FF666666" } },
-    };
-
-    // ----- Export file -----
+    /* ================== EXPORT ================== */
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-
-    const filename =
-      origin && destination && depDate
-        ? `PassengerManifest_${origin}-${destination}_${depDate}.xlsx`
-        : `PassengerManifest_${new Date().toISOString().slice(0, 10)}.xlsx`;
-
-    link.download = filename;
+    link.download = `Passenger_Manifest_${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`;
     link.click();
 
     showToast("Success!", "Excel exported successfully!", "success");
   } catch (err) {
     console.error(err);
-    showToast("Export failed", "Excel export failed. Please check ExcelJS install.", "error");
+    showToast("Export failed", "Excel export failed.", "error");
   }
 };
+
+
 
 
   return (
