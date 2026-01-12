@@ -267,15 +267,7 @@ export default function PeakReport() {
   const COLORS = {
     white: "#FFFFFF",
     green: "#3fe19b",
-    blue: "#3c65e6",
-  };
-
-  const buildFilterText = () => {
-    const includedStations =
-      stationNames.length > 0 ? stationNames.join(" · ") : "None";
-    return `Date Range: ${fmt(start)} — ${fmt(end)} | Station View: ${
-      selectedStation || "N/A"
-    } | Stations Included: ${includedStations}`;
+    blue: "#000c6f",
   };
 
 // ✅ exportPDF (COMPLETE) — summary table + 2 charts per page + SIGNATURE AT THE END
@@ -291,68 +283,102 @@ const exportPDF = async () => {
     const { default: html2canvas } = await import("html2canvas");
 
     const doc = new jsPDF({
-      orientation: "landscape",
+      orientation: "portrait",
       unit: "mm",
-      format: "a4",
+      format: [215.9, 330.2], // 8.5 x 13
     });
 
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
 
-    const COLORS = {
-      white: "#FFFFFF",
-      green: "#3fe19b",
-      blue: "#3c65e6",
-    };
+    /* ================= LOGOS ================= */
+    const leftLogo =
+      "https://upload.wikimedia.org/wikipedia/commons/6/6d/Metropolitan_Manila_Development_Authority_%28MMDA%29.png";
+    const rightLogo =
+      "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bagong_Pilipinas_logo.png";
 
-    const exportedAt = formatExportDateTime();
-    const filterText = buildFilterText();
+    const loadImage = (url) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.src = url;
+      });
 
-    // ---------- HEADER ----------
+    const [mmdaLogo, bpLogo] = await Promise.all([
+      loadImage(leftLogo),
+      loadImage(rightLogo),
+    ]);
+
+    /* ================= HEADER ================= */
     const drawHeader = (title) => {
-      doc.setFillColor(COLORS.blue);
-      doc.rect(0, 0, pageW, 18, "F");
-      doc.setFillColor(COLORS.green);
-      doc.rect(0, 18, pageW, 2, "F");
+      const y = 15;
 
-      doc.setTextColor(COLORS.white);
+      doc.addImage(mmdaLogo, "PNG", 15, y, 25, 25);
+      doc.addImage(bpLogo, "PNG", pageW - 40, y, 25, 25);
+
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text(title, 12, 12);
-    };
+      doc.setFontSize(11);
+      doc.text("Republic of the Philippines", pageW / 2, y + 4, { align: "center" });
 
-    // ---------- FOOTER ----------
-    const drawFooter = () => {
-      const page = doc.getCurrentPageInfo().pageNumber;
+      doc.setFontSize(10);
+      doc.text("Office of the President", pageW / 2, y + 9, { align: "center" });
+
+      doc.setFontSize(13);
+      doc.text(
+        "METROPOLITAN MANILA DEVELOPMENT AUTHORITY",
+        pageW / 2,
+        y + 16,
+        { align: "center" }
+      );
+
       doc.setFontSize(9);
-      doc.setTextColor(120);
-      doc.text(`Page ${page}`, pageW - 20, pageH - 6);
+      doc.text(
+        "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)",
+        pageW / 2,
+        y + 22,
+        { align: "center" }
+      );
+
+      doc.text("ISO 9001:2015 CERTIFIED", pageW / 2, y + 27, {
+        align: "center",
+      });
+
+      doc.setFontSize(12);
+      doc.text(title, pageW / 2, y + 36, { align: "center" });
+
+      return y + 46;
     };
 
-    // ---------- PAGE 1: SUMMARY ----------
-    drawHeader("Peak & Off-Peak Analysis Report");
+    const drawFooter = () => {
+      doc.setFontSize(9);
+      doc.text(
+        `Page ${doc.getCurrentPageInfo().pageNumber}`,
+        pageW - 20,
+        pageH - 10
+      );
+    };
 
-    // Wrap filter text so it doesn't cut
-    doc.setTextColor(20);
+    /* ================= PAGE 1 — SUMMARY ================= */
+    let y = drawHeader("PEAK & OFF-PEAK ANALYSIS REPORT");
+
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(9);
 
-    const maxTextW = pageW - 24; // 12mm left + 12mm right
-    const filterLines = doc.splitTextToSize(
-      `Filter Applied: ${filterText}`,
-      maxTextW
+    const summaryFilter = doc.splitTextToSize(
+      `Filter Applied: Date Range: ${fmt(start)} — ${fmt(end)} | Stations Included: ${stationNames.join(" · ")}`,
+      pageW - 30
     );
 
-    let y = 28;
-    doc.text(filterLines, 12, y);
-    y += filterLines.length * 5;
+    doc.text(summaryFilter, 15, y);
+    y += summaryFilter.length * 5;
 
-    doc.text(`Exported At: ${exportedAt}`, 12, y);
+    doc.text(`Exported At: ${formatExportDateTime()}`, 15, y);
     y += 6;
 
-    // Summary table
-    const head = [
-      [
+    autoTable(doc, {
+      startY: y,
+      head: [[
         "#",
         "Station Name",
         "Peak Day",
@@ -363,216 +389,149 @@ const exportPDF = async () => {
         "Peak Hour Count",
         "Off-Peak Hour",
         "Off-Peak Hour Count",
-      ],
-    ];
-
-    const body = report.perStation.map((s, idx) => [
-      String(idx + 1),
-      s.StationName || "N/A",
-      s.peakDay?.day_name || "N/A",
-      String(s.peakDay?.total || 0),
-      s.offPeakDay?.day_name || "N/A",
-      String(s.offPeakDay?.total || 0),
-      s.peakHour?.label || "N/A",
-      String(s.peakHour?.total || 0),
-      s.offPeakHour?.label || "N/A",
-      String(s.offPeakHour?.total || 0),
-    ]);
-
-    autoTable(doc, {
-      startY: y,
-      head,
-      body,
-      theme: "grid",
-      styles: {
-        font: "helvetica",
-        fontSize: 9,
-        cellPadding: 2,
-        valign: "middle",
-        textColor: 20,
-        lineColor: 220,
-        lineWidth: 0.1,
-      },
+      ]],
+      body: report.perStation.map((s, i) => [
+        i + 1,
+        s.StationName,
+        s.peakDay?.day_name || "N/A",
+        s.peakDay?.total || 0,
+        s.offPeakDay?.day_name || "N/A",
+        s.offPeakDay?.total || 0,
+        s.peakHour?.label || "N/A",
+        s.peakHour?.total || 0,
+        s.offPeakHour?.label || "N/A",
+        s.offPeakHour?.total || 0,
+      ]),
+      styles: { fontSize: 8, cellPadding: 2 },
       headStyles: {
-        fillColor: COLORS.blue,
-        textColor: COLORS.white,
+        fillColor: [0, 12, 111],
+        textColor: 255,
         fontStyle: "bold",
         halign: "center",
       },
-      alternateRowStyles: {
-        fillColor: [240, 253, 248],
-      },
-      margin: { left: 8, right: 8 },
-      tableWidth: "auto",
-      didDrawPage: () => {
-        drawFooter();
-      },
+      alternateRowStyles: { fillColor: [240, 253, 248] },
+      margin: { left: 10, right: 10 },
+      didDrawPage: drawFooter,
     });
 
-    // Ensure footer exists for the first page (in case table fits and didDrawPage timing varies)
-    drawFooter();
-
-    // ---------- CHART PAGES (2 charts per page) ----------
+    /* ================= TWO CHARTS PER PAGE ================= */
     const addTwoChartsPage = async ({
-      pageTitle,
-      chartIdTop,
-      titleTop,
-      chartIdBottom,
-      titleBottom,
+      title,
+      filterText,
+      topChartId,
+      topTitle,
+      bottomChartId,
+      bottomTitle,
     }) => {
-      const elTop = document.getElementById(chartIdTop);
-      const elBottom = document.getElementById(chartIdBottom);
-
-      if (!elTop && !elBottom) return;
-
-      const capture = async (el) => {
+      const capture = async (id) => {
+        const el = document.getElementById(id);
+        if (!el) return null;
         const canvas = await html2canvas(el, {
           scale: 2,
           useCORS: true,
           backgroundColor: "#ffffff",
         });
-        return { canvas, imgData: canvas.toDataURL("image/png") };
+        return { canvas, img: canvas.toDataURL("image/png") };
       };
 
-      const topCap = elTop ? await capture(elTop) : null;
-      const bottomCap = elBottom ? await capture(elBottom) : null;
+      const top = await capture(topChartId);
+      const bottom = await capture(bottomChartId);
+      if (!top && !bottom) return;
 
       doc.addPage();
-      drawHeader(pageTitle);
+      let yy = drawHeader(title);
 
-      // Filter lines (wrapped)
-      doc.setTextColor(20);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
+      doc.setFontSize(9);
 
-      const maxTextW2 = pageW - 24;
-      const filterLines2 = doc.splitTextToSize(
-        `Filter Applied: ${filterText}`,
-        maxTextW2
-      );
+      const lines = doc.splitTextToSize(filterText, pageW - 30);
+      doc.text(lines, 15, yy);
+      yy += lines.length * 5 + 4;
 
-      const metaY = 28;
-      doc.text(filterLines2, 12, metaY);
+      const maxW = pageW - 30;
+      const gap = 8;
+      const labelH = 6;
+      const availH = pageH - yy - 20;
+      const chartH = (availH - gap - labelH * 2) / 2;
 
-      const marginX = 12;
-      const gap = 6;
-      const labelH = 5;
-
-      let yStart = metaY + filterLines2.length * 5 + 6;
-
-      const bottomMargin = 14;
-      const availableH = pageH - yStart - bottomMargin;
-
-      const chartBoxH = (availableH - gap - labelH * 2) / 2;
-      const maxW3 = pageW - marginX * 2;
-
-      const drawChartBlock = (cap, blockTitle, yy) => {
-        if (!cap) return yy + chartBoxH + labelH + gap;
+      const drawChart = (cap, label, yStart) => {
+        if (!cap) return yStart + chartH + gap;
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
-        doc.setTextColor(30);
-        doc.text(blockTitle, marginX, yy);
+        doc.text(label, 15, yStart);
 
-        const imgTopY = yy + labelH;
+        const imgH = (cap.canvas.height * maxW) / cap.canvas.width;
+        const drawH = Math.min(imgH, chartH);
 
-        const imgW0 = maxW3;
-        const imgH0 = (cap.canvas.height * imgW0) / cap.canvas.width;
+        doc.addImage(
+          cap.img,
+          "PNG",
+          15,
+          yStart + labelH,
+          maxW,
+          drawH
+        );
 
-        let drawW = imgW0;
-        let drawH = imgH0;
-
-        // Fit by height first
-        if (drawH > chartBoxH) {
-          drawH = chartBoxH;
-          drawW = (cap.canvas.width * drawH) / cap.canvas.height;
-        }
-        // Safety fit by width
-        if (drawW > maxW3) {
-          drawW = maxW3;
-          drawH = (cap.canvas.height * drawW) / cap.canvas.width;
-        }
-
-        const x = (pageW - drawW) / 2;
-        doc.addImage(cap.imgData, "PNG", x, imgTopY, drawW, drawH);
-
-        return imgTopY + chartBoxH + gap;
+        return yStart + labelH + chartH + gap;
       };
 
-      // Top chart
-      yStart = drawChartBlock(topCap, titleTop, yStart);
-      // Bottom chart
-      yStart = drawChartBlock(bottomCap, titleBottom, yStart);
+      let posY = yy;
+      posY = drawChart(top, topTitle, posY);
+      drawChart(bottom, bottomTitle, posY);
 
       drawFooter();
     };
 
+    /* ---------- GLOBAL CHARTS ---------- */
     await addTwoChartsPage({
-      pageTitle: "Global Charts",
-      chartIdTop: "globalDayChart",
-      titleTop: "Global Bookings by Day of Week",
-      chartIdBottom: "globalHourChart",
-      titleBottom: "Global Bookings by Hour",
+      title: "GLOBAL CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
+      filterText: `Filter Applied: Date Range: ${fmt(start)} — ${fmt(end)} | Stations Included: ${stationNames.join(" · ")}`,
+      topChartId: "globalDayChart",
+      topTitle: "Global Bookings by Day of Week",
+      bottomChartId: "globalHourChart",
+      bottomTitle: "Global Bookings by Hour",
     });
 
+    /* ---------- STATION CHARTS ---------- */
     await addTwoChartsPage({
-      pageTitle: "Station Charts",
-      chartIdTop: "stationDayChart",
-      titleTop: `${selectedStation} – Bookings by Day`,
-      chartIdBottom: "stationHourChart",
-      titleBottom: `${selectedStation} – Bookings by Hour`,
+      title: "STATION CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
+      filterText: `Filter Applied: Date Range: ${fmt(start)} — ${fmt(end)} | Station View: ${selectedStation}`,
+      topChartId: "stationDayChart",
+      topTitle: `${selectedStation} – Bookings by Day`,
+      bottomChartId: "stationHourChart",
+      bottomTitle: `${selectedStation} – Bookings by Hour`,
     });
 
-    // ---------- FINAL PAGE: APPROVAL (SIGNATURE AT THE END) ----------
+    /* ================= FINAL PAGE — SIGNATURE ================= */
     doc.addPage();
-    drawHeader("Report Approval");
+    drawHeader("REPORT APPROVAL - PEAK & OFF-PEAK ANALYSIS REPORT");
 
-    // Repeat key meta info on approval page (wrapped)
-    doc.setTextColor(20);
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
+    doc.text("Remarks:", 15, 70);
+    doc.rect(35, 65, pageW - 50, 20);
 
-    const approvalMeta = doc.splitTextToSize(
-      `Report Range: ${fmt(start)} — ${fmt(end)}\nSelected Station View: ${
-        selectedStation || "N/A"
-      }\nExported At: ${exportedAt}`,
-      pageW - 24
-    );
-
-    doc.text(approvalMeta, 12, 30);
-
-    const signY = 70;
-
-    doc.setDrawColor(170);
-    doc.setTextColor(40);
-    doc.setFontSize(11);
-
-    doc.text("Report Approved:", 12, signY);
-    doc.line(45, signY, 120, signY);
+    const signY = 110;
+    doc.text("Report Approved:", 15, signY);
+    doc.line(55, signY, 130, signY);
 
     doc.setFontSize(9);
-    doc.setTextColor(120);
-    doc.text("Signature over Printed Name", 45, signY + 5);
+    doc.text("Signature over Printed Name", 55, signY + 5);
 
-    doc.setTextColor(40);
-    doc.setFontSize(11);
-    doc.text("Date:", 130, signY);
-    doc.line(142, signY, 170, signY);
+    doc.setFontSize(10);
+    doc.text("Date:", 145, signY);
+    doc.line(158, signY, 190, signY);
 
     drawFooter();
 
-    // Save
     doc.save(`PeakReport_${start}-${end}.pdf`);
-    showToast("Success!", "PDF exported with charts!", "success");
+    showToast("Success!", "PDF exported successfully!", "success");
   } catch (err) {
     console.error(err);
-    showToast(
-      "Export failed",
-      "Please install 'html2canvas' and 'jspdf-autotable'.",
-      "error"
-    );
+    showToast("Export failed", "PDF export failed.", "error");
   }
 };
+
 
 // ✅ Excel Export (FINAL FIX): pro header on ALL sheets + 2 charts per sheet + signature on ALL sheets
 // Requires: npm i exceljs html2canvas
@@ -590,298 +549,254 @@ const exportExcel = async () => {
     workbook.creator = "MCTS";
     workbook.created = new Date();
 
-    // Theme ARGB colors
-    const BLUE = "FF3C65E6";
-    const GREEN = "FF3FE19B";
-    const WHITE = "FFFFFFFF";
-    const LIGHT_GREEN = "FFF0FDF8";
-    const BORDER = "FFD9D9D9";
-    const GREY = "FF666666";
+    /* ================= STYLES ================= */
+    const headerBlue = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF000C6F" },
+    };
 
+    const lightGreenFill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF0FDF8" },
+    };
+
+    const thin = { style: "thin" };
+    const center = { vertical: "middle", horizontal: "center", wrapText: true };
+    const left = { vertical: "top", horizontal: "left", wrapText: true };
+
+    const dateRangeText = `Date Range: ${fmt(start)} — ${fmt(end)}`;
+    const stationsIncluded = stationNames.join(" · ");
     const exportedAt = formatExportDateTime();
-    const filterText = buildFilterText();
 
-    // -------------------------
-    // Helpers
-    // -------------------------
-    const setCommonPrint = (sheet) => {
-      sheet.pageSetup = {
-        orientation: "landscape",
-        fitToPage: true,
-        fitToWidth: 1,
-        fitToHeight: 0,
-        paperSize: 9, // A4
-        margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
-      };
-    };
+    /* ================= UTIL ================= */
+    const yieldToUI = () =>
+      new Promise((resolve) => setTimeout(resolve, 0));
 
-    const addHeaderBlock = (sheet, lastColLetter, title) => {
-      // Title band
-      sheet.mergeCells(`A1:${lastColLetter}1`);
-      const t = sheet.getCell("A1");
-      t.value = title;
-      t.font = { name: "Calibri", size: 16, bold: true, color: { argb: WHITE } };
-      t.alignment = { vertical: "middle", horizontal: "left" };
-      t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
-      sheet.getRow(1).height = 26;
-
-      // Accent line
-      sheet.mergeCells(`A2:${lastColLetter}2`);
-      const a = sheet.getCell("A2");
-      a.value = "";
-      a.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN } };
-      sheet.getRow(2).height = 6;
-
-      // Filter Applied (wrapped)
-      sheet.mergeCells(`A3:${lastColLetter}3`);
-      const f = sheet.getCell("A3");
-      f.value = `Filter Applied: ${filterText}`;
-      f.font = { name: "Calibri", size: 11 };
-      f.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
-      sheet.getRow(3).height = 30;
-
-      // Exported at
-      sheet.mergeCells(`A4:${lastColLetter}4`);
-      const e = sheet.getCell("A4");
-      e.value = `Exported At: ${exportedAt}`;
-      e.font = { name: "Calibri", size: 11 };
-      e.alignment = { vertical: "middle", horizontal: "left" };
-      sheet.getRow(4).height = 18;
-
-      // Spacer
-      sheet.mergeCells(`A5:${lastColLetter}5`);
-      sheet.getRow(5).height = 6;
-    };
-
-    const addSignatureBlock = (sheet, lastColLetter, signRow) => {
-      sheet.getRow(signRow).height = 18;
-
-      sheet.getCell(`A${signRow}`).value = "Report Approved:";
-      sheet.getCell(`A${signRow}`).font = { name: "Calibri", size: 11, bold: true };
-
-      sheet.mergeCells(`B${signRow}:E${signRow}`);
-      sheet.getCell(`B${signRow}`).border = {
-        bottom: { style: "thin", color: { argb: GREY } },
-      };
-
-      sheet.mergeCells(`B${signRow + 1}:E${signRow + 1}`);
-      sheet.getCell(`B${signRow + 1}`).value = "Signature over Printed Name";
-      sheet.getCell(`B${signRow + 1}`).font = { name: "Calibri", size: 10, color: { argb: GREY } };
-
-      sheet.getCell(`F${signRow}`).value = "Date:";
-      sheet.getCell(`F${signRow}`).font = { name: "Calibri", size: 11, bold: true };
-
-      sheet.mergeCells(`G${signRow}:H${signRow}`);
-      sheet.getCell(`G${signRow}`).border = {
-        bottom: { style: "thin", color: { argb: GREY } },
-      };
-
-      // Ensure printing includes signature area
-      sheet.pageSetup.printArea = `A1:${lastColLetter}${signRow + 2}`;
-    };
-
-    const captureToBase64 = async (chartId) => {
-      const el = document.getElementById(chartId);
+    const capture = async (id) => {
+      const el = document.getElementById(id);
       if (!el) return null;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+
+      const canvas = await html2canvas(el, {
+        scale: 1,                 // 🔥 SAFE
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
       return canvas.toDataURL("image/png");
     };
 
-    /**
-     * Chart sheet layout (A..H)
-     * Rows:
-     *  1-5 header/meta
-     *  6    title 1
-     *  7-24 chart 1 image
-     *  26   title 2
-     *  27-44 chart 2 image
-     *  46+  signature
-     */
-    const buildTwoChartsSheet = async (sheet, sheetTitle, top, bottom) => {
-      // Make sure columns A..H exist with friendly widths
-      sheet.columns = Array.from({ length: 8 }, (_, i) => ({
-        header: "",
-        key: `c${i + 1}`,
-        width: i === 0 ? 34 : 18,
-      }));
+    /* ================= HEADER ================= */
+    const baseHeader = (sheet, lastCol, title, filterText) => {
+      const rows = [
+        "Republic of the Philippines",
+        "Office of the President",
+        "METROPOLITAN MANILA DEVELOPMENT AUTHORITY",
+        "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)",
+        "ISO 9001:2015 CERTIFIED",
+        title,
+        `Filter Applied: ${filterText}`,
+        `Exported At: ${exportedAt}`,
+      ];
 
-      setCommonPrint(sheet);
-      sheet.views = [{ state: "frozen", ySplit: 5 }];
-
-      const lastColLetter = "H";
-      addHeaderBlock(sheet, lastColLetter, sheetTitle);
-
-      // Title 1
-      sheet.getCell("A6").value = top.title;
-      sheet.getCell("A6").font = { name: "Calibri", size: 14, bold: true };
-      sheet.getRow(6).height = 20;
-
-      // Chart 1 image (starts at Excel row 7)
-      const top64 = await captureToBase64(top.id);
-      if (top64) {
-        const imgId = workbook.addImage({ base64: top64, extension: "png" });
-        sheet.addImage(imgId, {
-          tl: { col: 0, row: 6 }, // 0-based row=6 => row 7
-          ext: { width: 900, height: 360 },
-        });
-      } else {
-        sheet.getCell("A8").value = "(Chart not found in DOM)";
-        sheet.getCell("A8").font = { name: "Calibri", size: 11, color: { argb: GREY } };
-      }
-
-      // Spacer
-      sheet.getRow(25).height = 8;
-
-      // Title 2
-      sheet.getCell("A26").value = bottom.title;
-      sheet.getCell("A26").font = { name: "Calibri", size: 14, bold: true };
-      sheet.getRow(26).height = 20;
-
-      // Chart 2 image (starts at Excel row 27)
-      const bottom64 = await captureToBase64(bottom.id);
-      if (bottom64) {
-        const imgId2 = workbook.addImage({ base64: bottom64, extension: "png" });
-        sheet.addImage(imgId2, {
-          tl: { col: 0, row: 26 }, // 0-based row=26 => row 27
-          ext: { width: 900, height: 360 },
-        });
-      } else {
-        sheet.getCell("A28").value = "(Chart not found in DOM)";
-        sheet.getCell("A28").font = { name: "Calibri", size: 11, color: { argb: GREY } };
-      }
-
-      // Signature (NOT overwritten, placed after chart area)
-      // (chart images occupy roughly rows 7-24 and 27-44 visually)
-      addSignatureBlock(sheet, lastColLetter, 47);
+      rows.forEach((text, i) => {
+        const r = i + 1;
+        sheet.mergeCells(`A${r}:${lastCol}${r}`);
+        const c = sheet.getCell(`A${r}`);
+        c.value = text;
+        c.alignment = i >= 6 ? left : center;
+        c.font =
+          i === 2
+            ? { bold: true, size: 13 }
+            : i === 5
+            ? { bold: true, size: 14 }
+            : { size: 10 };
+        sheet.getRow(r).height = i >= 6 ? 28 : 22;
+      });
     };
 
-    // ======================================================
-    // SHEET 1 — PEAK SUMMARY (styled table)
-    // ======================================================
+    /* ================= REMARKS + SIGN ================= */
+    const addRemarksAndSignatureAt = (sheet, lastCol, startRow) => {
+      const thinBorder = { style: "thin" };
+
+      while (sheet.lastRow.number < startRow - 1) {
+        sheet.addRow([]);
+      }
+
+      sheet.mergeCells(`A${startRow}:${lastCol}${startRow + 2}`);
+      const remarks = sheet.getCell(`A${startRow}`);
+      remarks.value = "Remarks:";
+      remarks.alignment = left;
+      remarks.border = {
+        top: thinBorder,
+        bottom: thinBorder,
+        left: thinBorder,
+        right: thinBorder,
+      };
+
+      sheet.getRow(startRow).height = 24;
+      sheet.getRow(startRow + 1).height = 24;
+      sheet.getRow(startRow + 2).height = 24;
+
+      sheet.addRow([]);
+      sheet.addRow(["Report Approved:"]).getCell(1).font = { bold: true };
+
+      const sigRow = sheet.addRow([]);
+      sheet.mergeCells(`A${sigRow.number}:E${sigRow.number}`);
+      sheet.getCell(`A${sigRow.number}`).value =
+        "______________________________";
+
+      sheet.mergeCells(`F${sigRow.number}:G${sigRow.number}`);
+      sheet.getCell(`F${sigRow.number}`).value = "Date:";
+
+      sheet.mergeCells(`H${sigRow.number}:${lastCol}${sigRow.number}`);
+      sheet.getCell(`H${sigRow.number}`).value = "____________";
+
+      const labelRow = sheet.addRow([]);
+      sheet.mergeCells(`A${labelRow.number}:E${labelRow.number}`);
+      sheet.getCell(`A${labelRow.number}`).value =
+        "Signature over Printed Name";
+    };
+
+    /* =====================================================
+       SHEET 1 — PEAK SUMMARY (TABLE)
+    ===================================================== */
     const sheet1 = workbook.addWorksheet("Peak Summary", {
-      views: [{ state: "frozen", ySplit: 6 }],
+      pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, paperSize: 9 },
+      views: [{ state: "frozen", ySplit: 8 }],
     });
-    setCommonPrint(sheet1);
 
     const cols = [
-      { header: "#", key: "__row", width: 6 },
-      { header: "Station Name", key: "StationName", width: 22 },
-      { header: "Peak Day", key: "peakDay", width: 14 },
-      { header: "Peak Day Count", key: "peakDayCount", width: 16 },
-      { header: "Off-Peak Day", key: "offPeakDay", width: 14 },
-      { header: "Off-Peak Day Count", key: "offPeakDayCount", width: 18 },
-      { header: "Peak Hour", key: "peakHour", width: 14 },
-      { header: "Peak Hour Count", key: "peakHourCount", width: 16 },
-      { header: "Off-Peak Hour", key: "offPeakHour", width: 16 },
-      { header: "Off-Peak Hour Count", key: "offPeakHourCount", width: 20 },
+      "#",
+      "STATION NAME",
+      "PEAK DAY",
+      "PEAK DAY COUNT",
+      "OFF-PEAK DAY",
+      "OFF-PEAK DAY COUNT",
+      "PEAK HOUR",
+      "PEAK HOUR COUNT",
+      "OFF-PEAK HOUR",
+      "OFF-PEAK HOUR COUNT",
     ];
-    sheet1.columns = cols;
-    const lastColLetter1 = sheet1.getColumn(cols.length).letter;
 
-    addHeaderBlock(sheet1, lastColLetter1, "Peak & Off-Peak Analysis Report");
+    sheet1.columns = [
+      { width: 5 }, { width: 22 }, { width: 14 }, { width: 16 },
+      { width: 14 }, { width: 18 }, { width: 14 }, { width: 16 },
+      { width: 16 }, { width: 18 },
+    ];
 
-    // Header row
-    const headerRowIndex = 6;
-    const headerRow = sheet1.getRow(headerRowIndex);
-    cols.forEach((c, i) => {
-      const cell = headerRow.getCell(i + 1);
-      cell.value = c.header;
-      cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: WHITE } };
-      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
-      cell.border = {
-        top: { style: "thin", color: { argb: BORDER } },
-        left: { style: "thin", color: { argb: BORDER } },
-        bottom: { style: "thin", color: { argb: BORDER } },
-        right: { style: "thin", color: { argb: BORDER } },
-      };
+    const lastCol1 = sheet1.getColumn(cols.length).letter;
+
+    baseHeader(
+      sheet1,
+      lastCol1,
+      "PEAK & OFF-PEAK ANALYSIS REPORT",
+      `${dateRangeText} | Stations Included: ${stationsIncluded}`
+    );
+
+    const headerRow = sheet1.addRow(cols);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 9 };
+      cell.fill = headerBlue;
+      cell.alignment = center;
+      cell.border = { top: thin, bottom: thin, left: thin, right: thin };
     });
-    headerRow.height = 20;
 
-    sheet1.autoFilter = {
-      from: { row: headerRowIndex, column: 1 },
-      to: { row: headerRowIndex, column: cols.length },
-    };
+    report.perStation.forEach((s, i) => {
+      const row = sheet1.addRow([
+        i + 1,
+        s.StationName,
+        s.peakDay?.day_name || "N/A",
+        s.peakDay?.total || 0,
+        s.offPeakDay?.day_name || "N/A",
+        s.offPeakDay?.total || 0,
+        s.peakHour?.label || "N/A",
+        s.peakHour?.total || 0,
+        s.offPeakHour?.label || "N/A",
+        s.offPeakHour?.total || 0,
+      ]);
 
-    // Data
-    const summaryRows = report.perStation.map((s, idx) => ({
-      __row: idx + 1,
-      StationName: s.StationName,
-      peakDay: s.peakDay?.day_name || "N/A",
-      peakDayCount: s.peakDay?.total || 0,
-      offPeakDay: s.offPeakDay?.day_name || "N/A",
-      offPeakDayCount: s.offPeakDay?.total || 0,
-      peakHour: s.peakHour?.label || "N/A",
-      peakHourCount: s.peakHour?.total || 0,
-      offPeakHour: s.offPeakHour?.label || "N/A",
-      offPeakHourCount: s.offPeakHour?.total || 0,
-    }));
+      row.eachCell((cell) => {
+        cell.alignment = left;
+        cell.border = { top: thin, bottom: thin, left: thin, right: thin };
+        if (i % 2 === 0) cell.fill = lightGreenFill;
+      });
+    });
 
-    sheet1.addRows(summaryRows);
+    addRemarksAndSignatureAt(sheet1, lastCol1, sheet1.lastRow.number + 2);
 
-    const startRow = headerRowIndex + 1;
-    const endRow = sheet1.rowCount;
+    /* =====================================================
+       SHEET 2 — GLOBAL CHARTS
+    ===================================================== */
+    const sheet2 = workbook.addWorksheet("Global Charts", {
+      pageSetup: { orientation: "landscape", paperSize: 9 },
+    });
 
-    for (let r = startRow; r <= endRow; r++) {
-      const row = sheet1.getRow(r);
-      row.height = 18;
-      const isAlt = (r - startRow) % 2 === 1;
+    baseHeader(
+      sheet2,
+      "H",
+      "GLOBAL CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
+      `${dateRangeText} | Stations Included: ${stationsIncluded}`
+    );
 
-      for (let c = 1; c <= cols.length; c++) {
-        const cell = row.getCell(c);
+    const gDay = await capture("globalDayChart");
+    await yieldToUI();
+    const gHour = await capture("globalHourChart");
+    await yieldToUI();
 
-        cell.fill = isAlt
-          ? { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GREEN } }
-          : { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
+    let rowCursor = 9;
 
-        cell.border = {
-          top: { style: "thin", color: { argb: BORDER } },
-          left: { style: "thin", color: { argb: BORDER } },
-          bottom: { style: "thin", color: { argb: BORDER } },
-          right: { style: "thin", color: { argb: BORDER } },
-        };
-
-        const key = cols[c - 1].key;
-        const centerKeys = ["__row", "peakDayCount", "offPeakDayCount", "peakHourCount", "offPeakHourCount"];
-        cell.alignment = {
-          vertical: "middle",
-          horizontal: centerKeys.includes(key) ? "center" : "left",
-          wrapText: true,
-        };
-        cell.font = { name: "Calibri", size: 10 };
-      }
+    if (gDay) {
+      const img = workbook.addImage({ base64: gDay, extension: "png" });
+      sheet2.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
     }
 
-    // Signature directly after table (not too far)
-    addSignatureBlock(sheet1, lastColLetter1, endRow + 3);
+    if (gHour) {
+      const img = workbook.addImage({ base64: gHour, extension: "png" });
+      sheet2.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
+    }
 
-    // ======================================================
-    // SHEET 2 — GLOBAL CHARTS (FIXED formatting + signature)
-    // ======================================================
-    const sheet2 = workbook.addWorksheet("Global Charts");
-    await buildTwoChartsSheet(sheet2, "Global Charts", {
-      id: "globalDayChart",
-      title: "Global Bookings by Day of Week",
-    }, {
-      id: "globalHourChart",
-      title: "Global Bookings by Hour",
+    addRemarksAndSignatureAt(sheet2, "H", rowCursor + 2);
+
+    /* =====================================================
+       SHEET 3 — STATION CHARTS
+    ===================================================== */
+    const sheet3 = workbook.addWorksheet("Station Charts", {
+      pageSetup: { orientation: "landscape", paperSize: 9 },
     });
 
-    // ======================================================
-    // SHEET 3 — STATION CHARTS (FIXED formatting + signature)
-    // ======================================================
-    const sheet3 = workbook.addWorksheet("Station Charts");
-    await buildTwoChartsSheet(sheet3, "Station Charts", {
-      id: "stationDayChart",
-      title: `${selectedStation} – Bookings by Day`,
-    }, {
-      id: "stationHourChart",
-      title: `${selectedStation} – Bookings by Hour`,
-    });
+    baseHeader(
+      sheet3,
+      "H",
+      "STATION CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
+      `${dateRangeText} | Station View: ${selectedStation}`
+    );
 
-    // ======================================================
-    // DOWNLOAD
-    // ======================================================
+    const sDay = await capture("stationDayChart");
+    await yieldToUI();
+    const sHour = await capture("stationHourChart");
+    await yieldToUI();
+
+    rowCursor = 9;
+
+    if (sDay) {
+      const img = workbook.addImage({ base64: sDay, extension: "png" });
+      sheet3.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
+    }
+
+    if (sHour) {
+      const img = workbook.addImage({ base64: sHour, extension: "png" });
+      sheet3.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
+    }
+
+    addRemarksAndSignatureAt(sheet3, "H", rowCursor + 2);
+
+    /* ================= DOWNLOAD ================= */
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -892,10 +807,10 @@ const exportExcel = async () => {
     link.download = `PeakReport_${start}-${end}.xlsx`;
     link.click();
 
-    showToast("Success!", "Excel exported with charts!", "success");
+    showToast("Success!", "Excel exported successfully!", "success");
   } catch (err) {
     console.error(err);
-    showToast("Export failed", "Error generating Excel file.", "error");
+    showToast("Export failed", "Excel export failed.", "error");
   }
 };
 
