@@ -111,7 +111,7 @@ export function Report() {
     });
   };
 
-  const buildFilterText = () => `Date Range: ${fmt(start)} — ${fmt(end)}`;
+
 
   // ===========================
   // DATA for Charts
@@ -165,27 +165,8 @@ const exportPDF = async () => {
   try {
     const { default: html2canvas } = await import("html2canvas");
 
-    const THEME = {
-      white: "#FFFFFF",
-      green: "#3fe19b",
-      blue: "#000c6f",
-    };
-
-    const formatExportDateTime = () => {
-      const d = new Date();
-      return d.toLocaleString(undefined, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    };
-
-    const buildFilterText = () => `Date Range: ${fmt(start)} — ${fmt(end)}`;
-
     const doc = new jsPDF({
-      orientation: "landscape",
+      orientation: "portrait",
       unit: "mm",
       format: "a4",
     });
@@ -194,124 +175,160 @@ const exportPDF = async () => {
     const pageH = doc.internal.pageSize.getHeight();
 
     const exportedAt = formatExportDateTime();
-    const filterText = buildFilterText();
+    const filterText = `Date Range: ${fmt(start)} — ${fmt(end)}`;
 
-    const drawHeader = (title) => {
-      doc.setFillColor(THEME.blue);
-      doc.rect(0, 0, pageW, 18, "F");
-      doc.setFillColor(THEME.green);
-      doc.rect(0, 18, pageW, 2, "F");
+    /* ================= LOGOS ================= */
+    const leftLogo =
+      "https://upload.wikimedia.org/wikipedia/commons/6/6d/Metropolitan_Manila_Development_Authority_%28MMDA%29.png";
+    const rightLogo =
+      "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bagong_Pilipinas_logo.png";
 
-      doc.setTextColor(THEME.white);
+    const loadImage = (url) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.src = url;
+      });
+
+    const [mmdaLogo, bpLogo] = await Promise.all([
+      loadImage(leftLogo),
+      loadImage(rightLogo),
+    ]);
+
+    /* ================= HEADER ================= */
+    const drawHeader = (title, showMeta = true) => {
+      const y = 12;
+
+      doc.addImage(mmdaLogo, "PNG", 12, y, 20, 20);
+      doc.addImage(bpLogo, "PNG", pageW - 32, y, 20, 20);
+
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text(title, 12, 12);
+      doc.setFontSize(11);
+      doc.text("Republic of the Philippines", pageW / 2, y + 4, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.text("Office of the President", pageW / 2, y + 9, { align: "center" });
+
+      doc.setFontSize(13);
+      doc.text(
+        "METROPOLITAN MANILA DEVELOPMENT AUTHORITY",
+        pageW / 2,
+        y + 16,
+        { align: "center" }
+      );
+
+      doc.setFontSize(9);
+      doc.text(
+        "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)",
+        pageW / 2,
+        y + 22,
+        { align: "center" }
+      );
+
+      doc.text("ISO 9001:2015 CERTIFIED", pageW / 2, y + 27, {
+        align: "center",
+      });
+
+      doc.setFontSize(12);
+      doc.text(title, pageW / 2, y + 36, { align: "center" });
+
+      let nextY = y + 44;
+
+      if (showMeta) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+
+        const lines = doc.splitTextToSize(
+          `Filter Applied: ${filterText}`,
+          pageW - 24
+        );
+        doc.text(lines, 12, nextY);
+        nextY += lines.length * 4;
+
+        doc.text(`Exported At: ${exportedAt}`, 12, nextY);
+        nextY += 6;
+      }
+
+      return nextY;
     };
 
     const drawFooter = () => {
-      const page = doc.getCurrentPageInfo().pageNumber;
       doc.setFontSize(9);
-      doc.setTextColor(120);
-      doc.text(`Page ${page}`, pageW - 20, pageH - 6);
+      doc.text(
+        `Page ${doc.getCurrentPageInfo().pageNumber}`,
+        pageW - 20,
+        pageH - 10
+      );
     };
 
-    // --------------------------
-    // PAGE 1 — TABLE (NEVER CUTS)
-    // --------------------------
-    drawHeader("Comprehensive Report");
-
-    doc.setTextColor(20);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-
-    const maxTextW = pageW - 24;
-    const filterLines = doc.splitTextToSize(`Filter Applied: ${filterText}`, maxTextW);
-
-    let y = 28;
-    doc.text(filterLines, 12, y);
-    y += filterLines.length * 5;
-
-    doc.text(`Exported At: ${exportedAt}`, 12, y);
-    y += 6;
-
-    const head = [[
-      "#",
-      "Station Name",
-      "Total Bookings",
-      "Canceled",
-      "Female",
-      "Male",
-      "Other",
-      "Age 0-18",
-      "Age 19-25",
-      "Age 26-40",
-      "Age 41-60",
-      "Age 60+",
-      "Student",
-      "Senior",
-      "PWD",
-      "Mobile App",
-      "Chatbot",
-      "Gmail",
-      "Manual",
-    ]];
-
-    const body = rows.map((r, idx) => ([
-      String(idx + 1),
-      r.StationName ?? "",
-      String(r.TotalBookings ?? 0),
-      String(r.CanceledCount ?? 0),
-      String(r.FemaleCount ?? 0),
-      String(r.MaleCount ?? 0),
-      String(r.OtherGenderCount ?? 0),
-      String(r.Age_0_18 ?? 0),
-      String(r.Age_19_25 ?? 0),
-      String(r.Age_26_40 ?? 0),
-      String(r.Age_41_60 ?? 0),
-      String(r.Age_60Plus ?? 0),
-      String(r.StudentCount ?? 0),
-      String(r.SeniorCount ?? 0),
-      String(r.PWDCount ?? 0),
-      String(r.MobileAppCount ?? 0),
-      String(r.ChatbotCount ?? 0),
-      String(r.EmailCount ?? 0),
-      String(r.ManualBookingCount ?? 0),
-    ]));
+    /* ================= PAGE 1 — TABLE ================= */
+    let y = drawHeader("COMPREHENSIVE TOTAL STATION REPORT");
 
     autoTable(doc, {
       startY: y,
-      head,
-      body,
-      theme: "grid",
+      margin: { left: 6, right: 6 },
       styles: {
-        font: "helvetica",
-        fontSize: 8,          // compact for many columns
-        cellPadding: 1.5,
+        fontSize: 7.5,
+        cellPadding: 1,
         valign: "middle",
-        textColor: 20,
-        lineColor: 220,
-        lineWidth: 0.1,
       },
       headStyles: {
-        fillColor: THEME.blue,
-        textColor: THEME.white,
-        fontStyle: "bold",
+        fillColor: [0, 12, 111],
+        textColor: 255,
         halign: "center",
+        valign: "middle",
+        fontSize: 7.5,
+        minCellHeight: 12,
       },
-      alternateRowStyles: {
-        fillColor: [240, 253, 248],
-      },
-      margin: { left: 6, right: 6 },
+      alternateRowStyles: { fillColor: [240, 253, 248] },
+      head: [[
+        "#",
+        "Station Name",
+        "Total\nBookings",
+        "Cancelled",
+        "Female",
+        "Male",
+        "Other",
+        "Age\n0–18",
+        "Age\n19–25",
+        "Age\n26–40",
+        "Age\n41–60",
+        "Age\n60+",
+        "Student",
+        "Senior",
+        "PWD",
+        "Mobile\nApp",
+        "Chatbot",
+        "Email",
+        "Manual",
+      ]],
+      body: rows.map((r, i) => ([
+        i + 1,
+        r.StationName,
+        r.TotalBookings,
+        r.CanceledCount,
+        r.FemaleCount,
+        r.MaleCount,
+        r.OtherGenderCount,
+        r.Age_0_18,
+        r.Age_19_25,
+        r.Age_26_40,
+        r.Age_41_60,
+        r.Age_60Plus,
+        r.StudentCount,
+        r.SeniorCount,
+        r.PWDCount,
+        r.MobileAppCount,
+        r.ChatbotCount,
+        r.EmailCount,
+        r.ManualBookingCount,
+      ])),
       didDrawPage: drawFooter,
     });
 
-    // Ensure footer on first page
-    drawFooter();
-
-    // --------------------------
-    // Chart capture helpers
-    // --------------------------
-    const captureEl = async (id) => {
+    /* ================= CHART HELPERS ================= */
+    const capture = async (id) => {
       const el = document.getElementById(id);
       if (!el) return null;
 
@@ -321,526 +338,346 @@ const exportPDF = async () => {
         backgroundColor: "#ffffff",
       });
 
-      return { canvas, imgData: canvas.toDataURL("image/png") };
+      return canvas.toDataURL("image/png");
     };
 
-    // 2 charts per page
-    const addTwoChartsPage = async (pageTitle, top, bottom) => {
-      const topCap = await captureEl(top.id);
-      const bottomCap = await captureEl(bottom.id);
+    const addChart = (img, yPos) => {
+      const maxW = pageW - 24;
+      const maxH = 85;
 
-      if (!topCap && !bottomCap) return;
+      const props = doc.getImageProperties(img);
+      let w = maxW;
+      let h = (props.height * w) / props.width;
+
+      if (h > maxH) {
+        h = maxH;
+        w = (props.width * h) / props.height;
+      }
+
+      const x = (pageW - w) / 2;
+      doc.addImage(img, "PNG", x, yPos, w, h);
+      return yPos + h + 8;
+    };
+
+    const addTwoChartsPage = async (title, topId, bottomId) => {
+      const top = await capture(topId);
+      const bottom = bottomId ? await capture(bottomId) : null;
+      if (!top && !bottom) return;
 
       doc.addPage();
-      drawHeader(pageTitle);
+      let yy = drawHeader(title);
 
-      doc.setTextColor(20);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-
-      const lines = doc.splitTextToSize(`Filter Applied: ${filterText}`, maxTextW);
-      const metaY = 28;
-      doc.text(lines, 12, metaY);
-
-      const marginX = 12;
-      const gap = 6;
-      const labelH = 5;
-
-      let yStart = metaY + lines.length * 5 + 6;
-
-      const bottomMargin = 14;
-      const availableH = pageH - yStart - bottomMargin;
-
-      const chartBoxH = (availableH - gap - labelH * 2) / 2;
-      const maxW = pageW - marginX * 2;
-
-      const drawChartBlock = (cap, title, yy) => {
-        if (!cap) return yy + chartBoxH + labelH + gap;
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(30);
-        doc.text(title, marginX, yy);
-
-        const imgTopY = yy + labelH;
-
-        let drawW = maxW;
-        let drawH = (cap.canvas.height * drawW) / cap.canvas.width;
-
-        // fit by height
-        if (drawH > chartBoxH) {
-          drawH = chartBoxH;
-          drawW = (cap.canvas.width * drawH) / cap.canvas.height;
-        }
-        // fit by width safety
-        if (drawW > maxW) {
-          drawW = maxW;
-          drawH = (cap.canvas.height * drawW) / cap.canvas.width;
-        }
-
-        const x = (pageW - drawW) / 2;
-        doc.addImage(cap.imgData, "PNG", x, imgTopY, drawW, drawH);
-
-        return imgTopY + chartBoxH + gap;
-      };
-
-      yStart = drawChartBlock(topCap, top.title, yStart);
-      yStart = drawChartBlock(bottomCap, bottom.title, yStart);
+      if (top) yy = addChart(top, yy);
+      if (bottom) addChart(bottom, yy);
 
       drawFooter();
     };
 
-    // 1 chart per page (no duplicates)
-    const addOneChartPage = async (pageTitle, chart) => {
-      const cap = await captureEl(chart.id);
-      if (!cap) return;
-
-      doc.addPage();
-      drawHeader(pageTitle);
-
-      doc.setTextColor(20);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-
-      const lines = doc.splitTextToSize(`Filter Applied: ${filterText}`, maxTextW);
-      const metaY = 28;
-      doc.text(lines, 12, metaY);
-
-      const marginX = 12;
-      const labelH = 6;
-      const bottomMargin = 14;
-
-      let yStart = metaY + lines.length * 5 + 8;
-
-      const availableH = pageH - yStart - bottomMargin;
-      const maxW = pageW - marginX * 2;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(30);
-      doc.text(chart.title, marginX, yStart);
-
-      const imgTopY = yStart + labelH;
-
-      let drawW = maxW;
-      let drawH = (cap.canvas.height * drawW) / cap.canvas.width;
-
-      // fit by height
-      if (drawH > availableH - labelH) {
-        drawH = availableH - labelH;
-        drawW = (cap.canvas.width * drawH) / cap.canvas.height;
-      }
-      // fit by width safety
-      if (drawW > maxW) {
-        drawW = maxW;
-        drawH = (cap.canvas.height * drawW) / cap.canvas.width;
-      }
-
-      const x = (pageW - drawW) / 2;
-      doc.addImage(cap.imgData, "PNG", x, imgTopY, drawW, drawH);
-
-      drawFooter();
-    };
-
-    // --------------------------
-    // CHART PAGES
-    // --------------------------
-    await addTwoChartsPage("Charts",
-      { id: "chart-bookings-cancelled", title: "Total vs Cancelled Bookings Per Station" },
-      { id: "chart-gender", title: "Gender Distribution Per Station" }
+    /* ================= CHART PAGES ================= */
+    await addTwoChartsPage(
+      "CHARTS - COMPREHENSIVE TOTAL STATION REPORT",
+      "chart-bookings-cancelled",
+      "chart-gender"
     );
 
-    await addTwoChartsPage("Charts",
-      { id: "chart-age", title: "Age Distribution Per Station" },
-      { id: "chart-demographics", title: "Demographics Distribution Per Station" }
+    await addTwoChartsPage(
+      "CHARTS - COMPREHENSIVE TOTAL STATION REPORT",
+      "chart-age",
+      "chart-demographics"
     );
 
-    // ✅ last one is single chart (NO DUPLICATE)
-    await addOneChartPage("Charts", {
-      id: "chart-platform",
-      title: "Preferred Platform Source Per Station",
-    });
+    await addTwoChartsPage(
+      "CHARTS - COMPREHENSIVE TOTAL STATION REPORT",
+      "chart-platform",
+      null
+    );
 
-    // --------------------------
-    // FINAL PAGE — APPROVAL
-    // --------------------------
+    /* ================= FINAL PAGE — APPROVAL (NO META) ================= */
     doc.addPage();
-    drawHeader("Report Approval");
+    drawHeader("REPORT APPROVAL - COMPREHENSIVE TOTAL STATION REPORT", false);
 
-    doc.setTextColor(20);
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
+    doc.text("Remarks:", 12, 70);
+    doc.rect(30, 65, pageW - 45, 24);
 
-    const approvalMeta = doc.splitTextToSize(
-      `Report Range: ${fmt(start)} — ${fmt(end)}\nExported At: ${exportedAt}`,
-      maxTextW
-    );
-    doc.text(approvalMeta, 12, 30);
-
-    const signY = 70;
-
-    doc.setDrawColor(170);
-    doc.setTextColor(40);
-    doc.setFontSize(11);
-
+    const signY = 105;
     doc.text("Report Approved:", 12, signY);
-    doc.line(45, signY, 120, signY);
+    doc.line(50, signY, 130, signY);
 
     doc.setFontSize(9);
-    doc.setTextColor(120);
-    doc.text("Signature over Printed Name", 45, signY + 5);
+    doc.text("Signature over Printed Name", 50, signY + 5);
 
-    doc.setTextColor(40);
-    doc.setFontSize(11);
-    doc.text("Date:", 130, signY);
-    doc.line(142, signY, 170, signY);
+    doc.setFontSize(10);
+    doc.text("Date:", 140, signY);
+    doc.line(155, signY, 185, signY);
 
     drawFooter();
 
-    // Save
     doc.save(`StationReport_${start}-${end}.pdf`);
-    showToast("Success!", "PDF exported with charts!", "success");
+    showToast("Success!", "PDF exported successfully!", "success");
   } catch (err) {
     console.error(err);
-    showToast(
-      "Export failed",
-      "Please install 'html2canvas' and 'jspdf-autotable'.",
-      "error"
-    );
+    showToast("Export failed", "PDF export failed.", "error");
   }
 };
+
+
 
 
   // ===========================
   // ✅ exportExcel (FIXED + Styled + Charts)
   // ===========================
-  const exportExcel = async () => {
-    if (!rows?.length) {
-      showToast("Error", "No data to export", "error");
-      return;
-    }
+const exportExcel = async () => {
+  if (!rows?.length) {
+    showToast("Error", "No data to export", "error");
+    return;
+  }
 
-    try {
-      const { default: html2canvas } = await import("html2canvas");
+  try {
+    const { default: html2canvas } = await import("html2canvas");
 
-      const workbook = new ExcelJS.Workbook();
-      workbook.creator = "MCTS";
-      workbook.created = new Date();
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "MCTS";
+    workbook.created = new Date();
 
-      // ARGB theme colors
-      const BLUE = "FF000C6F";
-      const GREEN = "FF3FE19B";
-      const WHITE = "FFFFFFFF";
-      const LIGHT_GREEN = "FFF0FDF8";
-      const BORDER = "FFD9D9D9";
-      const GREY = "FF666666";
+    /* ================= COLORS ================= */
+    const BLUE = "FF000C6F";
+    const GREEN = "FF3FE19B";
+    const WHITE = "FFFFFFFF";
+    const LIGHT_GREEN = "FFF0FDF8";
+    const BORDER = "FFD9D9D9";
+    const GREY = "FF777777";
 
-      const exportedAt = formatExportDateTime();
-      const filterText = buildFilterText();
+    const exportedAt = formatExportDateTime();
+    const filterText = `Date Range: ${fmt(start)} — ${fmt(end)}`;
 
-      const setCommonPrint = (sheet) => {
-        sheet.pageSetup = {
-          orientation: "landscape",
-          fitToPage: true,
-          fitToWidth: 1,
-          fitToHeight: 0,
-          paperSize: 9,
-          margins: {
-            left: 0.3,
-            right: 0.3,
-            top: 0.5,
-            bottom: 0.5,
-            header: 0.2,
-            footer: 0.2,
-          },
-        };
+    /* ================= COMMON ================= */
+    const setPrint = (sheet) => {
+      sheet.pageSetup = {
+        orientation: "portrait",
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        paperSize: 9,
+        margins: {
+          left: 0.3,
+          right: 0.3,
+          top: 0.5,
+          bottom: 0.5,
+          header: 0.2,
+          footer: 0.2,
+        },
       };
+    };
 
-      const addHeaderBlock = (sheet, lastColLetter, title) => {
-        sheet.mergeCells(`A1:${lastColLetter}1`);
-        const t = sheet.getCell("A1");
-        t.value = title;
-        t.font = { name: "Calibri", size: 16, bold: true, color: { argb: WHITE } };
-        t.alignment = { vertical: "middle", horizontal: "left" };
-        t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
-        sheet.getRow(1).height = 26;
-
-        sheet.mergeCells(`A2:${lastColLetter}2`);
-        const a = sheet.getCell("A2");
-        a.value = "";
-        a.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN } };
-        sheet.getRow(2).height = 6;
-
-        sheet.mergeCells(`A3:${lastColLetter}3`);
-        const f = sheet.getCell("A3");
-        f.value = `Filter Applied: ${filterText}`;
-        f.font = { name: "Calibri", size: 11 };
-        f.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
-        sheet.getRow(3).height = 30;
-
-        sheet.mergeCells(`A4:${lastColLetter}4`);
-        const e = sheet.getCell("A4");
-        e.value = `Exported At: ${exportedAt}`;
-        e.font = { name: "Calibri", size: 11 };
-        e.alignment = { vertical: "middle", horizontal: "left" };
-        sheet.getRow(4).height = 18;
-
-        sheet.mergeCells(`A5:${lastColLetter}5`);
-        sheet.getRow(5).height = 6;
-      };
-
-      const addSignatureBlock = (sheet, lastColLetter, signRow) => {
-        sheet.getRow(signRow).height = 18;
-
-        sheet.getCell(`A${signRow}`).value = "Report Approved:";
-        sheet.getCell(`A${signRow}`).font = { name: "Calibri", size: 11, bold: true };
-
-        sheet.mergeCells(`B${signRow}:E${signRow}`);
-        sheet.getCell(`B${signRow}`).border = {
-          bottom: { style: "thin", color: { argb: GREY } },
-        };
-
-        sheet.mergeCells(`B${signRow + 1}:E${signRow + 1}`);
-        sheet.getCell(`B${signRow + 1}`).value = "Signature over Printed Name";
-        sheet.getCell(`B${signRow + 1}`).font = {
-          name: "Calibri",
-          size: 10,
-          color: { argb: GREY },
-        };
-
-        sheet.getCell(`F${signRow}`).value = "Date:";
-        sheet.getCell(`F${signRow}`).font = { name: "Calibri", size: 11, bold: true };
-
-        sheet.mergeCells(`G${signRow}:H${signRow}`);
-        sheet.getCell(`G${signRow}`).border = {
-          bottom: { style: "thin", color: { argb: GREY } },
-        };
-
-        sheet.pageSetup.printArea = `A1:${lastColLetter}${signRow + 2}`;
-      };
-
-      const captureBase64 = async (id) => {
-        const el = document.getElementById(id);
-        if (!el) return null;
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-        return canvas.toDataURL("image/png");
-      };
-
-      // --------------------------
-      // Sheet 1: Stations (styled table)
-      // --------------------------
-      const sheet1 = workbook.addWorksheet("Stations", {
-        views: [{ state: "frozen", ySplit: 6 }],
-      });
-      setCommonPrint(sheet1);
-
-      const cols = [
-        { header: "#", key: "__row", width: 6 },
-        { header: "Station Name", key: "StationName", width: 20 },
-        { header: "Total Bookings", key: "TotalBookings", width: 15 },
-        { header: "Canceled", key: "CanceledCount", width: 12 },
-        { header: "Female", key: "FemaleCount", width: 10 },
-        { header: "Male", key: "MaleCount", width: 10 },
-        { header: "Other", key: "OtherGenderCount", width: 10 },
-        { header: "Age 0-18", key: "Age_0_18", width: 10 },
-        { header: "Age 19-25", key: "Age_19_25", width: 10 },
-        { header: "Age 26-40", key: "Age_26_40", width: 10 },
-        { header: "Age 41-60", key: "Age_41_60", width: 10 },
-        { header: "Age 60+", key: "Age_60Plus", width: 10 },
-        { header: "Student", key: "StudentCount", width: 10 },
-        { header: "Senior", key: "SeniorCount", width: 10 },
-        { header: "PWD", key: "PWDCount", width: 10 },
-        { header: "Mobile App", key: "MobileAppCount", width: 12 },
-        { header: "Chatbot", key: "ChatbotCount", width: 10 },
-        { header: "Gmail", key: "EmailCount", width: 10 },
-        { header: "Manual", key: "ManualBookingCount", width: 10 },
+    const addHeader = (sheet, lastCol, title, showMeta = true) => {
+      const rows = [
+        "Republic of the Philippines",
+        "Office of the President",
+        "METROPOLITAN MANILA DEVELOPMENT AUTHORITY",
+        "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)",
+        "ISO 9001:2015 CERTIFIED",
+        title,
       ];
-      sheet1.columns = cols;
 
-      const lastColLetter1 = sheet1.getColumn(cols.length).letter;
-      addHeaderBlock(sheet1, lastColLetter1, "Comprehensive Station Report");
-
-      const headerRowIndex = 6;
-      const headerRow = sheet1.getRow(headerRowIndex);
-      cols.forEach((c, i) => {
-        const cell = headerRow.getCell(i + 1);
-        cell.value = c.header;
-        cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: WHITE } };
-        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
-        cell.border = {
-          top: { style: "thin", color: { argb: BORDER } },
-          left: { style: "thin", color: { argb: BORDER } },
-          bottom: { style: "thin", color: { argb: BORDER } },
-          right: { style: "thin", color: { argb: BORDER } },
-        };
+      rows.forEach((txt, i) => {
+        const r = i + 1;
+        sheet.mergeCells(`A${r}:${lastCol}${r}`);
+        const c = sheet.getCell(`A${r}`);
+        c.value = txt;
+        c.alignment = { vertical: "middle", horizontal: "center" };
+        c.font =
+          i === 2
+            ? { bold: true, size: 13 }
+            : i === 5
+            ? { bold: true, size: 14 }
+            : { size: 10 };
+        sheet.getRow(r).height = 22;
       });
-      headerRow.height = 20;
 
-      sheet1.autoFilter = {
-        from: { row: headerRowIndex, column: 1 },
-        to: { row: headerRowIndex, column: cols.length },
+      if (showMeta) {
+        sheet.mergeCells(`A7:${lastCol}7`);
+        sheet.getCell("A7").value = `Filter Applied: ${filterText}`;
+        sheet.getCell("A7").alignment = { wrapText: true };
+        sheet.getRow(7).height = 24;
+
+        sheet.mergeCells(`A8:${lastCol}8`);
+        sheet.getCell("A8").value = `Exported At: ${exportedAt}`;
+        sheet.getRow(8).height = 18;
+      }
+    };
+
+    const addRemarksAndSign = (sheet, lastCol, startRow) => {
+      sheet.mergeCells(`A${startRow}:${lastCol}${startRow + 2}`);
+      const r = sheet.getCell(`A${startRow}`);
+      r.value = "Remarks:";
+      r.alignment = { wrapText: true };
+      r.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
       };
 
-      const dataRows = rows.map((r, idx) => ({
-        __row: idx + 1,
-        StationName: r.StationName ?? "",
-        TotalBookings: r.TotalBookings ?? 0,
-        CanceledCount: r.CanceledCount ?? 0,
-        FemaleCount: r.FemaleCount ?? 0,
-        MaleCount: r.MaleCount ?? 0,
-        OtherGenderCount: r.OtherGenderCount ?? 0,
-        Age_0_18: r.Age_0_18 ?? 0,
-        Age_19_25: r.Age_19_25 ?? 0,
-        Age_26_40: r.Age_26_40 ?? 0,
-        Age_41_60: r.Age_41_60 ?? 0,
-        Age_60Plus: r.Age_60Plus ?? 0,
-        StudentCount: r.StudentCount ?? 0,
-        SeniorCount: r.SeniorCount ?? 0,
-        PWDCount: r.PWDCount ?? 0,
-        MobileAppCount: r.MobileAppCount ?? 0,
-        ChatbotCount: r.ChatbotCount ?? 0,
-        EmailCount: r.EmailCount ?? 0,
-        ManualBookingCount: r.ManualBookingCount ?? 0,
-      }));
+      sheet.getRow(startRow).height = 24;
+      sheet.getRow(startRow + 1).height = 24;
+      sheet.getRow(startRow + 2).height = 24;
 
-      sheet1.addRows(dataRows);
+      sheet.addRow([]);
+      sheet.addRow(["Report Approved:"]).getCell(1).font = { bold: true };
 
-      const startData = headerRowIndex + 1;
-      const endData = sheet1.rowCount;
+      const sig = sheet.addRow([]);
+      sheet.mergeCells(`A${sig.number}:E${sig.number}`);
+      sheet.getCell(`A${sig.number}`).value = "______________________________";
 
-      const centerKeys = new Set([
-        "__row",
-        "TotalBookings",
-        "CanceledCount",
-        "FemaleCount",
-        "MaleCount",
-        "OtherGenderCount",
-        "Age_0_18",
-        "Age_19_25",
-        "Age_26_40",
-        "Age_41_60",
-        "Age_60Plus",
-        "StudentCount",
-        "SeniorCount",
-        "PWDCount",
-        "MobileAppCount",
-        "ChatbotCount",
-        "EmailCount",
-        "ManualBookingCount",
+      sheet.mergeCells(`F${sig.number}:G${sig.number}`);
+      sheet.getCell(`F${sig.number}`).value = "Date:";
+
+      sheet.mergeCells(`H${sig.number}:${lastCol}${sig.number}`);
+      sheet.getCell(`H${sig.number}`).value = "____________";
+
+      const lbl = sheet.addRow([]);
+      sheet.mergeCells(`A${lbl.number}:E${lbl.number}`);
+      sheet.getCell(`A${lbl.number}`).value =
+        "Signature over Printed Name";
+    };
+
+    const capture = async (id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const canvas = await html2canvas(el, {
+        scale: 1, // 🔥 PREVENT STRETCH / CRASH
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+      return canvas.toDataURL("image/png");
+    };
+
+    /* ======================================================
+       SHEET 1 — TABLE
+    ====================================================== */
+    const sheet1 = workbook.addWorksheet("Station Summary", {
+      views: [{ state: "frozen", ySplit: 9 }],
+    });
+    setPrint(sheet1);
+
+    sheet1.columns = [
+      { width: 5 },  { width: 18 }, { width: 12 }, { width: 10 },
+      { width: 9 },  { width: 9 },  { width: 9 },  { width: 9 },
+      { width: 9 },  { width: 9 },  { width: 9 },  { width: 9 },
+      { width: 9 },  { width: 9 },  { width: 9 },  { width: 10 },
+      { width: 9 },  { width: 9 },  { width: 9 },
+    ];
+
+    const lastCol1 = sheet1.getColumn(19).letter;
+    addHeader(sheet1, lastCol1, "COMPREHENSIVE TOTAL STATION REPORT");
+
+    const header = sheet1.addRow([
+      "#","Station Name","Total","Canceled","Female","Male","Other",
+      "0–18","19–25","26–40","41–60","60+",
+      "Student","Senior","PWD",
+      "Mobile","Chatbot","Email","Manual",
+    ]);
+
+    header.eachCell((c) => {
+      c.font = { bold: true, size: 9, color: { argb: WHITE } };
+      c.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+      c.border = { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} };
+    });
+    header.height = 22;
+
+    rows.forEach((r, i) => {
+      const row = sheet1.addRow([
+        i + 1,
+        r.StationName,
+        r.TotalBookings,
+        r.CanceledCount,
+        r.FemaleCount,
+        r.MaleCount,
+        r.OtherGenderCount,
+        r.Age_0_18,
+        r.Age_19_25,
+        r.Age_26_40,
+        r.Age_41_60,
+        r.Age_60Plus,
+        r.StudentCount,
+        r.SeniorCount,
+        r.PWDCount,
+        r.MobileAppCount,
+        r.ChatbotCount,
+        r.EmailCount,
+        r.ManualBookingCount,
       ]);
 
-      for (let r = startData; r <= endData; r++) {
-        const row = sheet1.getRow(r);
-        row.height = 18;
-        const isAlt = (r - startData) % 2 === 1;
-
-        for (let c = 1; c <= cols.length; c++) {
-          const cell = row.getCell(c);
-          const key = cols[c - 1].key;
-
-          cell.fill = isAlt
-            ? { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GREEN } }
-            : { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
-
-          cell.border = {
-            top: { style: "thin", color: { argb: BORDER } },
-            left: { style: "thin", color: { argb: BORDER } },
-            bottom: { style: "thin", color: { argb: BORDER } },
-            right: { style: "thin", color: { argb: BORDER } },
-          };
-
-          cell.alignment = {
-            vertical: "middle",
-            horizontal: centerKeys.has(key) ? "center" : "left",
-            wrapText: true,
-          };
-
-          cell.font = { name: "Calibri", size: 10 };
+      row.eachCell((c) => {
+        c.font = { size: 9 };
+        c.alignment = { vertical: "middle", horizontal: "center" };
+        c.border = { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} };
+        if (i % 2 === 1) {
+          c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GREEN } };
         }
-      }
-
-      // signature right after table
-      addSignatureBlock(sheet1, lastColLetter1, endData + 3);
-
-      // --------------------------
-      // Sheet 2: Charts (styled header + 2 charts per block + signature)
-      // --------------------------
-      const sheet2 = workbook.addWorksheet("Charts", {
-        views: [{ state: "frozen", ySplit: 5 }],
       });
-      setCommonPrint(sheet2);
+    });
 
-      // create A..H columns so header merges reliably
-      sheet2.columns = Array.from({ length: 8 }, (_, i) => ({
-        header: "",
-        key: `c${i + 1}`,
-        width: i === 0 ? 34 : 18,
-      }));
+    addRemarksAndSign(sheet1, lastCol1, sheet1.lastRow.number + 2);
 
-      const lastColLetter2 = "H";
-      addHeaderBlock(sheet2, lastColLetter2, "Comprehensive Station Report — Charts");
+   /* ======================================================
+   SHEET 2 — CHARTS
+====================================================== */
+const sheet2 = workbook.addWorksheet("Charts");
+setPrint(sheet2);
 
-      const putTitle = (row, title) => {
-        sheet2.getCell(`A${row}`).value = title;
-        sheet2.getCell(`A${row}`).font = { name: "Calibri", size: 14, bold: true };
-        sheet2.getRow(row).height = 20;
-      };
+sheet2.columns = Array.from({ length: 8 }, () => ({ width: 20 }));
+addHeader(sheet2, "H", "CHARTS - COMPREHENSIVE TOTAL STATION REPORT");
 
-      const putImage = (base64, row1Based) => {
-        if (!base64) return;
-        const imgId = workbook.addImage({ base64, extension: "png" });
-        // exceljs image coords use 0-based row indexes
-        sheet2.addImage(imgId, {
-          tl: { col: 0, row: row1Based - 1 },
-          ext: { width: 900, height: 360 },
-        });
-      };
+let cursor = 9;
 
-      // Chart block 1 (two charts)
-      putTitle(6, "Total Bookings vs Cancelled");
-      putImage(await captureBase64("chart-bookings-cancelled"), 7);
+const addChart = async (id) => {
+  const img = await capture(id);
+  if (!img) return;
 
-      putTitle(26, "Gender Distribution");
-      putImage(await captureBase64("chart-gender"), 27);
+  const imageId = workbook.addImage({
+    base64: img,
+    extension: "png",
+  });
 
-      // Chart block 2 (two charts)
-      putTitle(46, "Age Distribution");
-      putImage(await captureBase64("chart-age"), 47);
+  sheet2.addImage(imageId, {
+    tl: { col: 0, row: cursor },
+    ext: { width: 600, height: 260 }, // ✅ not stretched
+  });
 
-      putTitle(66, "Demographics Distribution");
-      putImage(await captureBase64("chart-demographics"), 67);
+  cursor += 16;
+};
 
-      // Chart block 3 (one chart)
-      putTitle(86, "Platform Source");
-      putImage(await captureBase64("chart-platform"), 87);
+await addChart("chart-bookings-cancelled");
+await addChart("chart-gender");
+await addChart("chart-age");
+await addChart("chart-demographics");
+await addChart("chart-platform");
 
-      // signature under charts
-      addSignatureBlock(sheet2, lastColLetter2, 107);
+// ✅ FIX: REMARKS + SIGNATURE NOW INCLUDED
+addRemarksAndSign(sheet2, "H", cursor + 2);
 
-      // --------------------------
-      // Download
-      // --------------------------
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
 
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `StationReport_${start}-${end}.xlsx`;
-      link.click();
+    /* ================= DOWNLOAD ================= */
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-      showToast("Success!", "Excel exported with charts!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast(
-        "Export failed",
-        "Please install 'exceljs' and 'html2canvas' for charts.",
-        "error"
-      );
-    }
-  };
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `StationReport_${start}-${end}.xlsx`;
+    link.click();
+
+    showToast("Success!", "Excel exported successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Export failed", "Excel export failed.", "error");
+  }
+};
+
 
   return (
     <>

@@ -194,12 +194,18 @@ html { scrollbar-gutter: stable; }
 }
 
 /* Sticky header */
-.pmc-table thead th{
-  position: sticky;
-  top: 0;
-  background: #f6f8ff;
-  z-index: 2;
+/* === FIX: Header text wrapping & height === */
+.pmc-table thead th {
+  font-size: 14px;          /* 🔑 smaller than body */
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  height: auto;             /* 🔑 allow row to grow */
+  padding: 8px 6px;         /* tighter but readable */
 }
+
 
 /* Sticky first column */
 .pmc-sticky{

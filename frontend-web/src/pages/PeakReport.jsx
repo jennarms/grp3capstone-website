@@ -485,7 +485,7 @@ const exportPDF = async () => {
 
     /* ---------- GLOBAL CHARTS ---------- */
     await addTwoChartsPage({
-      title: "GLOBAL CHARTS",
+      title: "GLOBAL CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
       filterText: `Filter Applied: Date Range: ${fmt(start)} — ${fmt(end)} | Stations Included: ${stationNames.join(" · ")}`,
       topChartId: "globalDayChart",
       topTitle: "Global Bookings by Day of Week",
@@ -495,7 +495,7 @@ const exportPDF = async () => {
 
     /* ---------- STATION CHARTS ---------- */
     await addTwoChartsPage({
-      title: "STATION CHARTS",
+      title: "STATION CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
       filterText: `Filter Applied: Date Range: ${fmt(start)} — ${fmt(end)} | Station View: ${selectedStation}`,
       topChartId: "stationDayChart",
       topTitle: `${selectedStation} – Bookings by Day`,
@@ -505,7 +505,7 @@ const exportPDF = async () => {
 
     /* ================= FINAL PAGE — SIGNATURE ================= */
     doc.addPage();
-    drawHeader("REPORT APPROVAL");
+    drawHeader("REPORT APPROVAL - PEAK & OFF-PEAK ANALYSIS REPORT");
 
     doc.setFontSize(10);
     doc.text("Remarks:", 15, 70);
@@ -568,59 +568,64 @@ const exportExcel = async () => {
 
     const dateRangeText = `Date Range: ${fmt(start)} — ${fmt(end)}`;
     const stationsIncluded = stationNames.join(" · ");
+    const exportedAt = formatExportDateTime();
 
-    /* ================= COMMON HEADER ================= */
-    const baseHeader = (sheet, lastCol, title, filterText) => {
-      sheet.mergeCells(`A1:${lastCol}1`);
-      sheet.getCell("A1").value = "Republic of the Philippines";
-      sheet.getCell("A1").alignment = center;
-      sheet.getCell("A1").font = { bold: true, size: 11 };
+    /* ================= UTIL ================= */
+    const yieldToUI = () =>
+      new Promise((resolve) => setTimeout(resolve, 0));
 
-      sheet.mergeCells(`A2:${lastCol}2`);
-      sheet.getCell("A2").value = "Office of the President";
-      sheet.getCell("A2").alignment = center;
-      sheet.getCell("A2").font = { size: 10 };
+    const capture = async (id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
 
-      sheet.mergeCells(`A3:${lastCol}3`);
-      sheet.getCell("A3").value =
-        "METROPOLITAN MANILA DEVELOPMENT AUTHORITY";
-      sheet.getCell("A3").alignment = center;
-      sheet.getCell("A3").font = { bold: true, size: 13 };
+      const canvas = await html2canvas(el, {
+        scale: 1,                 // 🔥 SAFE
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
 
-      sheet.mergeCells(`A4:${lastCol}4`);
-      sheet.getCell("A4").value =
-        "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)";
-      sheet.getCell("A4").alignment = center;
-      sheet.getCell("A4").font = { size: 9 };
-
-      sheet.mergeCells(`A5:${lastCol}5`);
-      sheet.getCell("A5").value = "ISO 9001:2015 CERTIFIED";
-      sheet.getCell("A5").alignment = center;
-      sheet.getCell("A5").font = { size: 9 };
-
-      sheet.mergeCells(`A6:${lastCol}6`);
-      sheet.getCell("A6").value = title;
-      sheet.getCell("A6").alignment = center;
-      sheet.getCell("A6").font = { bold: true, size: 14 };
-
-      sheet.mergeCells(`A7:${lastCol}7`);
-      sheet.getCell("A7").value = `Filter Applied: ${filterText}`;
-      sheet.getCell("A7").alignment = left;
-
-      sheet.mergeCells(`A8:${lastCol}8`);
-      sheet.getCell("A8").value = `Exported At: ${formatExportDateTime()}`;
-      sheet.getCell("A8").alignment = left;
+      return canvas.toDataURL("image/png");
     };
 
-    /* ================= REMARKS + SIGNATURE ================= */
-    const addRemarksAndSignature = (sheet, lastCol) => {
+    /* ================= HEADER ================= */
+    const baseHeader = (sheet, lastCol, title, filterText) => {
+      const rows = [
+        "Republic of the Philippines",
+        "Office of the President",
+        "METROPOLITAN MANILA DEVELOPMENT AUTHORITY",
+        "(Pangasiwaan Sa Pagpapaunlad Ng Kalakhang Maynila)",
+        "ISO 9001:2015 CERTIFIED",
+        title,
+        `Filter Applied: ${filterText}`,
+        `Exported At: ${exportedAt}`,
+      ];
+
+      rows.forEach((text, i) => {
+        const r = i + 1;
+        sheet.mergeCells(`A${r}:${lastCol}${r}`);
+        const c = sheet.getCell(`A${r}`);
+        c.value = text;
+        c.alignment = i >= 6 ? left : center;
+        c.font =
+          i === 2
+            ? { bold: true, size: 13 }
+            : i === 5
+            ? { bold: true, size: 14 }
+            : { size: 10 };
+        sheet.getRow(r).height = i >= 6 ? 28 : 22;
+      });
+    };
+
+    /* ================= REMARKS + SIGN ================= */
+    const addRemarksAndSignatureAt = (sheet, lastCol, startRow) => {
       const thinBorder = { style: "thin" };
 
-      sheet.addRow([]);
-      const start = sheet.lastRow.number + 1;
+      while (sheet.lastRow.number < startRow - 1) {
+        sheet.addRow([]);
+      }
 
-      sheet.mergeCells(`A${start}:${lastCol}${start + 2}`);
-      const remarks = sheet.getCell(`A${start}`);
+      sheet.mergeCells(`A${startRow}:${lastCol}${startRow + 2}`);
+      const remarks = sheet.getCell(`A${startRow}`);
       remarks.value = "Remarks:";
       remarks.alignment = left;
       remarks.border = {
@@ -630,26 +635,32 @@ const exportExcel = async () => {
         right: thinBorder,
       };
 
+      sheet.getRow(startRow).height = 24;
+      sheet.getRow(startRow + 1).height = 24;
+      sheet.getRow(startRow + 2).height = 24;
+
       sheet.addRow([]);
-      sheet.addRow(["Report Approved:"]);
-      sheet.addRow([
-        "______________________________",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "Date:",
-        "____________",
-      ]);
-      sheet.addRow(["Signature over Printed Name"]);
+      sheet.addRow(["Report Approved:"]).getCell(1).font = { bold: true };
+
+      const sigRow = sheet.addRow([]);
+      sheet.mergeCells(`A${sigRow.number}:E${sigRow.number}`);
+      sheet.getCell(`A${sigRow.number}`).value =
+        "______________________________";
+
+      sheet.mergeCells(`F${sigRow.number}:G${sigRow.number}`);
+      sheet.getCell(`F${sigRow.number}`).value = "Date:";
+
+      sheet.mergeCells(`H${sigRow.number}:${lastCol}${sigRow.number}`);
+      sheet.getCell(`H${sigRow.number}`).value = "____________";
+
+      const labelRow = sheet.addRow([]);
+      sheet.mergeCells(`A${labelRow.number}:E${labelRow.number}`);
+      sheet.getCell(`A${labelRow.number}`).value =
+        "Signature over Printed Name";
     };
 
     /* =====================================================
-       SHEET 1 — PEAK SUMMARY
+       SHEET 1 — PEAK SUMMARY (TABLE)
     ===================================================== */
     const sheet1 = workbook.addWorksheet("Peak Summary", {
       pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, paperSize: 9 },
@@ -713,7 +724,7 @@ const exportExcel = async () => {
       });
     });
 
-    addRemarksAndSignature(sheet1, lastCol1);
+    addRemarksAndSignatureAt(sheet1, lastCol1, sheet1.lastRow.number + 2);
 
     /* =====================================================
        SHEET 2 — GLOBAL CHARTS
@@ -725,31 +736,30 @@ const exportExcel = async () => {
     baseHeader(
       sheet2,
       "H",
-      "GLOBAL CHARTS",
+      "GLOBAL CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
       `${dateRangeText} | Stations Included: ${stationsIncluded}`
     );
 
-    const capture = async (id) => {
-      const el = document.getElementById(id);
-      if (!el) return null;
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#fff" });
-      return canvas.toDataURL("image/png");
-    };
-
     const gDay = await capture("globalDayChart");
+    await yieldToUI();
     const gHour = await capture("globalHourChart");
+    await yieldToUI();
+
+    let rowCursor = 9;
 
     if (gDay) {
       const img = workbook.addImage({ base64: gDay, extension: "png" });
-      sheet2.addImage(img, { tl: { col: 0, row: 9 }, ext: { width: 900, height: 350 } });
+      sheet2.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
     }
 
     if (gHour) {
       const img = workbook.addImage({ base64: gHour, extension: "png" });
-      sheet2.addImage(img, { tl: { col: 0, row: 28 }, ext: { width: 900, height: 350 } });
+      sheet2.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
     }
 
-    addRemarksAndSignature(sheet2, "H");
+    addRemarksAndSignatureAt(sheet2, "H", rowCursor + 2);
 
     /* =====================================================
        SHEET 3 — STATION CHARTS
@@ -761,24 +771,30 @@ const exportExcel = async () => {
     baseHeader(
       sheet3,
       "H",
-      "STATION CHARTS",
+      "STATION CHARTS - PEAK & OFF-PEAK ANALYSIS REPORT",
       `${dateRangeText} | Station View: ${selectedStation}`
     );
 
     const sDay = await capture("stationDayChart");
+    await yieldToUI();
     const sHour = await capture("stationHourChart");
+    await yieldToUI();
+
+    rowCursor = 9;
 
     if (sDay) {
       const img = workbook.addImage({ base64: sDay, extension: "png" });
-      sheet3.addImage(img, { tl: { col: 0, row: 9 }, ext: { width: 900, height: 350 } });
+      sheet3.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
     }
 
     if (sHour) {
       const img = workbook.addImage({ base64: sHour, extension: "png" });
-      sheet3.addImage(img, { tl: { col: 0, row: 28 }, ext: { width: 900, height: 350 } });
+      sheet3.addImage(img, { tl: { col: 0, row: rowCursor }, ext: { width: 700, height: 260 } });
+      rowCursor += 15;
     }
 
-    addRemarksAndSignature(sheet3, "H");
+    addRemarksAndSignatureAt(sheet3, "H", rowCursor + 2);
 
     /* ================= DOWNLOAD ================= */
     const buffer = await workbook.xlsx.writeBuffer();
@@ -797,8 +813,6 @@ const exportExcel = async () => {
     showToast("Export failed", "Excel export failed.", "error");
   }
 };
-
-
 
 
   return (

@@ -427,7 +427,12 @@ doc.text("Date:", 145, signY);
 doc.line(158, signY, 190, signY);
 
 
-    doc.save("Passenger_Manifest_Report.pdf");
+    const today = new Date()
+  .toISOString()
+  .slice(0, 10); // YYYY-MM-DD
+
+doc.save(`Passenger_Manifest_${today}.pdf`);
+
     showToast("Success!", "PDF exported successfully!", "success");
   } catch (err) {
     console.error(err);
