@@ -11,33 +11,37 @@ PLATFORM_SOURCE_MAP = {
     "CB": "Chatbot"
 }
 
-# ✅ Gender mapping
+# Gender mapping
 GENDER_MAP = {
     "M": "Male",
     "F": "Female"
 }
 
+
 @passenger_bp.route("/manifest", methods=["GET"])
 def get_passenger_manifest():
     """
-    Returns passenger manifest for boarded passengers (status = 'D')
+    Returns passenger manifest for boarded passengers only (bd.status = 'D')
     """
-    origin_name = request.args.get("origin", None)
-    destination_name = request.args.get("destination", None)
-    departure_date = request.args.get("departure_date", None)
-    departure_time = request.args.get("departure_time", None)
 
-    print(f"\n=== MANIFEST FILTER DEBUG ===")
+    origin_name = request.args.get("origin")
+    destination_name = request.args.get("destination")
+    departure_date = request.args.get("departure_date")
+    departure_time = request.args.get("departure_time")
+
+    print("\n=== MANIFEST FILTER DEBUG ===")
     print(f"Origin: {origin_name}")
     print(f"Destination: {destination_name}")
     print(f"Date: {departure_date}")
     print(f"Time: {departure_time}")
 
     cur = mysql.connection.cursor()
+
     try:
         where_clauses = ["bd.status = 'D'"]
         params = []
 
+        # ---- Origin ----
         if origin_name:
             cur.execute(
                 "SELECT Station_ID FROM Station WHERE StationName = %s",
@@ -48,6 +52,7 @@ def get_passenger_manifest():
                 where_clauses.append("bd.origin = %s")
                 params.append(row[0])
 
+        # ---- Destination ----
         if destination_name:
             cur.execute(
                 "SELECT Station_ID FROM Station WHERE StationName = %s",
@@ -58,10 +63,12 @@ def get_passenger_manifest():
                 where_clauses.append("bd.destination = %s")
                 params.append(row[0])
 
+        # ---- Date ----
         if departure_date:
             where_clauses.append("bd.departure_date = %s")
             params.append(departure_date)
 
+        # ---- Time (24-hour filter, display handled later) ----
         if departure_time:
             where_clauses.append("bd.departure_time = %s")
             params.append(departure_time)
@@ -83,9 +90,12 @@ def get_passenger_manifest():
                 so.StationName AS origin_name,
                 sd.StationName AS destination_name
             FROM BoardingDisembarking bd
-            JOIN Users u ON u.User_ID = bd.User_ID
-            LEFT JOIN Station so ON so.Station_ID = bd.origin
-            LEFT JOIN Station sd ON sd.Station_ID = bd.destination
+            JOIN Users u
+                ON u.User_ID = bd.User_ID
+            LEFT JOIN Station so
+                ON so.Station_ID = bd.origin
+            LEFT JOIN Station sd
+                ON sd.Station_ID = bd.destination
             {where_sql}
             ORDER BY u.last_name, u.first_name;
         """
@@ -113,23 +123,34 @@ def get_passenger_manifest():
 
             full_name = f"{first_name or ''} {last_name or ''}".strip()
 
-            # Convert abbreviations
+            # ---- Convert abbreviations ----
             gender_full = GENDER_MAP.get(gender, gender)
-            platform_source_full = PLATFORM_SOURCE_MAP.get(platform_source, platform_source)
+            platform_source_full = PLATFORM_SOURCE_MAP.get(
+                platform_source, platform_source
+            )
 
-            # Format time safely
+            # ---- Convert 24h time → 12h AM/PM ----
             formatted_time = None
             if dep_time:
-                if hasattr(dep_time, "strftime"):
-                    formatted_time = dep_time.strftime("%H:%M:%S")
-                else:
+                try:
+                    # MySQL TIME / DATETIME
+                    formatted_time = dep_time.strftime("%I:%M %p").lstrip("0")
+                except AttributeError:
+                    # timedelta
                     total_seconds = int(dep_time.total_seconds())
-                    formatted_time = f"{total_seconds // 3600:02d}:{(total_seconds % 3600) // 60:02d}:{total_seconds % 60:02d}"
+                    hours = total_seconds // 3600
+                    minutes = (total_seconds % 3600) // 60
+
+                    suffix = "AM" if hours < 12 else "PM"
+                    hours = hours % 12
+                    hours = 12 if hours == 0 else hours
+
+                    formatted_time = f"{hours}:{minutes:02d} {suffix}"
 
             manifest.append({
                 "full_name": full_name,
                 "age": age,
-                "gender": gender_full,  # ✅ Male / Female
+                "gender": gender_full,
                 "contact_number": contact_number,
                 "address": address,
                 "profession": profession,
