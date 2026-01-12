@@ -12,7 +12,6 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 // Manifest table columns (based on /api/users/manifest response)
 const columns = [
-  "User_ID",
   "full_name",
   "age",
   "gender",
@@ -24,8 +23,6 @@ const columns = [
   "destination_name",
   "departure_date",
   "departure_time",
-  "Booking_ID",
-  "Schedule_ID",
 ];
 
 const idOf = (v) => String(v ?? "");
@@ -669,45 +666,62 @@ const exportExcel = async () => {
 
         <div className="pmc-content" ref={reportRef}>
           <div className="pmc-table-wrap">
-            <table className="pmc-table">
-              <thead>
-                <tr>
-                  <th className="pmc-sticky">#</th>
-                  {columns.map((c) => (
-                    <th key={c}>{c.replace(/_/g, " ").toUpperCase()}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={columns.length + 1} className="pmc-empty">
-                      Loading manifest…
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length + 1} className="pmc-empty">
-                      No passengers found for the selected filters.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((r, idx) => {
-                    const rowKey = idOf(r.User_ID) || `row-${idx}`;
-                    return (
-                      <tr key={rowKey}>
-                        <td className="pmc-sticky">{idx + 1}</td>
-                        {columns.map((c) => (
-                          <td key={`cell-${rowKey}-${c}`}>
-                            {String(r[c] ?? "")}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+<table className="pmc-table">
+  <colgroup>
+    <col style={{ width: "44px" }} />   {/* # */}
+    <col style={{ width: "160px" }} />  {/* Full Name */}
+    <col style={{ width: "70px" }} />   {/* Age */}
+    <col style={{ width: "90px" }} />   {/* Gender */}
+    <col style={{ width: "160px" }} />  {/* Contact Number */}
+    <col style={{ width: "260px" }} />  {/* Address */}
+    <col style={{ width: "140px" }} />  {/* Profession */}
+    <col style={{ width: "160px" }} />  {/* Platform Source */}
+    <col style={{ width: "130px" }} />  {/* Origin */}
+    <col style={{ width: "130px" }} />  {/* Destination */}
+    <col style={{ width: "120px" }} />  {/* Departure Date */}
+    <col style={{ width: "120px" }} />  {/* Departure Time */}
+  </colgroup>
+
+  <thead>
+    <tr>
+      <th className="pmc-sticky">#</th>
+      {columns.map((c) => (
+        <th key={c}>{c.replace(/_/g, " ").toUpperCase()}</th>
+      ))}
+    </tr>
+  </thead>
+
+  <tbody>
+    {isLoading ? (
+      <tr>
+        <td colSpan={columns.length + 1} className="pmc-empty">
+          Loading manifest…
+        </td>
+      </tr>
+    ) : filtered.length === 0 ? (
+      <tr>
+        <td colSpan={columns.length + 1} className="pmc-empty">
+          No passengers found for the selected filters.
+        </td>
+      </tr>
+    ) : (
+      filtered.map((r, idx) => {
+        const rowKey = idOf(r.User_ID) || `row-${idx}`;
+        return (
+          <tr key={rowKey}>
+            <td className="pmc-sticky">{idx + 1}</td>
+            {columns.map((c) => (
+              <td key={`cell-${rowKey}-${c}`}>
+                {String(r[c] ?? "")}
+              </td>
+            ))}
+          </tr>
+        );
+      })
+    )}
+  </tbody>
+</table>
+
           </div>
         </div>
 

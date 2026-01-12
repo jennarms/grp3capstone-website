@@ -22,47 +22,47 @@
   padding: 0 16px 40px 24px;
   box-sizing: border-box;
 
-  /* SAME spacing as reports-page */
   margin-left: 50px;
 }
 
-/* header row: title (left) | account/actions (right) */
+/* header row */
 .pmc-header-row{
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
+
 .pmc-title{
   font-weight: 800;
   margin: 0 0 10px 30px;
   color: black;
 }
 
-/* ===== Controls row: Search + Platform + Delete (aligned) ===== */
+/* ===== Controls ===== */
 .pmc-controls{
   display: flex;
-  align-items: center;  /* vertical alignment */
+  align-items: center;
   gap: 10px;
   margin: 6px 0 10px 30px;
 }
 
-/* Search with inline SVG icon */
+/* Search */
 .pmc-search{
   position: relative;
   display: inline-flex;
   align-items: center;
 }
+
 .pmc-search input{
   height: 36px;
   width: 280px;
-  padding: 6px 12px 6px 36px;     /* left space for icon */
+  padding: 6px 12px 6px 36px;
   border: 1px solid var(--stroke);
   border-radius: 999px;
   outline: none;
   box-sizing: border-box;
 }
 
-/* Magnifying glass icon */
 .pmc-searchIcon{
   position: absolute;
   left: 12px;
@@ -76,22 +76,22 @@
   pointer-events: none;
 }
 
+/* Filter */
 .pmc-filter select{
   height: 36px;
   padding: 6px 12px;
   border: 1px solid var(--stroke);
   border-radius: 8px;
   background: #fff;
-  outline: none;
   font-weight: 700;
   width: 200px;
   cursor: pointer;
 }
 
-/* Delete button – same height as inputs for perfect alignment */
+/* Filter button */
 .pmc-delete{
   height: 36px;
-  padding: 0px 10px;
+  padding: 0 10px;
   border-radius: 999px;
   border: 1px solid var(--blue-ink);
   background: var(--blue-ink);
@@ -99,59 +99,61 @@
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
-  transition: filter .15s ease, box-shadow .15s ease;
-  margin-left: auto;  
+  margin-left: auto;
   width: 300px;
 }
+
 .pmc-delete:hover{ filter: brightness(1.05); }
+
 .pmc-delete:focus-visible{
   outline: none;
   box-shadow: 0 0 0 3px rgba(11,26,120,.18);
 }
+
 .pmc-delete:disabled{
   opacity: .5;
   cursor: not-allowed;
 }
 
-/* section label */
+/* Section label */
 .pmc-section-label{
+  text-align: left;
   margin: 8px 0 8px 30px;
   font-weight: 900;
   font-size: 24px;
-  text-align: start;
   color: black;
 }
 
 html { scrollbar-gutter: stable; }
 
-/* ===== Fixed title+table region: only table area scrolls ===== */
+/* ===== Content ===== */
 .pmc-content{
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);   /* label | table region */
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
   height: calc(100vh - var(--nav-h) - 250px);
-  min-height: 420px;  /* keeps a visible frame even with 0 rows */
+  min-height: 420px;
 }
 
-/* table wrapper (the ONLY vertical scroller) */
-/* table wrapper (the ONLY vertical scroller) */
+/* ===== Table Wrapper ===== */
 .pmc-table-wrap{
-  margin-left: 30px;
+  width: 100%;              
+  margin-left: 0;
+  margin-right: auto;
+  padding: 0 12px 12px 0; /* left-aligned feel */
+  
   background: #fff;
   border-radius: 8px;
   border: 1px solid var(--stroke);
   box-shadow: 0 6px 16px rgba(0,0,0,.06);
   height: 620px;
+
   overflow-y: auto;
   overflow-x: auto;
-
-  /* match previous pages' scrollbar style (scoped to this area only) */
-  scrollbar-gutter: stable;             /* prevents layout shift */
-  scrollbar-width: thin;                /* Firefox */
-  scrollbar-color: #b5c0ff #eef2ff;     /* thumb | track */
 }
 
-/* WebKit (Chrome/Edge/Safari) */
+
+/* Scrollbars */
 .pmc-table-wrap::-webkit-scrollbar{
   width: 10px;
   height: 10px;
@@ -168,23 +170,30 @@ html { scrollbar-gutter: stable; }
   background: #9eaefc;
 }
 
-
-/* table */
+/* ===== TABLE (CRITICAL FIXES HERE) ===== */
 .pmc-table{
   border-collapse: collapse;
   min-width: 1100px;
+  table-layout: fixed; /* 🔑 REQUIRED */
 }
-.pmc-table th, .pmc-table td{
+
+.pmc-table th,
+.pmc-table td{
   border: 1px solid var(--table-line);
   padding: 6px 8px;
-  text-align: left;
-  vertical-align: middle;
   font-size: 16.5px;
   color: black;
   background: #fff;
+
+  /* 🔑 Prevent layout break */
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  vertical-align: middle;
+  
 }
 
-/* sticky header */
+/* Sticky header */
 .pmc-table thead th{
   position: sticky;
   top: 0;
@@ -192,7 +201,7 @@ html { scrollbar-gutter: stable; }
   z-index: 2;
 }
 
-/* sticky first column for checkboxes */
+/* Sticky first column */
 .pmc-sticky{
   position: sticky;
   left: 0;
@@ -202,13 +211,32 @@ html { scrollbar-gutter: stable; }
   text-align: center;
 }
 
-/* utility cells */
-.pmc-mono{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.pmc-ellipsis{
-  max-width: 240px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/* Column alignment */
+
+/* Force text columns LEFT */
+.pmc-table td:nth-child(2),
+.pmc-table td:nth-child(3),
+.pmc-table td:nth-child(4),
+.pmc-table td:nth-child(5),
+.pmc-table td:nth-child(6),
+.pmc-table td:nth-child(7),
+.pmc-table td:nth-child(8),
+.pmc-table td:nth-child(9),
+.pmc-table td:nth-child(10),
+.pmc-table td:nth-child(11),
+.pmc-table td:nth-child(12){
+  text-align: left;
+}
+
+/* Address column */
+.pmc-table th:nth-child(6),
+.pmc-table td:nth-child(6){
+  line-height: 1.4;
+}
+
+/* Name emphasis */
+.pmc-table td:nth-child(2){
+  font-weight: 500;
 }
 
 .pmc-empty{
@@ -217,14 +245,14 @@ html { scrollbar-gutter: stable; }
   color: #59627a;
 }
 
-/* ===== Confirm Delete Modal ===== */
+/* ===== MODAL ===== */
 .pmc-confirmOverlay{
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.45);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: left;
   z-index: 30001;
 }
 
@@ -235,158 +263,78 @@ html { scrollbar-gutter: stable; }
   border-radius: 12px;
   box-shadow: 0 16px 40px rgba(0,0,0,.2);
   border: 1px solid var(--stroke);
-  overflow: hidden;
 }
 
 .pmc-confirmHeader{
   padding: 16px 20px 10px;
   border-bottom: 1px solid #eee;
-
 }
+
 .pmc-confirmTitle{
   margin: 0;
   font-size: 1.25rem;
   font-weight: 800;
-  color: #111;
-  text-align: start;
 }
 
 .pmc-confirmBody{ padding: 14px 22px 4px; }
+
 .pmc-confirmText{
   margin: 0;
-  font-size: 1rem;
-  color: #111;
   text-align: center;
   line-height: 1.5;
 }
 
-/* ⬇️ UPDATED: footer actions are bottom-right */
 .pmc-confirmActions{
   display: flex;
-  justify-content: flex-end;      /* was center */
+  justify-content: flex-end;
   gap: 12px;
   padding: 14px 16px 18px;
-  border-top: 1px solid #eee;     /* separates footer from body */
+  border-top: 1px solid #eee;
 }
 
 /* Buttons */
 .pmc-btn{
-  border: 1px solid transparent;
   border-radius: 12px;
   padding: 10px 22px;
   font-weight: 700;
   cursor: pointer;
-  min-width: 120px;
-  transition: filter .15s ease, box-shadow .15s ease, background .15s ease;
 }
-.pmc-btn:focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(11,26,120,.2);
-}
+
 .pmc-btnOutline{
   background: #fff;
-  border-color: #cfd1d8;
-  color: #111;
+  border: 1px solid #cfd1d8;
 }
-.pmc-btnOutline:hover{ background: #f5f6f8; }
+
 .pmc-btnNavy{
   background: var(--blue-ink);
-  border-color: var(--blue-ink);
   color: #fff;
-}
-.pmc-btnNavy:hover{ filter: brightness(1.05); }
-
-.pmc-filterGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 16px;
-  margin-top: 8px;
+  border: none;
 }
 
-.pmc-filterField span {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.pmc-filterField input {
-  width: 100%;
-  height: 38px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #9da9c2;
-}
-
-@media print {
-  .no-print {
-    display: none !important;
-  }
-}
-
-
-/* Additional styles for export buttons and toast */
-.rg-export-row {
+/* ===== EXPORT + TOAST ===== */
+.rg-export-row{
   display: flex;
   gap: 12px;
-  justify-content: center;
+  justify-content: left;
   padding: 20px 0;
 }
 
-.rg-export {
+.rg-export{
   padding: 12px 24px;
   background: #2E5BFF;
   color: white;
-  border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.2s;
 }
 
-.rg-export:hover {
-  background: #1d4ed8;
-}
-
-.rg-toast {
+.rg-toast{
   position: fixed;
   top: 20px;
   right: 20px;
   padding: 16px 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 9999;
-  animation: slideIn 0.3s ease-out;
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.rg-toast.success {
-  background: #10b981;
-  color: white;
-}
-
-.rg-toast.error {
-  background: #ef4444;
-  color: white;
-}
-
-.rg-toast-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-  font-size: 15px;
-}
-
-.rg-toast-msg {
-  font-size: 14px;
-  opacity: 0.95;
-}
+.rg-toast.success{ background: #10b981; color: white; }
+.rg-toast.error{ background: #ef4444; color: white; }
